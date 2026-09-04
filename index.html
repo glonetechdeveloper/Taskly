@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taskly — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TASKLY — DESIGN TOKENS (matched to Figma reference)
+   ============================================================ */
+:root {
+  --color-cream: #FAF3E5;        /* left panel + card background */
+  --color-cream-soft: #F3E9D4;   /* input fill */
+  --color-white: #FFFFFF;        /* right panel background */
+
+  --color-ink: #241C10;          /* headings, wordmark */
+  --color-ink-soft: #8A7F6E;     /* subtext, placeholders */
+  --color-ink-faint: #B4A990;
+
+  --color-orange: #F2A30D;       /* primary accent */
+  --color-orange-deep: #DB8F06;  /* hover / pressed */
+  --color-orange-tint: #FCE9C2;
+
+  --color-teal: #2E8E86;         /* secondary / links */
+  --color-teal-deep: #23716B;
+  --color-teal-tint: #DCEEEC;
+
+  --color-locked: #B7CFCC;       /* muted teal, "not yet" */
+  --color-success: #4B9B5E;
+  --color-error: #C1503A;
+  --color-error-tint: #F8E4DE;
+
+  --color-border: #EADFC4;
+
+  --font-display: 'Baloo 2', 'Fredoka', 'Segoe UI', sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 16px; --sp-4: 24px;
+  --sp-5: 32px; --sp-6: 40px; --sp-7: 48px; --sp-8: 64px;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 24px 60px -22px rgba(60, 42, 10, 0.22);
+  --shadow-avatar: 0 8px 18px -6px rgba(60, 42, 10, 0.25);
+  --shadow-btn: 0 12px 24px -10px rgba(242, 163, 13, 0.55);
+  --shadow-focus: 0 0 0 4px rgba(46, 142, 134, 0.15);
+
+  --ease-snap: cubic-bezier(.65, 0, .35, 1);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-white);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
+svg { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ============================================================
+   BACKGROUND — minimal slanted productivity-icon wallpaper
+   Sits on the white panel specifically, in the warm yellow accent.
+   Its parent needs position:relative + overflow:hidden.
+   ============================================================ */
+.bg-pattern {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform .6s var(--ease-snap);
+}
+.bg-pattern .pat-icon {
+  stroke: var(--color-orange);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.bg-pattern svg.pattern-root { opacity: .32; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.page-shell { position: relative; min-height: 100vh; overflow-x: hidden; }
+
+.auth-layout {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 960px) {
+  .auth-layout { grid-template-columns: 5fr 6fr; }
+}
+
+/* --- Left brand panel --- */
+.brand-panel {
+  display: none;
+  background: var(--color-cream);
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8);
+}
+@media (min-width: 960px) { .brand-panel { display: flex; } }
+
+.brand-block { text-align: left; }
+
+.brand-mark { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.brand-mark-icon { width: 40px; height: 40px; flex-shrink: 0; display: block; object-fit: contain; }
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  position: relative;
+}
+.brand-wordmark .dot-accent { color: var(--color-orange); }
+
+.brand-tagline {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-orange);
+}
+
+/* --- Right form panel --- */
+.form-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6) var(--sp-3) var(--sp-8);
+  background: var(--color-white);
+}
+@media (min-width: 960px) { .form-panel { padding: var(--sp-8); } }
+.form-panel > .auth-card { position: relative; z-index: 1; }
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-cream);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(18px);
+}
+.auth-card.is-visible { animation: cardEnter .6s var(--ease-snap) forwards; }
+@keyframes cardEnter { to { opacity: 1; transform: translateY(0); } }
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: center;
+  margin-bottom: var(--sp-5);
+}
+@media (min-width: 960px) { .mobile-brand { display: none; } }
+.mobile-brand .brand-mark-icon { width: 28px; height: 28px; }
+.mobile-brand .brand-wordmark { font-size: 20px; }
+
+/* --- Avatar --- */
+.avatar-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: var(--shadow-avatar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--sp-4);
+  transform: scale(0.7);
+  opacity: 0;
+}
+.auth-card.is-visible .avatar-circle {
+  animation: avatarPop .5s var(--ease-snap) .1s forwards;
+}
+@keyframes avatarPop { to { transform: scale(1); opacity: 1; } }
+
+.avatar-circle .mascot { width: 52px; height: 52px; display: block; object-fit: contain; }
+.mascot-bob { animation: mascotBob 3.4s ease-in-out infinite; }
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.auth-card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+}
+.auth-card .sub {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-ink-soft);
+  max-width: 300px;
+  margin: 0 auto var(--sp-5);
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+.auth-form { text-align: left; }
+
+.field {
+  position: relative;
+  margin-bottom: var(--sp-4);
+  opacity: 0;
+  transform: translateY(10px);
+}
+.auth-card.is-visible .field {
+  animation: fieldEnter .5s var(--ease-snap) forwards;
+}
+.auth-card.is-visible .field:nth-of-type(1) { animation-delay: .16s; }
+.auth-card.is-visible .field:nth-of-type(2) { animation-delay: .22s; }
+.auth-card.is-visible .field:nth-of-type(3) { animation-delay: .28s; }
+@keyframes fieldEnter { to { opacity: 1; transform: translateY(0); } }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: 6px;
+}
+
+.field-input-wrap { position: relative; }
+.field-input-wrap.has-suffix input { padding-right: 44px; }
+
+.field-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 17px;
+  height: 17px;
+  color: var(--color-ink-faint);
+  pointer-events: none;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 14px 13px 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-cream-soft);
+  font-size: 14.5px;
+  color: var(--color-ink);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.field input::placeholder { color: var(--color-ink-faint); }
+.field input:focus {
+  outline: none;
+  border-color: var(--color-teal);
+  background: var(--color-white);
+  box-shadow: var(--shadow-focus);
+}
+.field.has-error input { border-color: var(--color-error); }
+
+.field-toggle-visibility {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--color-orange);
+  display: flex;
+  border-radius: 6px;
+  transition: color .2s ease, transform .15s ease;
+}
+.field-toggle-visibility:hover { color: var(--color-orange-deep); }
+.field-toggle-visibility:active { transform: translateY(-50%) scale(.88); }
+.field-toggle-visibility svg { width: 18px; height: 18px; }
+
+.field-error {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-error);
+  margin-top: 6px;
+}
+.field.has-error .field-error { display: flex; }
+.field.shake { animation: shakeField .4s ease; }
+@keyframes shakeField {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+/* ============================================================
+   BUTTON
+   ============================================================ */
+.btn-primary {
+  position: relative;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-orange);
+  color: var(--color-white);
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: var(--sp-2);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: background .2s ease, box-shadow .2s ease, transform .12s ease;
+}
+.auth-card.is-visible .btn-primary {
+  animation: fieldEnter .5s var(--ease-snap) .34s forwards;
+}
+.btn-primary:hover { background: var(--color-orange-deep); box-shadow: var(--shadow-btn); }
+.btn-primary:active { transform: scale(.97) !important; }
+.btn-primary:focus-visible { outline: 3px solid var(--color-teal-deep); outline-offset: 2px; }
+
+.btn-primary .btn-label, .btn-primary .btn-spinner {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary .btn-spinner { display: none; }
+.btn-primary.is-loading .btn-label { visibility: hidden; }
+.btn-primary.is-loading .btn-spinner { display: flex; position: absolute; inset: 0; }
+.btn-primary.is-loading { pointer-events: none; }
+
+.spinner-ring {
+  width: 19px; height: 19px;
+  border: 2.5px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.switch-line {
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-ink-soft);
+  margin-top: var(--sp-4);
+}
+.switch-line a { color: var(--color-orange); font-weight: 700; }
+.switch-line a:hover { color: var(--color-orange-deep); text-decoration: underline; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  top: var(--sp-4); right: var(--sp-4); left: var(--sp-4);
+  max-width: 380px; margin-left: auto;
+  background: var(--color-white);
+  border-left: 4px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: 14px; color: var(--color-ink);
+  z-index: 100;
+  transform: translateY(-140%); opacity: 0;
+  transition: transform .4s var(--ease-snap), opacity .4s ease;
+}
+.toast.is-visible { transform: translateY(0); opacity: 1; }
+.toast.is-success { border-left-color: var(--color-success); }
+@media (min-width: 500px) { .toast { left: auto; } }
+
+/* ============================================================
+   DASHBOARD — app shell
+   ============================================================ */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  background: var(--color-white);
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: 264px;
+  flex-shrink: 0;
+  background: var(--color-teal);
+  padding: var(--sp-5) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  transform: translateX(-100%);
+  transition: transform .35s var(--ease-snap);
+  z-index: 50;
+}
+.sidebar.is-open { transform: translateX(0); }
+@media (min-width: 960px) {
+  .sidebar { position: sticky; top: 0; height: 100vh; transform: none; }
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-6);
+}
+.sidebar-brand { display: flex; align-items: center; gap: 10px; }
+.sidebar-brand .brand-mark-icon { width: 30px; height: 30px; }
+.sidebar-brand .brand-wordmark { color: var(--color-white); font-size: 19px; }
+.sidebar-brand .brand-wordmark .dot-accent { color: var(--color-orange); }
+
+.sidebar-close {
+  display: flex;
+  background: none;
+  border: none;
+  color: var(--color-white);
+  padding: 6px;
+  opacity: .85;
+}
+.sidebar-close svg { width: 20px; height: 20px; }
+@media (min-width: 960px) { .sidebar-close { display: none; } }
+
+.nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  font-size: 14.5px;
+  font-weight: 600;
+  opacity: .82;
+  transition: background .2s ease, opacity .2s ease, transform .12s ease;
+}
+.nav-link svg { width: 19px; height: 19px; flex-shrink: 0; }
+.nav-link:hover { opacity: 1; background: rgba(255,255,255,.1); }
+.nav-link:active { transform: scale(.98); }
+.nav-link.is-active {
+  background: var(--color-white);
+  color: var(--color-teal-deep);
+  opacity: 1;
+  box-shadow: 0 6px 16px -8px rgba(0,0,0,.35);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  color: var(--color-white);
+  opacity: .6;
+  font-size: 12px;
+}
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(36, 28, 16, .35);
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.drawer-overlay.is-visible { opacity: 1; pointer-events: auto; }
+@media (min-width: 960px) { .drawer-overlay { display: none; } }
+
+/* --- Main column --- */
+.main-column { flex: 1; min-width: 0; position: relative; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+}
+@media (min-width: 960px) { .topbar { padding: var(--sp-4) var(--sp-7) var(--sp-3); border-bottom: none; } }
+
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.hamburger-btn {
+  display: flex;
+  background: var(--color-cream-soft);
+  border: none;
+  padding: 9px;
+  border-radius: 10px;
+  color: var(--color-ink);
+  transition: background .2s ease, transform .12s ease;
+}
+.hamburger-btn:hover { background: var(--color-orange-tint); }
+.hamburger-btn:active { transform: scale(.93); }
+.hamburger-btn svg { width: 20px; height: 20px; }
+@media (min-width: 960px) { .hamburger-btn { display: none; } }
+
+.topbar-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--color-orange); }
+@media (min-width: 960px) { .topbar-title { display: none; } }
+
+.topbar-right { display: flex; align-items: center; gap: var(--sp-3); }
+.icon-btn-ghost {
+  display: flex;
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--color-ink-soft);
+  position: relative;
+  transition: background .2s ease, color .2s ease, transform .12s ease;
+}
+.icon-btn-ghost:hover { background: var(--color-cream-soft); color: var(--color-ink); }
+.icon-btn-ghost:active { transform: scale(.92); }
+.icon-btn-ghost svg { width: 21px; height: 21px; }
+.notif-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-orange);
+  border: 2px solid var(--color-white);
+}
+
+.topbar-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-orange-tint);
+  display: block;
+}
+
+/* --- Content --- */
+.main-content {
+  position: relative;
+  overflow: hidden;
+  padding: var(--sp-5) var(--sp-4) var(--sp-8);
+}
+@media (min-width: 960px) { .main-content { padding: var(--sp-6) var(--sp-7) var(--sp-8); } }
+
+.content-inner { position: relative; z-index: 1; max-width: 760px; }
+
+.greeting { opacity: 0; transform: translateY(14px); animation: contentEnter .5s var(--ease-snap) forwards; }
+.greeting h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+.greeting p { font-size: 14.5px; color: var(--color-ink-soft); max-width: 480px; line-height: 1.55; }
+@keyframes contentEnter { to { opacity: 1; transform: translateY(0); } }
+
+/* --- Streak badge --- */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-3);
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-orange-tint);
+  color: var(--color-orange-deep);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) .04s forwards;
+}
+.streak-badge svg { width: 16px; height: 16px; }
+
+/* --- Chat / goal-entry card --- */
+.chat-card {
+  margin-top: var(--sp-5);
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) .08s forwards;
+}
+.chat-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--color-ink);
+  min-height: 64px;
+  padding: 4px 2px;
+}
+.chat-textarea:focus { outline: none; }
+.chat-textarea::placeholder { color: var(--color-ink-faint); }
+
+.chat-toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.chat-toolbar-left { display: flex; align-items: center; gap: 4px; }
+.chat-icon-btn {
+  display: flex;
+  background: none;
+  border: none;
+  padding: 7px;
+  border-radius: 8px;
+  color: var(--color-ink-faint);
+  transition: background .2s ease, color .2s ease;
+}
+.chat-icon-btn:hover { background: var(--color-cream-soft); color: var(--color-ink-soft); }
+.chat-icon-btn svg { width: 17px; height: 17px; }
+.char-count { font-size: 11.5px; color: var(--color-ink-faint); margin-left: 4px; }
+
+.send-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-teal);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .2s ease, transform .12s ease, box-shadow .2s ease;
+}
+.send-btn:hover { background: var(--color-teal-deep); box-shadow: 0 8px 18px -8px rgba(46,142,134,.55); }
+.send-btn:active { transform: scale(.92); }
+.send-btn:disabled { opacity: .5; pointer-events: none; }
+.send-btn svg { width: 16px; height: 16px; }
+
+/* --- Add roadmap button --- */
+.btn-add-roadmap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: var(--sp-4) auto 0;
+  padding: 12px 22px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-orange);
+  color: var(--color-white);
+  font-size: 14px;
+  font-weight: 700;
+  transition: background .2s ease, box-shadow .2s ease, transform .12s ease;
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) .14s forwards;
+}
+.btn-add-roadmap:hover { background: var(--color-orange-deep); box-shadow: var(--shadow-btn); }
+.btn-add-roadmap:active { transform: scale(.96) !important; }
+.btn-add-roadmap svg { width: 16px; height: 16px; }
+
+/* --- Roadmaps list --- */
+.section-heading {
+  margin-top: var(--sp-6);
+  margin-bottom: var(--sp-3);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) .2s forwards;
+}
+
+.roadmap-list { display: flex; flex-direction: column; gap: 12px; }
+
+.roadmap-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) forwards;
+  transition: box-shadow .2s ease, transform .15s ease, border-color .2s ease;
+  cursor: pointer;
+}
+.roadmap-card:hover {
+  box-shadow: 0 14px 30px -18px rgba(60,42,10,.35);
+  transform: translateY(-2px);
+  border-color: var(--color-orange-tint);
+}
+.roadmap-list .roadmap-card:nth-child(1) { animation-delay: .26s; }
+.roadmap-list .roadmap-card:nth-child(2) { animation-delay: .32s; }
+.roadmap-list .roadmap-card:nth-child(3) { animation-delay: .38s; }
+.roadmap-list .roadmap-card:nth-child(4) { animation-delay: .44s; }
+
+.roadmap-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-orange-tint);
+  color: var(--color-orange-deep);
+}
+.roadmap-icon.is-teal { background: var(--color-teal-tint); color: var(--color-teal-deep); }
+.roadmap-icon svg { width: 22px; height: 22px; }
+
+.roadmap-body { flex: 1; min-width: 0; }
+.roadmap-title { font-size: 14.5px; font-weight: 700; margin-bottom: 8px; }
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--color-teal); width: 0%; transition: width .8s var(--ease-snap); }
+
+.roadmap-meta { font-size: 12px; color: var(--color-ink-soft); }
+
+.card-menu-btn {
+  display: flex;
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--color-ink-faint);
+  flex-shrink: 0;
+  transition: background .2s ease, color .2s ease;
+}
+.card-menu-btn:hover { background: var(--color-white); color: var(--color-ink-soft); }
+.card-menu-btn svg { width: 18px; height: 18px; }
+
+/* --- Floating help bubble --- */
+.help-bubble {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-teal);
+  color: var(--color-white);
+  padding: 8px 16px 8px 8px;
+  border-radius: var(--radius-pill);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 14px 30px -12px rgba(46,142,134,.55);
+  z-index: 30;
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.help-bubble:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -14px rgba(46,142,134,.6); }
+.help-bubble:active { transform: scale(.96); }
+.help-bubble img { width: 30px; height: 30px; display: block; border-radius: 50%; background: var(--color-white); }
+
+</style>
+</head>
+<body>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></symbol>
+    <symbol id="ic-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V13a4 4 0 0 0 4 4h4"/></symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></symbol>
+    <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+    <symbol id="ic-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
+    <symbol id="ic-close" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+    <symbol id="ic-send" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-paperclip" viewBox="0 0 24 24"><path d="M17 7 8.5 15.5a3 3 0 0 0 4.24 4.24L21 11.5a5 5 0 0 0-7.07-7.07L5.5 12.8"/></symbol>
+    <symbol id="ic-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="m4 18 5-5 3.5 3.5L17 12l3.5 3.5"/></symbol>
+    <symbol id="ic-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M2 19h20"/></symbol>
+    <symbol id="ic-car" viewBox="0 0 24 24"><path d="M4 16V11l2-4h12l2 4v5"/><path d="M4 16h16"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></symbol>
+    <symbol id="ic-pot" viewBox="0 0 24 24"><path d="M4 11h16v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M2 11h20"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="ic-wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.8L4 16.4V20h3.6l5.1-5.1a4 4 0 0 0 4.8-5.4L15 12l-3-3Z"/></symbol>
+    <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1 1 2 2.5 2 4.5A5.5 5.5 0 0 1 6 14.5C6 9 12 7 12 2Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app-shell">
+
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <img class="brand-mark-icon" src="images/logo.svg" alt="Taskly logo">
+        <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
+      </div>
+      <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+      </button>
+    </div>
+
+    <ul class="nav-list">
+      <li><a class="nav-link is-active" href="dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-grid"/></svg>
+        Dashboard
+      </a></li>
+      <li><a class="nav-link" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
+        Roadmap Manager
+      </a></li>
+      <li><a class="nav-link" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
+        Notifications
+      </a></li>
+      <li><a class="nav-link" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-user"/></svg>
+        Account
+      </a></li>
+      <li><a class="nav-link" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
+        Settings
+      </a></li>
+    </ul>
+
+    <p class="sidebar-footer">Taskly v1.0</p>
+  </aside>
+
+  <!-- Main column -->
+  <div class="main-column">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-menu"/></svg>
+        </button>
+        <span class="topbar-title">Taskly</span>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn-ghost" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
+          <span class="notif-dot"></span>
+        </button>
+        <img class="topbar-avatar" src="images/avatar-placeholder.svg" alt="Your profile">
+      </div>
+    </header>
+
+    <main class="main-content">
+
+      <!-- Minimal slanted productivity-icon wallpaper, yellow, on the white content area -->
+      <div class="bg-pattern" id="bgPattern" aria-hidden="true">
+        <svg class="pattern-root" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <symbol id="pat-notebook" viewBox="0 0 40 40">
+              <rect x="7" y="4" width="24" height="32" rx="3"/>
+              <circle cx="11" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+              <circle cx="17" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+              <circle cx="23" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+              <line x1="12" y1="15" x2="26" y2="15"/>
+              <line x1="12" y1="21" x2="26" y2="21"/>
+              <line x1="12" y1="27" x2="22" y2="27"/>
+            </symbol>
+            <symbol id="pat-calculator" viewBox="0 0 40 40">
+              <rect x="7" y="4" width="26" height="32" rx="4"/>
+              <rect x="11" y="9" width="18" height="7" rx="1.5"/>
+              <circle cx="13" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+              <circle cx="20" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+              <circle cx="27" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+              <circle cx="13" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+              <circle cx="20" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+              <circle cx="27" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+            </symbol>
+            <symbol id="pat-pencil" viewBox="0 0 40 40">
+              <path d="M7 33 L27 13"/>
+              <path d="M27 13 L31 9 L34 12 L30 16 Z"/>
+              <path d="M7 33 L5 36 L9 34 Z" fill="currentColor" stroke="none"/>
+            </symbol>
+            <symbol id="pat-clock" viewBox="0 0 40 40">
+              <circle cx="20" cy="20" r="15"/>
+              <line x1="20" y1="20" x2="20" y2="10"/>
+              <line x1="20" y1="20" x2="27" y2="23"/>
+            </symbol>
+            <symbol id="pat-check" viewBox="0 0 40 40">
+              <rect x="6" y="6" width="28" height="28" rx="7"/>
+              <path d="M13 20 L18 25 L28 13"/>
+            </symbol>
+            <symbol id="pat-cup" viewBox="0 0 40 40">
+              <path d="M9 13 H26 V25 A8.5 8.5 0 0 1 9 25 Z"/>
+              <path d="M26 16 A5.5 5.5 0 0 1 26 27"/>
+              <line x1="12" y1="8" x2="12" y2="11"/>
+              <line x1="17.5" y1="6" x2="17.5" y2="9.5"/>
+            </symbol>
+            <pattern id="dash-pattern" width="260" height="260" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+              <use class="pat-icon" href="#pat-notebook" x="6" y="14" width="34" height="34"/>
+              <use class="pat-icon" href="#pat-calculator" x="150" y="46" width="30" height="30"/>
+              <use class="pat-icon" href="#pat-pencil" x="60" y="150" width="30" height="30"/>
+              <use class="pat-icon" href="#pat-clock" x="196" y="176" width="28" height="28"/>
+              <use class="pat-icon" href="#pat-check" x="16" y="206" width="24" height="24"/>
+              <use class="pat-icon" href="#pat-cup" x="150" y="4" width="26" height="26"/>
+              <use class="pat-icon" href="#pat-notebook" x="220" y="220" width="24" height="24"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dash-pattern)"/>
+        </svg>
+      </div>
+
+      <div class="content-inner">
+
+        <div class="greeting">
+          <h1>Welcome back, Sarah!</h1>
+          <p>What would you like to get done? Tell Taskly and we'll guide you all the way.</p>
+        </div>
+
+        <div class="streak-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
+          5 day streak — keep it going!
+        </div>
+
+        <div class="chat-card">
+          <textarea class="chat-textarea" id="goalInput" placeholder="What's on your mind?" rows="2" maxlength="500"></textarea>
+          <div class="chat-toolbar">
+            <div class="chat-toolbar-left">
+              <button class="chat-icon-btn" type="button" aria-label="Attach a file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-paperclip"/></svg>
+              </button>
+              <button class="chat-icon-btn" type="button" aria-label="Attach an image">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-image"/></svg>
+              </button>
+              <span class="char-count" id="charCount">0/500</span>
+            </div>
+            <button class="send-btn" id="sendBtn" type="button" aria-label="Send" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-send"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn-add-roadmap" id="addRoadmapBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><use href="#ic-plus"/></svg>
+          Add New Roadmap
+        </button>
+
+        <h2 class="section-heading">Your Roadmaps</h2>
+
+        <div class="roadmap-list">
+
+          <article class="roadmap-card">
+            <div class="roadmap-icon is-teal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-laptop"/></svg>
+            </div>
+            <div class="roadmap-body">
+              <p class="roadmap-title">My Figma course</p>
+              <div class="progress-track"><div class="progress-fill" data-progress="42"></div></div>
+              <p class="roadmap-meta">10 out of 24 tasks completed</p>
+            </div>
+            <button class="card-menu-btn" aria-label="Roadmap options">
+              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
+            </button>
+          </article>
+
+          <article class="roadmap-card">
+            <div class="roadmap-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-car"/></svg>
+            </div>
+            <div class="roadmap-body">
+              <p class="roadmap-title">Learn to drive</p>
+              <div class="progress-track"><div class="progress-fill" data-progress="60"></div></div>
+              <p class="roadmap-meta">3 out of 5 tasks completed</p>
+            </div>
+            <button class="card-menu-btn" aria-label="Roadmap options">
+              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
+            </button>
+          </article>
+
+          <article class="roadmap-card">
+            <div class="roadmap-icon is-teal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pot"/></svg>
+            </div>
+            <div class="roadmap-body">
+              <p class="roadmap-title">Jollof Rice recipe</p>
+              <div class="progress-track"><div class="progress-fill" data-progress="87"></div></div>
+              <p class="roadmap-meta">13 out of 15 tasks completed</p>
+            </div>
+            <button class="card-menu-btn" aria-label="Roadmap options">
+              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
+            </button>
+          </article>
+
+          <article class="roadmap-card">
+            <div class="roadmap-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-wrench"/></svg>
+            </div>
+            <div class="roadmap-body">
+              <p class="roadmap-title">Plumbing</p>
+              <div class="progress-track"><div class="progress-fill" data-progress="0"></div></div>
+              <p class="roadmap-meta">0 out of 12 tasks completed</p>
+            </div>
+            <button class="card-menu-btn" aria-label="Roadmap options">
+              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
+            </button>
+          </article>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<button class="help-bubble" type="button">
+  <img src="/assets/Nodi.png" alt="">
+  Need help? Ask Nodi
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==========================================================
+   TASKLY — dashboard.js
+   ========================================================== */
+window.TasklyDashboard = (function () {
+
+  // Point this at your FastAPI backend. Set window.TASKLY_API_BASE
+  // to your API URL in a script tag before this file loads.
+  const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
+  const TOKEN_KEY = "taskly_access_token";
+  const MAX_CHARS = 500;
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  }
+
+  function showToast(message, type) {
+    const toast = $("#toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 3600);
+  }
+
+  /* ---------- mobile drawer ---------- */
+
+  function wireDrawer() {
+    const sidebar = $("#sidebar");
+    const overlay = $("#drawerOverlay");
+    const openBtn = $("#hamburgerBtn");
+    const closeBtn = $("#sidebarCloseBtn");
+    if (!sidebar || !overlay) return;
+
+    function open() {
+      sidebar.classList.add("is-open");
+      overlay.classList.add("is-visible");
+    }
+    function close() {
+      sidebar.classList.remove("is-open");
+      overlay.classList.remove("is-visible");
+    }
+    openBtn && openBtn.addEventListener("click", open);
+    closeBtn && closeBtn.addEventListener("click", close);
+    overlay.addEventListener("click", close);
+    $all(".nav-link").forEach((link) => link.addEventListener("click", close));
+  }
+
+  /* ---------- goal / chat card ---------- */
+
+  function wireChatCard() {
+    const textarea = $("#goalInput");
+    const charCount = $("#charCount");
+    const sendBtn = $("#sendBtn");
+    const addBtn = $("#addRoadmapBtn");
+    if (!textarea) return;
+
+    function updateCount() {
+      const len = textarea.value.length;
+      if (charCount) charCount.textContent = `${len}/${MAX_CHARS}`;
+      if (sendBtn) sendBtn.disabled = len === 0;
+    }
+    textarea.addEventListener("input", () => {
+      if (textarea.value.length > MAX_CHARS) {
+        textarea.value = textarea.value.slice(0, MAX_CHARS);
+      }
+      updateCount();
+    });
+    updateCount();
+
+    async function submitGoal() {
+      const goal = textarea.value.trim();
+      if (!goal) {
+        textarea.focus();
+        return;
+      }
+      const token = getToken();
+      try {
+        // POST /roadmaps { goal_text } — kicks off async generation per the API spec.
+        const res = await fetch(API_BASE + "/roadmaps", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ goal_text: goal })
+        });
+        if (!res.ok) throw new Error("Couldn't start that roadmap. Please try again.");
+        showToast("Building your roadmap…", "success");
+        textarea.value = "";
+        updateCount();
+        // window.location.href = `roadmap.html?id=${data.id}`;
+      } catch (err) {
+        showToast(err.message || "Something went wrong. Please try again.", "error");
+      }
+    }
+
+    sendBtn && sendBtn.addEventListener("click", submitGoal);
+    addBtn && addBtn.addEventListener("click", submitGoal);
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitGoal();
+      }
+    });
+  }
+
+  /* ---------- roadmap cards ---------- */
+
+  function animateProgressBars() {
+    $all(".progress-fill").forEach((bar) => {
+      const target = bar.dataset.progress || "0";
+      requestAnimationFrame(() => {
+        setTimeout(() => { bar.style.width = target + "%"; }, 200);
+      });
+    });
+  }
+
+  function wireRoadmapCards() {
+    $all(".roadmap-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        // Roadmap detail view isn't built yet — wire this to
+        // roadmap.html?id=... once that page exists.
+        showToast("Opening roadmap details is coming next.");
+      });
+    });
+    $all(".card-menu-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showToast("Roadmap options are coming soon.");
+      });
+    });
+  }
+
+  /* ---------- init ---------- */
+
+  function init() {
+    document.addEventListener("DOMContentLoaded", () => {
+      wireDrawer();
+      wireChatCard();
+      wireRoadmapCards();
+      animateProgressBars();
+    });
+  }
+
+  return { init };
+})();
+
+TasklyDashboard.init();
+
+</script>
+</body>
+</html>
