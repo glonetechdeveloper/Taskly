@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taskly — Create Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TASKLY — DESIGN TOKENS (matched to Figma reference)
+   ============================================================ */
+:root {
+  --color-cream: #FAF3E5;        /* left panel + card background */
+  --color-cream-soft: #F3E9D4;   /* input fill */
+  --color-white: #FFFFFF;        /* right panel background */
+
+  --color-ink: #241C10;          /* headings, wordmark */
+  --color-ink-soft: #8A7F6E;     /* subtext, placeholders */
+  --color-ink-faint: #B4A990;
+
+  --color-orange: #F2A30D;       /* primary accent */
+  --color-orange-deep: #DB8F06;  /* hover / pressed */
+  --color-orange-tint: #FCE9C2;
+
+  --color-teal: #2E8E86;         /* secondary / links */
+  --color-teal-deep: #23716B;
+  --color-teal-tint: #DCEEEC;
+
+  --color-locked: #B7CFCC;       /* muted teal, "not yet" */
+  --color-success: #4B9B5E;
+  --color-error: #C1503A;
+  --color-error-tint: #F8E4DE;
+
+  --color-border: #EADFC4;
+
+  --font-display: 'Baloo 2', 'Fredoka', 'Segoe UI', sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 16px; --sp-4: 24px;
+  --sp-5: 32px; --sp-6: 40px; --sp-7: 48px; --sp-8: 64px;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 24px 60px -22px rgba(60, 42, 10, 0.22);
+  --shadow-avatar: 0 8px 18px -6px rgba(60, 42, 10, 0.25);
+  --shadow-btn: 0 12px 24px -10px rgba(242, 163, 13, 0.55);
+  --shadow-focus: 0 0 0 4px rgba(46, 142, 134, 0.15);
+
+  --ease-snap: cubic-bezier(.65, 0, .35, 1);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-white);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
+svg { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ============================================================
+   BACKGROUND — minimal slanted productivity-icon wallpaper
+   (subtle layer, sits behind the clean Figma layout)
+   ============================================================ */
+.bg-pattern {
+  position: fixed;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform .6s var(--ease-snap);
+}
+.bg-pattern .pat-icon {
+  stroke: var(--color-teal);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.bg-pattern .pat-icon.is-orange { stroke: var(--color-orange); }
+.bg-pattern svg.pattern-root { opacity: .055; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.page-shell { position: relative; min-height: 100vh; overflow-x: hidden; }
+
+.auth-layout {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 960px) {
+  .auth-layout { grid-template-columns: 5fr 6fr; }
+}
+
+/* --- Left brand panel --- */
+.brand-panel {
+  display: none;
+  background: var(--color-cream);
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8);
+}
+@media (min-width: 960px) { .brand-panel { display: flex; } }
+
+.brand-block { text-align: left; }
+
+.brand-mark { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.brand-mark-icon { width: 40px; height: 40px; flex-shrink: 0; }
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  position: relative;
+}
+.brand-wordmark .dot-accent { color: var(--color-orange); }
+
+.brand-tagline {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-orange);
+}
+
+/* --- Right form panel --- */
+.form-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6) var(--sp-3) var(--sp-8);
+  background: var(--color-white);
+}
+@media (min-width: 960px) { .form-panel { padding: var(--sp-8); } }
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-cream);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(18px);
+}
+.auth-card.is-visible { animation: cardEnter .6s var(--ease-snap) forwards; }
+@keyframes cardEnter { to { opacity: 1; transform: translateY(0); } }
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: center;
+  margin-bottom: var(--sp-5);
+}
+@media (min-width: 960px) { .mobile-brand { display: none; } }
+.mobile-brand .brand-mark-icon { width: 28px; height: 28px; }
+.mobile-brand .brand-wordmark { font-size: 20px; }
+
+/* --- Avatar --- */
+.avatar-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: var(--shadow-avatar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--sp-4);
+  transform: scale(0.7);
+  opacity: 0;
+}
+.auth-card.is-visible .avatar-circle {
+  animation: avatarPop .5s var(--ease-snap) .1s forwards;
+}
+@keyframes avatarPop { to { transform: scale(1); opacity: 1; } }
+
+.avatar-circle .mascot { width: 52px; height: 52px; }
+.mascot-bob { animation: mascotBob 3.4s ease-in-out infinite; }
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.auth-card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+}
+.auth-card .sub {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-ink-soft);
+  max-width: 300px;
+  margin: 0 auto var(--sp-5);
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+.auth-form { text-align: left; }
+
+.field {
+  position: relative;
+  margin-bottom: var(--sp-4);
+  opacity: 0;
+  transform: translateY(10px);
+}
+.auth-card.is-visible .field {
+  animation: fieldEnter .5s var(--ease-snap) forwards;
+}
+.auth-card.is-visible .field:nth-of-type(1) { animation-delay: .16s; }
+.auth-card.is-visible .field:nth-of-type(2) { animation-delay: .22s; }
+.auth-card.is-visible .field:nth-of-type(3) { animation-delay: .28s; }
+@keyframes fieldEnter { to { opacity: 1; transform: translateY(0); } }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: 6px;
+}
+
+.field-input-wrap { position: relative; }
+
+.field-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 17px;
+  height: 17px;
+  color: var(--color-ink-faint);
+  pointer-events: none;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 14px 13px 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-cream-soft);
+  font-size: 14.5px;
+  color: var(--color-ink);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.field input::placeholder { color: var(--color-ink-faint); }
+.field input:focus {
+  outline: none;
+  border-color: var(--color-teal);
+  background: var(--color-white);
+  box-shadow: var(--shadow-focus);
+}
+.field.has-error input { border-color: var(--color-error); }
+
+.field-toggle-visibility {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--color-orange);
+  display: flex;
+  border-radius: 6px;
+  transition: color .2s ease, transform .15s ease;
+}
+.field-toggle-visibility:hover { color: var(--color-orange-deep); }
+.field-toggle-visibility:active { transform: translateY(-50%) scale(.88); }
+.field-toggle-visibility svg { width: 18px; height: 18px; }
+
+.field-error {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-error);
+  margin-top: 6px;
+}
+.field.has-error .field-error { display: flex; }
+.field.shake { animation: shakeField .4s ease; }
+@keyframes shakeField {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+/* ============================================================
+   BUTTON
+   ============================================================ */
+.btn-primary {
+  position: relative;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-orange);
+  color: var(--color-white);
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: var(--sp-2);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: background .2s ease, box-shadow .2s ease, transform .12s ease;
+}
+.auth-card.is-visible .btn-primary {
+  animation: fieldEnter .5s var(--ease-snap) .34s forwards;
+}
+.btn-primary:hover { background: var(--color-orange-deep); box-shadow: var(--shadow-btn); }
+.btn-primary:active { transform: scale(.97) !important; }
+.btn-primary:focus-visible { outline: 3px solid var(--color-teal-deep); outline-offset: 2px; }
+
+.btn-primary .btn-label, .btn-primary .btn-spinner {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary .btn-spinner { display: none; }
+.btn-primary.is-loading .btn-label { visibility: hidden; }
+.btn-primary.is-loading .btn-spinner { display: flex; position: absolute; inset: 0; }
+.btn-primary.is-loading { pointer-events: none; }
+
+.spinner-ring {
+  width: 19px; height: 19px;
+  border: 2.5px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.switch-line {
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-ink-soft);
+  margin-top: var(--sp-4);
+}
+.switch-line a { color: var(--color-orange); font-weight: 700; }
+.switch-line a:hover { color: var(--color-orange-deep); text-decoration: underline; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  top: var(--sp-4); right: var(--sp-4); left: var(--sp-4);
+  max-width: 380px; margin-left: auto;
+  background: var(--color-white);
+  border-left: 4px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: 14px; color: var(--color-ink);
+  z-index: 100;
+  transform: translateY(-140%); opacity: 0;
+  transition: transform .4s var(--ease-snap), opacity .4s ease;
+}
+.toast.is-visible { transform: translateY(0); opacity: 1; }
+.toast.is-success { border-left-color: var(--color-success); }
+@media (min-width: 500px) { .toast { left: auto; } }
+
+</style>
+</head>
+<body>
+
+<div class="page-shell">
+
+  <!-- Minimal slanted productivity-icon wallpaper -->
+  <div class="bg-pattern" id="bgPattern" aria-hidden="true">
+    <svg class="pattern-root" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="ic-notebook" viewBox="0 0 40 40">
+          <rect x="7" y="4" width="24" height="32" rx="3"/>
+          <circle cx="11" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+          <circle cx="23" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
+          <line x1="12" y1="15" x2="26" y2="15"/>
+          <line x1="12" y1="21" x2="26" y2="21"/>
+          <line x1="12" y1="27" x2="22" y2="27"/>
+        </symbol>
+        <symbol id="ic-calculator" viewBox="0 0 40 40">
+          <rect x="7" y="4" width="26" height="32" rx="4"/>
+          <rect x="11" y="9" width="18" height="7" rx="1.5"/>
+          <circle cx="13" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+          <circle cx="20" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+          <circle cx="27" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+          <circle cx="13" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+          <circle cx="20" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+          <circle cx="27" cy="29" r="1.4" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="ic-pencil" viewBox="0 0 40 40">
+          <path d="M7 33 L27 13"/>
+          <path d="M27 13 L31 9 L34 12 L30 16 Z"/>
+          <path d="M7 33 L5 36 L9 34 Z" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="ic-clock" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="15"/>
+          <line x1="20" y1="20" x2="20" y2="10"/>
+          <line x1="20" y1="20" x2="27" y2="23"/>
+        </symbol>
+        <symbol id="ic-check" viewBox="0 0 40 40">
+          <rect x="6" y="6" width="28" height="28" rx="7"/>
+          <path d="M13 20 L18 25 L28 13"/>
+        </symbol>
+        <symbol id="ic-cup" viewBox="0 0 40 40">
+          <path d="M9 13 H26 V25 A8.5 8.5 0 0 1 9 25 Z"/>
+          <path d="M26 16 A5.5 5.5 0 0 1 26 27"/>
+          <line x1="12" y1="8" x2="12" y2="11"/>
+          <line x1="17.5" y1="6" x2="17.5" y2="9.5"/>
+        </symbol>
+        <pattern id="taskly-pattern" width="260" height="260" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+          <use class="pat-icon" href="#ic-notebook" x="6" y="14" width="34" height="34"/>
+          <use class="pat-icon is-orange" href="#ic-calculator" x="150" y="46" width="30" height="30"/>
+          <use class="pat-icon" href="#ic-pencil" x="60" y="150" width="30" height="30"/>
+          <use class="pat-icon is-orange" href="#ic-clock" x="196" y="176" width="28" height="28"/>
+          <use class="pat-icon" href="#ic-check" x="16" y="206" width="24" height="24"/>
+          <use class="pat-icon is-orange" href="#ic-cup" x="150" y="4" width="26" height="26"/>
+          <use class="pat-icon" href="#ic-notebook" x="220" y="220" width="24" height="24"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#taskly-pattern)"/>
+    </svg>
+  </div>
+
+  <div class="auth-layout">
+
+    <!-- Left brand panel -->
+    <aside class="brand-panel">
+      <div class="brand-block">
+        <div class="brand-mark">
+          <svg class="brand-mark-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="24" height="24" rx="6" fill="#F2A30D"/>
+            <rect x="10" y="16" width="12" height="3" rx="1.5" fill="#FAF3E5"/>
+            <rect x="10" y="22" width="8" height="3" rx="1.5" fill="#FAF3E5"/>
+          </svg>
+          <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
+        </div>
+        <p class="brand-tagline">From task to done</p>
+      </div>
+    </aside>
+
+    <!-- Right form panel -->
+    <main class="form-panel">
+      <div class="auth-card" id="authCard">
+
+        <div class="mobile-brand">
+          <svg class="brand-mark-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="24" height="24" rx="6" fill="#F2A30D"/>
+            <rect x="10" y="16" width="12" height="3" rx="1.5" fill="#FAF3E5"/>
+            <rect x="10" y="22" width="8" height="3" rx="1.5" fill="#FAF3E5"/>
+          </svg>
+          <span class="brand-wordmark">Taskly</span>
+        </div>
+
+        <div class="avatar-circle">
+          <svg class="mascot mascot-bob" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="15" cy="55" rx="9" ry="3.4" fill="#D9D9D9" opacity=".5"/>
+            <path d="M32 8c11 0 18 8 18 20c0 14-8 24-18 24S14 42 14 28C14 16 21 8 32 8Z" fill="#F2A30D"/>
+            <circle cx="25" cy="28" r="3" fill="#241C10"/>
+            <circle cx="39" cy="28" r="3" fill="#241C10"/>
+            <path d="M24 37c3 4 13 4 16 0" stroke="#241C10" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+
+        <h2>Welcome to Taskly</h2>
+        <p class="sub">Turn your goals into clear, actionable steps today. Create your account right away!</p>
+
+        <form class="auth-form" id="formSignup" novalidate>
+
+          <div class="field" id="fieldFullName">
+            <label for="fullName">Full Name</label>
+            <div class="field-input-wrap">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+              <input type="text" id="fullName" name="fullName" placeholder="Enter name here" autocomplete="name" required>
+            </div>
+            <div class="field-error"><span>&#9888;</span><span class="field-error-text">Enter your name</span></div>
+          </div>
+
+          <div class="field" id="fieldEmail">
+            <label for="email">Email</label>
+            <div class="field-input-wrap">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7L22 6"/></svg>
+              <input type="email" id="email" name="email" placeholder="Enter email here" autocomplete="email" required>
+            </div>
+            <div class="field-error"><span>&#9888;</span><span class="field-error-text">Enter a valid email address</span></div>
+          </div>
+
+          <div class="field" id="fieldPassword">
+            <label for="password">Password</label>
+            <div class="field-input-wrap">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" id="password" name="password" placeholder="Enter password here" autocomplete="new-password" required>
+              <button type="button" class="field-toggle-visibility" data-target="password" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="field-error"><span>&#9888;</span><span class="field-error-text">Use at least 8 characters</span></div>
+          </div>
+
+          <button type="submit" class="btn-primary">
+            <span class="btn-label">Create Account</span>
+            <span class="btn-spinner"><span class="spinner-ring"></span></span>
+          </button>
+
+          <p class="switch-line">Already have an account? <a href="login.html">Sign In</a></p>
+        </form>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==========================================================
+   TASKLY — auth.js
+   Shared logic for login.html and signup.html
+   ========================================================== */
+window.Taskly = (function () {
+
+  // Point this at your FastAPI backend. Set window.TASKLY_API_BASE
+  // to your API URL in a script tag before this file loads.
+  const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
+  const TOKEN_KEY = "taskly_access_token";
+
+  /* ---------- small utilities ---------- */
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+
+  function showToast(message, type) {
+    const toast = $("#toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 4200);
+  }
+
+  function setFieldError(fieldEl, message) {
+    if (!fieldEl) return;
+    const textEl = fieldEl.querySelector(".field-error-text");
+    if (message) {
+      if (textEl) textEl.textContent = message;
+      fieldEl.classList.add("has-error");
+      fieldEl.classList.remove("shake");
+      // restart shake animation
+      void fieldEl.offsetWidth;
+      fieldEl.classList.add("shake");
+    } else {
+      fieldEl.classList.remove("has-error", "shake");
+    }
+  }
+
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function setButtonLoading(btn, isLoading) {
+    if (!btn) return;
+    btn.classList.toggle("is-loading", isLoading);
+  }
+
+  async function apiRequest(path, body) {
+    const res = await fetch(API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* no body */ }
+    if (!res.ok) {
+      const msg = (data && (data.detail || data.message)) || "Something went wrong. Please try again.";
+      throw new Error(typeof msg === "string" ? msg : "Something went wrong. Please try again.");
+    }
+    return data || {};
+  }
+
+  function storeToken(data) {
+    const token = data.access_token || data.token || null;
+    if (token) {
+      try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* storage unavailable */ }
+    }
+    return token;
+  }
+
+  /* ---------- password visibility toggle ---------- */
+
+  function wirePasswordToggles(root) {
+    root.querySelectorAll(".field-toggle-visibility").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.dataset.target);
+        if (!input) return;
+        const nowVisible = input.type === "password";
+        input.type = nowVisible ? "text" : "password";
+        btn.setAttribute("aria-label", nowVisible ? "Hide password" : "Show password");
+      });
+    });
+  }
+
+  /* ---------- background parallax (subtle, non-intrusive) ---------- */
+
+  function wireParallax() {
+    const bg = document.getElementById("bgPattern");
+    if (!bg || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let targetX = 0, targetY = 0, curX = 0, curY = 0;
+
+    window.addEventListener("mousemove", (e) => {
+      targetX = (e.clientX / window.innerWidth - 0.5) * 14;
+      targetY = (e.clientY / window.innerHeight - 0.5) * 14;
+    });
+
+    window.addEventListener("scroll", () => {
+      targetY += (window.scrollY * 0.02);
+    }, { passive: true });
+
+    (function loop() {
+      curX += (targetX - curX) * 0.06;
+      curY += (targetY - curY) * 0.06;
+      bg.style.transform = `translate(${curX.toFixed(2)}px, ${curY.toFixed(2)}px)`;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ---------- entrance animation trigger ---------- */
+
+  function playEntrance() {
+    const card = document.getElementById("authCard");
+    if (!card) return;
+    requestAnimationFrame(() => card.classList.add("is-visible"));
+  }
+
+  /* ---------- form wiring ---------- */
+
+  function initLogin() {
+    const form = document.getElementById("formSignin");
+    if (!form) return;
+    const btn = form.querySelector(".btn-primary");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const emailField = document.getElementById("fieldEmail");
+      const passwordField = document.getElementById("fieldPassword");
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      let valid = true;
+      if (!isValidEmail(email)) { setFieldError(emailField, "Enter a valid email address"); valid = false; }
+      else setFieldError(emailField, null);
+
+      if (!password) { setFieldError(passwordField, "Enter your password"); valid = false; }
+      else setFieldError(passwordField, null);
+
+      if (!valid) return;
+
+      setButtonLoading(btn, true);
+      try {
+        const data = await apiRequest("/auth/login", { email, password });
+        storeToken(data);
+        showToast("Signed in. Taking you to your dashboard…", "success");
+        // window.location.href = "dashboard.html";
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    });
+  }
+
+  function initSignup() {
+    const form = document.getElementById("formSignup");
+    if (!form) return;
+    const btn = form.querySelector(".btn-primary");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nameField = document.getElementById("fieldFullName");
+      const emailField = document.getElementById("fieldEmail");
+      const passwordField = document.getElementById("fieldPassword");
+      const fullName = document.getElementById("fullName").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      let valid = true;
+      if (!fullName) { setFieldError(nameField, "Enter your name"); valid = false; }
+      else setFieldError(nameField, null);
+
+      if (!isValidEmail(email)) { setFieldError(emailField, "Enter a valid email address"); valid = false; }
+      else setFieldError(emailField, null);
+
+      if (password.length < 8) { setFieldError(passwordField, "Use at least 8 characters"); valid = false; }
+      else setFieldError(passwordField, null);
+
+      if (!valid) return;
+
+      setButtonLoading(btn, true);
+      try {
+        // NOTE: the backend spec (/auth/register) only accepts email + password.
+        // fullName is collected for the UI but not sent yet — add it to the
+        // payload once the backend supports a name field.
+        const data = await apiRequest("/auth/register", { email, password });
+        storeToken(data);
+        showToast("Account created. Let's build your first roadmap…", "success");
+        // window.location.href = "dashboard.html";
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    });
+  }
+
+  /* ---------- public entry point ---------- */
+
+  function initForm(opts) {
+    document.addEventListener("DOMContentLoaded", () => {
+      wirePasswordToggles(document);
+      wireParallax();
+      playEntrance();
+      if (opts.mode === "login") initLogin();
+      if (opts.mode === "signup") initSignup();
+    });
+  }
+
+  return { initForm };
+})();
+
+</script>
+<script>Taskly.initForm({ mode: 'signup' });</script>
+</body>
+</html>
