@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taskly — Dashboard</title>
+<title>Taskly — Roadmap</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -129,7 +129,7 @@ svg { display: block; }
 .brand-block { text-align: left; }
 
 .brand-mark { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.brand-mark-icon { width: 90px; height: 40px; flex-shrink: 0; display: block; object-fit: contain; }
+.brand-mark-icon { width: 40px; height: 40px; flex-shrink: 0; display: block; object-fit: contain; }
 .brand-wordmark {
   font-family: var(--font-display);
   font-size: 28px;
@@ -182,7 +182,7 @@ svg { display: block; }
   margin-bottom: var(--sp-5);
 }
 @media (min-width: 960px) { .mobile-brand { display: none; } }
-.mobile-brand .brand-mark-icon { width: 80px; height: 40px; }
+.mobile-brand .brand-mark-icon { width: 28px; height: 28px; }
 .mobile-brand .brand-wordmark { font-size: 20px; }
 
 /* --- Avatar --- */
@@ -426,7 +426,7 @@ svg { display: block; }
   margin-bottom: var(--sp-6);
 }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; }
-.sidebar-brand .brand-mark-icon { width: 80px; height: 40px; }
+.sidebar-brand .brand-mark-icon { width: 30px; height: 30px; }
 .sidebar-brand .brand-wordmark { color: var(--color-white); font-size: 19px; }
 .sidebar-brand .brand-wordmark .dot-accent { color: var(--color-orange); }
 
@@ -1113,6 +1113,305 @@ svg { display: block; }
   .dropdown-panel { right: var(--sp-3); left: var(--sp-3); width: auto; }
 }
 
+/* ============================================================
+   ROADMAP DETAIL PAGE
+   ============================================================ */
+
+/* --- Header --- */
+.roadmap-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) forwards;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  margin-bottom: var(--sp-2);
+  transition: color .2s ease;
+}
+.back-link:hover { color: var(--color-teal); }
+.back-link svg { width: 15px; height: 15px; }
+
+.roadmap-header-left { min-width: 0; flex: 1; }
+.roadmap-header h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+.roadmap-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--color-teal-tint);
+  color: var(--color-teal-deep);
+}
+.roadmap-type-badge.is-flat { background: var(--color-orange-tint); color: var(--color-orange-deep); }
+.roadmap-type-badge svg { width: 12px; height: 12px; }
+
+.roadmap-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.progress-ring-wrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
+.progress-ring-wrap svg { width: 56px; height: 56px; transform: rotate(-90deg); }
+.progress-ring-track { fill: none; stroke: var(--color-border); stroke-width: 5; }
+.progress-ring-fill {
+  fill: none; stroke: var(--color-teal); stroke-width: 5; stroke-linecap: round;
+  stroke-dasharray: 150.8; stroke-dashoffset: 150.8;
+  transition: stroke-dashoffset 1s var(--ease-snap);
+}
+.progress-ring-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--color-ink);
+}
+
+/* --- Phase key (legend) --- */
+.state-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin: var(--sp-4) 0;
+  padding: 12px 14px;
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) .06s forwards;
+}
+.state-legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot.is-complete { background: var(--color-success); }
+.legend-dot.is-available { background: var(--color-orange); }
+.legend-dot.is-locked { background: var(--color-locked); }
+
+/* --- Sequential: phase + node chain --- */
+.phase-block {
+  margin-bottom: var(--sp-5);
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) forwards;
+}
+.roadmap-body .phase-block:nth-child(1) { animation-delay: .1s; }
+.roadmap-body .phase-block:nth-child(2) { animation-delay: .16s; }
+.roadmap-body .phase-block:nth-child(3) { animation-delay: .22s; }
+.roadmap-body .phase-block:nth-child(4) { animation-delay: .28s; }
+
+.phase-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin-bottom: var(--sp-3);
+}
+.phase-label .phase-index {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-teal-tint); color: var(--color-teal-deep);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+
+.node-chain { position: relative; padding-left: 6px; }
+.node-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 4px 0 var(--sp-4) 0;
+}
+.node-item:last-child { padding-bottom: 0; }
+.node-chain-line {
+  position: absolute;
+  left: 19px; top: 34px; bottom: -4px;
+  width: 2px;
+  background: var(--color-border);
+}
+.node-item:last-child .node-chain-line { display: none; }
+.node-chain-line.is-done { background: var(--color-success); opacity: .5; }
+
+.node-icon-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-locked);
+  color: var(--color-white);
+  transition: background .3s ease, box-shadow .3s ease;
+  z-index: 1;
+}
+.node-icon-circle svg { width: 18px; height: 18px; }
+
+.node-item.is-complete .node-icon-circle { background: var(--color-success); }
+.node-item.is-available .node-icon-circle {
+  background: var(--color-orange);
+  box-shadow: 0 0 0 4px var(--color-orange-tint);
+  animation: pulseNode 2.4s ease-in-out infinite;
+}
+.node-item.is-locked .node-icon-circle { background: var(--color-locked); color: var(--color-ink-soft); }
+
+.node-card {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: box-shadow .2s ease, transform .15s ease, border-color .2s ease, opacity .2s ease;
+}
+.node-item.is-locked .node-card { opacity: .6; cursor: default; }
+.node-item:not(.is-locked) .node-card:hover {
+  box-shadow: 0 12px 26px -16px rgba(60,42,10,.35);
+  transform: translateY(-1px);
+  border-color: var(--color-orange-tint);
+}
+.node-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.node-item.is-complete .node-title { color: var(--color-ink-soft); text-decoration: line-through; text-decoration-color: var(--color-success); }
+.node-meta-row { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--color-ink-soft); }
+.node-meta-row svg { width: 12px; height: 12px; }
+.node-meta-item { display: flex; align-items: center; gap: 4px; }
+.locked-tag { color: var(--color-ink-faint); font-style: italic; }
+
+/* --- Flat: checklist --- */
+.checklist { display: flex; flex-direction: column; gap: 8px; }
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0; transform: translateY(10px);
+  animation: contentEnter .4s var(--ease-snap) forwards;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.checklist-item:hover { border-color: var(--color-orange-tint); }
+
+.checklist-checkbox {
+  width: 22px; height: 22px;
+  border-radius: 7px;
+  border: 2px solid var(--color-border);
+  background: var(--color-white);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: transparent;
+  transition: background .2s ease, border-color .2s ease;
+}
+.checklist-checkbox svg { width: 13px; height: 13px; }
+.checklist-item.is-complete .checklist-checkbox { background: var(--color-success); border-color: var(--color-success); color: var(--color-white); }
+
+.checklist-body { flex: 1; min-width: 0; }
+.checklist-title { font-size: 14px; font-weight: 600; }
+.checklist-item.is-complete .checklist-title { color: var(--color-ink-soft); text-decoration: line-through; text-decoration-color: var(--color-success); }
+.checklist-meta { font-size: 11.5px; color: var(--color-ink-soft); margin-top: 2px; }
+
+/* --- Add task button --- */
+.btn-add-task {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  margin-top: var(--sp-3);
+  padding: 13px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-ink-soft);
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn-add-task:hover { background: var(--color-cream-soft); border-color: var(--color-teal); color: var(--color-teal-deep); }
+.btn-add-task svg { width: 16px; height: 16px; }
+
+/* --- Node detail modal --- */
+.node-detail-desc { font-size: 13.5px; color: var(--color-ink-soft); line-height: 1.6; margin-bottom: var(--sp-4); }
+.node-detail-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--color-ink-soft);
+  background: var(--color-cream-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: var(--sp-4);
+}
+.node-detail-meta svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.btn-complete-toggle {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-orange);
+  color: var(--color-white);
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background .2s ease, box-shadow .2s ease, transform .12s ease;
+  margin-bottom: var(--sp-3);
+}
+.btn-complete-toggle:hover { background: var(--color-orange-deep); box-shadow: var(--shadow-btn); }
+.btn-complete-toggle:active { transform: scale(.97); }
+.btn-complete-toggle.is-complete { background: var(--color-success); }
+.btn-complete-toggle.is-complete:hover { background: #3f8551; box-shadow: 0 12px 24px -10px rgba(75,155,94,.5); }
+.btn-complete-toggle svg { width: 18px; height: 18px; }
+
+.node-secondary-actions { display: flex; gap: 10px; }
+.node-secondary-actions .btn-ghost, .node-secondary-actions .btn-solid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.node-secondary-actions svg { width: 15px; height: 15px; }
+
+/* --- Add / edit task modal --- */
+.modal-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  margin-bottom: var(--sp-3);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.modal-input:focus, .modal-select:focus { outline: none; border-color: var(--color-teal); box-shadow: var(--shadow-focus); }
+.modal-field-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--color-ink); margin-bottom: 6px; }
+.modal-select {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  margin-bottom: var(--sp-3);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A7F6E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .roadmap-header { flex-direction: column; }
+  .roadmap-header-right { align-self: flex-end; margin-top: -48px; }
+}
+
 </style>
 </head>
 <body>
@@ -1127,17 +1426,19 @@ svg { display: block; }
     <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
     <symbol id="ic-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
     <symbol id="ic-close" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
-    <symbol id="ic-send" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></symbol>
     <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
     <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="ic-paperclip" viewBox="0 0 24 24"><path d="M17 7 8.5 15.5a3 3 0 0 0 4.24 4.24L21 11.5a5 5 0 0 0-7.07-7.07L5.5 12.8"/></symbol>
-    <symbol id="ic-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="m4 18 5-5 3.5 3.5L17 12l3.5 3.5"/></symbol>
-    <symbol id="ic-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M2 19h20"/></symbol>
-    <symbol id="ic-car" viewBox="0 0 24 24"><path d="M4 16V11l2-4h12l2 4v5"/><path d="M4 16h16"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></symbol>
-    <symbol id="ic-pot" viewBox="0 0 24 24"><path d="M4 11h16v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M2 11h20"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
-    <symbol id="ic-wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.8L4 16.4V20h3.6l5.1-5.1a4 4 0 0 0 4.8-5.4L15 12l-3-3Z"/></symbol>
     <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1 1 2 2.5 2 4.5A5.5 5.5 0 0 1 6 14.5C6 9 12 7 12 2Z"/></symbol>
     <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="ic-back" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></symbol>
+    <symbol id="ic-clock-small" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
+    <symbol id="ic-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></symbol>
+    <symbol id="ic-list" viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></symbol>
+    <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
   </defs>
 </svg>
 
@@ -1149,8 +1450,8 @@ svg { display: block; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <img class="brand-mark-icon" src="assets/tasklylogo.png" alt="Taskly logo">
-        
+        <img class="brand-mark-icon" src="images/logo.svg" alt="Taskly logo">
+        <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
       </div>
       <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
@@ -1158,11 +1459,11 @@ svg { display: block; }
     </div>
 
     <ul class="nav-list">
-      <li><a class="nav-link is-active" href="dashboard.html">
+      <li><a class="nav-link" href="dashboard.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-grid"/></svg>
         Dashboard
       </a></li>
-      <li><a class="nav-link" href="./roadmapmanager.html">
+      <li><a class="nav-link is-active" href="./roadmapmanager.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
         Roadmap Manager
       </a></li>
@@ -1196,19 +1497,18 @@ svg { display: block; }
       <div class="topbar-right">
         <button class="icon-btn-ghost" id="streakBtn" aria-label="Your streak">
           <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
-          <span class="badge-count" id="streakBadge">5</span>
+          <span class="badge-count">5</span>
         </button>
         <button class="icon-btn-ghost" id="notifBtn" aria-label="Notifications">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
           <span class="notif-dot" id="notifDot"></span>
         </button>
-        <img class="topbar-avatar" src="assets/profile.png" alt="Your profile">
+        <img class="topbar-avatar" src="images/avatar-placeholder.svg" alt="Your profile">
       </div>
     </header>
 
     <main class="main-content">
 
-      <!-- Minimal slanted productivity-icon wallpaper, yellow, on the white content area -->
       <div class="bg-pattern" id="bgPattern" aria-hidden="true">
         <svg class="pattern-root" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -1265,118 +1565,166 @@ svg { display: block; }
         </svg>
       </div>
 
-      <div class="content-inner">
+      <div class="content-inner" style="max-width: 720px;">
 
-        <div class="greeting">
-          <h1>Welcome back, Sarah!</h1>
-          <p>What would you like to get done? Tell Taskly and we'll guide you all the way.</p>
-        </div>
+        <a class="back-link" href="./roadmapmanager.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-back"/></svg>
+          Back to manager
+        </a>
 
-        <div class="chat-card">
-          <textarea class="chat-textarea" id="goalInput" placeholder="What's on your mind?" rows="2" maxlength="500"></textarea>
-          <div class="chat-toolbar">
-            <div class="chat-toolbar-left">
-              <button class="chat-icon-btn" type="button" aria-label="Attach a file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-paperclip"/></svg>
-              </button>
-              <button class="chat-icon-btn" type="button" aria-label="Attach an image">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-image"/></svg>
-              </button>
-              <span class="char-count" id="charCount">0/500</span>
+        <div class="roadmap-header">
+          <div class="roadmap-header-left">
+            <h1 id="roadmapTitle">Roadmap</h1>
+            <span class="roadmap-type-badge" id="roadmapTypeBadge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-layers" id="roadmapTypeIcon"/></svg>
+              <span id="roadmapTypeLabel">Sequential</span>
+            </span>
+          </div>
+          <div class="roadmap-header-right">
+            <div class="progress-ring-wrap">
+              <svg viewBox="0 0 56 56">
+                <circle class="progress-ring-track" cx="28" cy="28" r="24"/>
+                <circle class="progress-ring-fill" id="progressRingFill" cx="28" cy="28" r="24"/>
+              </svg>
+              <span class="progress-ring-label" id="progressRingLabel">0%</span>
             </div>
-            <button class="send-btn" id="sendBtn" type="button" aria-label="Send" disabled>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-send"/></svg>
+            <button class="card-menu-btn" id="roadmapMenuBtn" aria-label="Roadmap options" style="background:var(--color-cream-soft);">
+              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
             </button>
           </div>
         </div>
 
-        <button class="btn-add-roadmap" id="addRoadmapBtn" type="button">
+        <div class="state-legend" id="stateLegend">
+          <div class="state-legend-item"><span class="legend-dot is-complete"></span>Complete</div>
+          <div class="state-legend-item"><span class="legend-dot is-available"></span>Available now</div>
+          <div class="state-legend-item"><span class="legend-dot is-locked"></span>Locked — finish earlier tasks first</div>
+        </div>
+
+        <div class="roadmap-body" id="roadmapBody">
+          <!-- Rendered by JS based on roadmap type -->
+        </div>
+
+        <button class="btn-add-task" id="addTaskBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><use href="#ic-plus"/></svg>
-          Add New Roadmap
+          Add a task
         </button>
-
-        <h2 class="section-heading">Your Roadmaps</h2>
-
-        <div class="roadmap-list" id="roadmapList">
-
-          <article class="roadmap-card" data-id="rm-1" data-title="My Figma course" data-icon="ic-laptop" data-icon-variant="is-teal">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-laptop"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">My Figma course</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="42"></div></div>
-              <p class="roadmap-meta">10 out of 24 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-2" data-title="Learn to drive" data-icon="ic-car" data-icon-variant="">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-car"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Learn to drive</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="60"></div></div>
-              <p class="roadmap-meta">3 out of 5 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-3" data-title="Jollof Rice recipe" data-icon="ic-pot" data-icon-variant="is-teal">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pot"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Jollof Rice recipe</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="87"></div></div>
-              <p class="roadmap-meta">13 out of 15 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-4" data-title="Plumbing" data-icon="ic-wrench" data-icon-variant="">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-wrench"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Plumbing</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="0"></div></div>
-              <p class="roadmap-meta">0 out of 12 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-        </div>
-
-        <div class="empty-roadmaps" id="emptyRoadmaps">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
-          <strong>No roadmaps yet</strong>
-          Type a goal above or tap "Add New Roadmap" to get your first checkable path.
-        </div>
 
       </div>
     </main>
   </div>
 </div>
 
-<button class="help-bubble" id="nodiBtn" type="button">
-  <img src="assets/Nodi.png" alt="">
-  Need help? Ask Nodi
-</button>
+<!-- ============ Node detail modal ============ -->
+<div class="modal-overlay" id="nodeDetailOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Task detail">
+    <div class="modal-header">
+      <h3 id="nodeDetailTitle">Task</h3>
+      <button class="modal-close" data-close-modal="nodeDetailOverlay" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+      </button>
+    </div>
 
-<!-- ============ Notifications dropdown ============ -->
+    <p class="node-detail-desc" id="nodeDetailDesc">Description goes here.</p>
+
+    <div class="node-detail-meta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"/></svg>
+      <span id="nodeDetailEstimate">30 minutes</span>
+    </div>
+
+    <button class="btn-complete-toggle" id="nodeCompleteToggle" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"/></svg>
+      <span id="nodeCompleteToggleLabel">Mark as complete</span>
+    </button>
+
+    <div class="node-secondary-actions">
+      <button class="btn-ghost" id="nodeEditBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
+        Edit
+      </button>
+      <button class="btn-ghost" id="nodeDeleteBtn" type="button" style="color: var(--color-error); border-color: var(--color-error-tint);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Add / edit task modal ============ -->
+<div class="modal-overlay" id="taskFormOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Task form">
+    <div class="modal-header">
+      <h3 id="taskFormHeading">Add a task</h3>
+      <button class="modal-close" data-close-modal="taskFormOverlay" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+      </button>
+    </div>
+
+    <label class="modal-field-label" for="taskNameInput">Task name</label>
+    <input class="modal-input" id="taskNameInput" type="text" maxlength="120" placeholder="e.g. Set up component variants">
+
+    <label class="modal-field-label" for="taskDescInput">Description</label>
+    <textarea class="modal-textarea" id="taskDescInput" maxlength="300" placeholder="What does done look like?" style="min-height:70px; margin-bottom: var(--sp-3);"></textarea>
+
+    <label class="modal-field-label" for="taskEstimateInput">Time estimate</label>
+    <input class="modal-input" id="taskEstimateInput" type="text" maxlength="40" placeholder="e.g. 45 minutes">
+
+    <div id="taskPositionField">
+      <label class="modal-field-label" for="taskPositionSelect">Comes after</label>
+      <select class="modal-select" id="taskPositionSelect"></select>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" type="button" data-close-modal="taskFormOverlay">Cancel</button>
+      <button class="btn-solid" id="taskFormSaveBtn" type="button">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Delete task confirm ============ -->
+<div class="modal-overlay" id="deleteTaskOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Delete task">
+    <div class="confirm-view is-active">
+      <div class="warn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-warn"/></svg>
+      </div>
+      <p>Delete "<strong id="deleteTaskTitle">this task</strong>"? This can't be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-ghost" type="button" data-close-modal="deleteTaskOverlay">Cancel</button>
+        <button class="btn-solid is-danger" type="button" id="confirmDeleteTaskBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Roadmap-level options ============ -->
+<div class="modal-overlay" id="roadmapMenuOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Roadmap options">
+    <div class="modal-header">
+      <h3>Roadmap Options</h3>
+      <button class="modal-close" data-close-modal="roadmapMenuOverlay" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+      </button>
+    </div>
+    <div class="option-list">
+      <button class="option-item" type="button" id="renameRoadmapBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
+        Rename Roadmap
+      </button>
+      <button class="option-item" type="button" id="regenerateRoadmapBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-refresh"/></svg>
+        Regenerate Roadmap
+      </button>
+      <button class="option-item is-danger" type="button" id="deleteRoadmapBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
+        Delete Roadmap
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Streak + notifications (shared with dashboard) ============ -->
 <div class="dropdown-panel" id="notifPanel" role="menu" aria-label="Notifications">
   <div class="dropdown-header">Notifications</div>
-
   <div class="notif-item">
     <div class="notif-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"/></svg></div>
     <div>
@@ -1384,7 +1732,6 @@ svg { display: block; }
       <p class="notif-time">12 minutes ago</p>
     </div>
   </div>
-
   <div class="notif-item">
     <div class="notif-icon is-teal"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg></div>
     <div>
@@ -1392,29 +1739,11 @@ svg { display: block; }
       <p class="notif-time">3 hours ago</p>
     </div>
   </div>
-
-  <div class="notif-item">
-    <div class="notif-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg></div>
-    <div>
-      <p class="notif-text">Your <strong>Jollof Rice recipe</strong> roadmap is almost done — 2 tasks left.</p>
-      <p class="notif-time">Yesterday</p>
-    </div>
-  </div>
-
-  <div class="notif-item">
-    <div class="notif-icon is-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-plus"/></svg></div>
-    <div>
-      <p class="notif-text">"Plumbing" roadmap was created and is ready to start.</p>
-      <p class="notif-time">2 days ago</p>
-    </div>
-  </div>
-
   <div class="dropdown-footer">
     <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
   </div>
 </div>
 
-<!-- ============ Streak modal ============ -->
 <div class="modal-overlay" id="streakOverlay">
   <div class="modal modal-streak" role="dialog" aria-modal="true" aria-label="Your streak">
     <div class="modal-header">
@@ -1423,152 +1752,14 @@ svg { display: block; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
       </button>
     </div>
-
     <div class="streak-flame-big">
       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
     </div>
-    <p class="streak-count-big" id="streakCountBig">5 Days</p>
+    <p class="streak-count-big">5 Days</p>
     <p class="streak-sub">You're on fire! Complete a task today to keep it going.</p>
-
-    <div class="streak-week" id="streakWeek">
-      <div class="streak-day"><span class="streak-day-dot is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5 11-11"/></svg></span>Mon</div>
-      <div class="streak-day"><span class="streak-day-dot is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5 11-11"/></svg></span>Tue</div>
-      <div class="streak-day"><span class="streak-day-dot is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5 11-11"/></svg></span>Wed</div>
-      <div class="streak-day"><span class="streak-day-dot is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5 11-11"/></svg></span>Thu</div>
-      <div class="streak-day"><span class="streak-day-dot is-active is-today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5 11-11"/></svg></span>Fri</div>
-      <div class="streak-day"><span class="streak-day-dot"></span>Sat</div>
-      <div class="streak-day"><span class="streak-day-dot"></span>Sun</div>
-    </div>
-
     <div class="streak-countdown-box">
       <p class="streak-countdown-label">Streak resets in</p>
       <p class="streak-countdown" id="streakCountdown">--:--:--</p>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Add New Roadmap modal ============ -->
-<div class="modal-overlay" id="addRoadmapOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Add a new roadmap">
-
-    <div class="form-view" id="addRoadmapFormView">
-      <div class="modal-header">
-        <h3>Start a new roadmap</h3>
-        <button class="modal-close" data-close-modal="addRoadmapOverlay" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-        </button>
-      </div>
-      <p class="modal-sub">Type any goal, from a skill to an errand. Taskly will figure out whether it needs a step-by-step path or a simple checklist.</p>
-
-      <textarea class="modal-textarea" id="modalGoalInput" maxlength="500" placeholder="e.g. Learn Rust, plan a wedding, buy groceries for the week…"></textarea>
-      <p class="modal-char-count"><span id="modalCharCount">0</span>/500</p>
-
-      <div class="example-chips">
-        <button class="example-chip" type="button" data-example="Learn the basics of Rust">Learn Rust</button>
-        <button class="example-chip" type="button" data-example="Plan a wedding in 6 months">Plan a wedding</button>
-        <button class="example-chip" type="button" data-example="Buy groceries for the week">Weekly groceries</button>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-ghost" type="button" data-close-modal="addRoadmapOverlay">Cancel</button>
-        <button class="btn-solid" id="generateRoadmapBtn" type="button" disabled>Generate Roadmap</button>
-      </div>
-    </div>
-
-    <div class="generation-state" id="generationState">
-      <div class="gen-ring"></div>
-      <p class="generation-message" id="generationMessage">Breaking this into phases…</p>
-      <p class="generation-submessage">This usually takes a few seconds.</p>
-    </div>
-
-  </div>
-</div>
-
-<!-- ============ Roadmap options modal ============ -->
-<div class="modal-overlay" id="roadmapOptionsOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Roadmap options">
-
-    <div id="roadmapOptionsView">
-      <div class="modal-header">
-        <h3>Roadmap Options</h3>
-        <button class="modal-close" data-close-modal="roadmapOptionsOverlay" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-        </button>
-      </div>
-
-      <div class="roadmap-options-header">
-        <div class="roadmap-icon" id="optionsRoadmapIcon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route" id="optionsRoadmapIconUse"/></svg>
-        </div>
-        <div class="roadmap-options-header-text">
-          <p class="title" id="optionsRoadmapTitle">Roadmap</p>
-          <p class="meta" id="optionsRoadmapMeta">—</p>
-        </div>
-      </div>
-
-      <div class="option-list">
-        <button class="option-item" type="button" id="viewRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
-          View Roadmap
-        </button>
-        <button class="option-item" type="button" id="renameRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          Rename Roadmap
-        </button>
-        <button class="option-item" type="button" id="regenerateRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
-          Regenerate Roadmap
-        </button>
-        <button class="option-item is-danger" type="button" id="deleteRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
-          Delete Roadmap
-        </button>
-      </div>
-    </div>
-
-    <div class="confirm-view" id="deleteConfirmView">
-      <div class="warn-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-      </div>
-      <p>Delete "<strong id="deleteConfirmTitle">this roadmap</strong>"? This can't be undone.</p>
-      <div class="confirm-actions">
-        <button class="btn-ghost" type="button" id="cancelDeleteBtn">Cancel</button>
-        <button class="btn-solid is-danger" type="button" id="confirmDeleteBtn">Delete</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ============ Ask Nodi modal ============ -->
-<div class="modal-overlay" id="nodiOverlay">
-  <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi">
-    <div class="nodi-header">
-      <img src="assets/Nodi.png" alt="">
-      <div class="nodi-header-text">
-        <p class="name">Nodi</p>
-        <p class="status">Online</p>
-      </div>
-      <button class="modal-close" data-close-modal="nodiOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
-
-    <div class="nodi-body" id="nodiBody">
-      <div class="chat-bubble from-nodi">Hey, I'm Nodi 👋 Ask me anything about your roadmaps, or tell me what you're stuck on.</div>
-    </div>
-
-    <div class="nodi-suggestions" id="nodiSuggestions">
-      <button class="suggestion-chip" type="button">Help me get unstuck</button>
-      <button class="suggestion-chip" type="button">Explain this task</button>
-      <button class="suggestion-chip" type="button">Suggest resources</button>
-    </div>
-
-    <div class="nodi-input-row">
-      <input class="nodi-input" id="nodiInput" type="text" placeholder="Message Nodi…" maxlength="300">
-      <button class="send-btn" id="nodiSendBtn" type="button" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-send"/></svg>
-      </button>
     </div>
   </div>
 </div>
@@ -1577,22 +1768,12 @@ svg { display: block; }
 
 <script>
 /* ==========================================================
-   TASKLY — dashboard.js
+   TASKLY — roadmap.js
    ========================================================== */
-window.TasklyDashboard = (function () {
-
-  // Point this at your FastAPI backend. Set window.TASKLY_API_BASE
-  // to your API URL in a script tag before this file loads.
-  const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
-  const TOKEN_KEY = "taskly_access_token";
-  const MAX_CHARS = 500;
+window.TasklyRoadmap = (function () {
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
-
-  function getToken() {
-    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
-  }
 
   function showToast(message, type) {
     const toast = $("#toast");
@@ -1603,7 +1784,13 @@ window.TasklyDashboard = (function () {
     showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 3600);
   }
 
-  /* ---------- generic modal + dropdown plumbing ---------- */
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  /* ---------- generic modal plumbing (mirrors dashboard.js) ---------- */
 
   function openModal(overlayId) {
     closeAllDropdowns();
@@ -1613,9 +1800,6 @@ window.TasklyDashboard = (function () {
   function closeModal(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.remove("is-open");
-  }
-  function closeAllModals() {
-    $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
   }
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
@@ -1632,13 +1816,13 @@ window.TasklyDashboard = (function () {
     });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
-        closeAllModals();
+        $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
         closeAllDropdowns();
       }
     });
   }
 
-  /* ---------- mobile drawer ---------- */
+  /* ---------- shared shell: drawer, streak, notifications ---------- */
 
   function wireDrawer() {
     const sidebar = $("#sidebar");
@@ -1646,7 +1830,6 @@ window.TasklyDashboard = (function () {
     const openBtn = $("#hamburgerBtn");
     const closeBtn = $("#sidebarCloseBtn");
     if (!sidebar || !overlay) return;
-
     function open() { sidebar.classList.add("is-open"); overlay.classList.add("is-visible"); }
     function close() { sidebar.classList.remove("is-open"); overlay.classList.remove("is-visible"); }
     openBtn && openBtn.addEventListener("click", open);
@@ -1655,295 +1838,7 @@ window.TasklyDashboard = (function () {
     $all(".nav-link").forEach((link) => link.addEventListener("click", close));
   }
 
-  /* ---------- inline goal / chat card (dashboard body) ---------- */
-
-  function wireChatCard() {
-    const textarea = $("#goalInput");
-    const charCount = $("#charCount");
-    const sendBtn = $("#sendBtn");
-    if (!textarea) return;
-
-    function updateCount() {
-      const len = textarea.value.length;
-      if (charCount) charCount.textContent = `${len}/${MAX_CHARS}`;
-      if (sendBtn) sendBtn.disabled = len === 0;
-    }
-    textarea.addEventListener("input", () => {
-      if (textarea.value.length > MAX_CHARS) textarea.value = textarea.value.slice(0, MAX_CHARS);
-      updateCount();
-    });
-    updateCount();
-
-    async function submitInlineGoal() {
-      const goal = textarea.value.trim();
-      if (!goal) { textarea.focus(); return; }
-      await createRoadmapRequest(goal);
-      textarea.value = "";
-      updateCount();
-    }
-
-    sendBtn && sendBtn.addEventListener("click", submitInlineGoal);
-    textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitInlineGoal(); }
-    });
-  }
-
-  /* ---------- shared: call the backend to create a roadmap ---------- */
-
-  async function createRoadmapRequest(goalText) {
-    const token = getToken();
-    try {
-      // POST /roadmaps { goal_text } — kicks off async generation per the API spec.
-      const res = await fetch(API_BASE + "/roadmaps", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ goal_text: goalText })
-      });
-      if (!res.ok) throw new Error("Couldn't start that roadmap. Please try again.");
-      return await res.json().catch(() => ({}));
-    } catch (err) {
-      // Backend isn't wired up in this preview — fail silently upstream,
-      // the calling UI (modal) shows its own simulated progress.
-      throw err;
-    }
-  }
-
-  /* ---------- Add New Roadmap modal ---------- */
-
-  function wireAddRoadmapModal() {
-    const openBtn = $("#addRoadmapBtn");
-    const textarea = $("#modalGoalInput");
-    const charCount = $("#modalCharCount");
-    const generateBtn = $("#generateRoadmapBtn");
-    const formView = $("#addRoadmapFormView");
-    const genState = $("#generationState");
-    const genMessage = $("#generationMessage");
-    if (!openBtn || !textarea) return;
-
-    openBtn.addEventListener("click", () => {
-      openModal("addRoadmapOverlay");
-      formView.classList.remove("is-hidden");
-      genState.classList.remove("is-active");
-      setTimeout(() => textarea.focus(), 250);
-    });
-
-    function updateCount() {
-      const len = textarea.value.length;
-      charCount.textContent = len;
-      generateBtn.disabled = len === 0;
-    }
-    textarea.addEventListener("input", updateCount);
-    updateCount();
-
-    $all(".example-chip").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        textarea.value = chip.dataset.example;
-        updateCount();
-        textarea.focus();
-      });
-    });
-
-    const messages = [
-      "Breaking this into phases…",
-      "Figuring out what needs to come first…",
-      "Filling in the details…"
-    ];
-
-    generateBtn.addEventListener("click", () => {
-      const goal = textarea.value.trim();
-      if (!goal) return;
-
-      formView.classList.add("is-hidden");
-      genState.classList.add("is-active");
-
-      let step = 0;
-      genMessage.textContent = messages[0];
-      const msgInterval = setInterval(() => {
-        step++;
-        if (step < messages.length) {
-          genMessage.style.opacity = 0;
-          setTimeout(() => { genMessage.textContent = messages[step]; genMessage.style.opacity = 1; }, 200);
-        }
-      }, 1000);
-
-      // Try the real backend; regardless of outcome, this is a UI demo
-      // so we simulate the generation delay and show a result either way.
-      createRoadmapRequest(goal).catch(() => {});
-
-      setTimeout(() => {
-        clearInterval(msgInterval);
-        closeModal("addRoadmapOverlay");
-        formView.classList.remove("is-hidden");
-        genState.classList.remove("is-active");
-        textarea.value = "";
-        updateCount();
-        addRoadmapCardToList(goal);
-        showToast("Your roadmap is ready!", "success");
-      }, 3200);
-    });
-  }
-
-  function addRoadmapCardToList(goalText) {
-    const list = $("#roadmapList");
-    if (!list) return;
-    const id = "rm-" + Date.now();
-    const title = goalText.length > 46 ? goalText.slice(0, 43) + "…" : goalText;
-    const variant = list.children.length % 2 === 0 ? "is-teal" : "";
-
-    const card = document.createElement("article");
-    card.className = "roadmap-card";
-    card.dataset.id = id;
-    card.dataset.title = title;
-    card.dataset.icon = "ic-route";
-    card.dataset.iconVariant = variant;
-    card.style.opacity = "0";
-    card.style.transform = "translateY(14px)";
-    card.innerHTML = [
-      '<div class="roadmap-icon ' + variant + '">',
-      '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"></use></svg>',
-      '</div>',
-      '<div class="roadmap-body">',
-      '  <p class="roadmap-title">' + escapeHtml(title) + '</p>',
-      '  <div class="progress-track"><div class="progress-fill" data-progress="0" style="width:0%"></div></div>',
-      '  <p class="roadmap-meta">0 out of 8 tasks completed</p>',
-      '</div>',
-      '<button class="card-menu-btn" aria-label="Roadmap options">',
-      '  <svg viewBox="0 0 24 24"><use href="#ic-dots"></use></svg>',
-      '</button>'
-    ].join("\n");
-    list.prepend(card);
-    wireOneRoadmapCard(card);
-    requestAnimationFrame(() => {
-      card.style.transition = "opacity .4s ease, transform .4s ease";
-      card.style.opacity = "1";
-      card.style.transform = "translateY(0)";
-    });
-    updateEmptyState();
-  }
-
-  function escapeHtml(str) {
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
-  }
-
-  /* ---------- roadmap cards + options modal ---------- */
-
-  let currentOptionsCard = null;
-
-  function animateProgressBars() {
-    $all(".progress-fill").forEach((bar) => {
-      const target = bar.dataset.progress || "0";
-      setTimeout(() => { bar.style.width = target + "%"; }, 200);
-    });
-  }
-
-  function openOptionsForCard(card) {
-    currentOptionsCard = card;
-    const title = card.dataset.title || "Roadmap";
-    const metaEl = card.querySelector(".roadmap-meta");
-    const meta = metaEl ? metaEl.textContent : "";
-    const iconId = card.dataset.icon || "ic-route";
-    const variant = card.dataset.iconVariant || "";
-
-    $("#optionsRoadmapTitle").textContent = title;
-    $("#optionsRoadmapMeta").textContent = meta;
-    $("#optionsRoadmapIconUse").setAttribute("href", "#" + iconId);
-    const iconBox = $("#optionsRoadmapIcon");
-    iconBox.className = "roadmap-icon" + (variant ? " " + variant : "");
-
-    $("#roadmapOptionsView").style.display = "";
-    $("#deleteConfirmView").classList.remove("is-active");
-    openModal("roadmapOptionsOverlay");
-  }
-
-  function wireOneRoadmapCard(card) {
-    card.addEventListener("click", (e) => {
-      if (e.target.closest(".card-menu-btn")) return; // handled separately
-      openOptionsForCard(card);
-    });
-    const menuBtn = card.querySelector(".card-menu-btn");
-    if (menuBtn) {
-      menuBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openOptionsForCard(card);
-      });
-    }
-  }
-
-  function wireRoadmapCards() {
-    $all(".roadmap-card").forEach(wireOneRoadmapCard);
-  }
-
-  function updateEmptyState() {
-    const list = $("#roadmapList");
-    const empty = $("#emptyRoadmaps");
-    if (!list || !empty) return;
-    empty.classList.toggle("is-visible", list.children.length === 0);
-  }
-
-  function wireOptionsModalActions() {
-    $("#viewRoadmapOption").addEventListener("click", () => {
-      showToast("Opening roadmap details is coming next.");
-    });
-
-    $("#renameRoadmapOption").addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      const current = currentOptionsCard.dataset.title;
-      const next = window.prompt("Rename roadmap", current);
-      if (next && next.trim()) {
-        const trimmed = next.trim();
-        currentOptionsCard.dataset.title = trimmed;
-        currentOptionsCard.querySelector(".roadmap-title").textContent = trimmed;
-        $("#optionsRoadmapTitle").textContent = trimmed;
-        showToast("Roadmap renamed.", "success");
-      }
-    });
-
-    $("#regenerateRoadmapOption").addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      closeModal("roadmapOptionsOverlay");
-      const bar = currentOptionsCard.querySelector(".progress-fill");
-      const original = bar.dataset.progress;
-      bar.style.width = "0%";
-      showToast("Regenerating roadmap…");
-      setTimeout(() => { bar.style.width = original + "%"; showToast("Roadmap regenerated.", "success"); }, 1400);
-    });
-
-    $("#deleteRoadmapOption").addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      $("#deleteConfirmTitle").textContent = currentOptionsCard.dataset.title;
-      $("#roadmapOptionsView").style.display = "none";
-      $("#deleteConfirmView").classList.add("is-active");
-    });
-
-    $("#cancelDeleteBtn").addEventListener("click", () => {
-      $("#roadmapOptionsView").style.display = "";
-      $("#deleteConfirmView").classList.remove("is-active");
-    });
-
-    $("#confirmDeleteBtn").addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      const card = currentOptionsCard;
-      closeModal("roadmapOptionsOverlay");
-      card.style.transition = "opacity .25s ease, transform .25s ease";
-      card.style.opacity = "0";
-      card.style.transform = "translateY(-8px)";
-      setTimeout(() => {
-        card.remove();
-        updateEmptyState();
-      }, 250);
-      showToast("Roadmap deleted.");
-    });
-  }
-
-  /* ---------- streak popup ---------- */
-
   let streakInterval = null;
-
   function wireStreakPopup() {
     const btn = $("#streakBtn");
     if (!btn) return;
@@ -1953,14 +1848,7 @@ window.TasklyDashboard = (function () {
       clearInterval(streakInterval);
       streakInterval = setInterval(tickCountdown, 1000);
     });
-    $("#streakOverlay").addEventListener("click", (e) => {
-      if (e.target.id === "streakOverlay") clearInterval(streakInterval);
-    });
-    $all('[data-close-modal="streakOverlay"]').forEach((b) =>
-      b.addEventListener("click", () => clearInterval(streakInterval))
-    );
   }
-
   function tickCountdown() {
     const el = $("#streakCountdown");
     if (!el) return;
@@ -1975,88 +1863,396 @@ window.TasklyDashboard = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
-  /* ---------- notifications dropdown ---------- */
-
   function wireNotifications() {
     const btn = $("#notifBtn");
     const panel = $("#notifPanel");
     const dot = $("#notifDot");
     if (!btn || !panel) return;
-
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const willOpen = !panel.classList.contains("is-open");
       closeAllDropdowns();
-      if (willOpen) {
-        panel.classList.add("is-open");
-        if (dot) dot.style.display = "none";
-      }
+      if (willOpen) { panel.classList.add("is-open"); if (dot) dot.style.display = "none"; }
     });
-
     document.addEventListener("click", (e) => {
-      if (panel.classList.contains("is-open") && !panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
         panel.classList.remove("is-open");
       }
     });
-
-    $("#viewAllNotifsBtn").addEventListener("click", () => {
+    const viewAll = $("#viewAllNotifsBtn");
+    viewAll && viewAll.addEventListener("click", () => {
       panel.classList.remove("is-open");
       showToast("A full notifications page is coming soon.");
     });
   }
 
-  /* ---------- Ask Nodi modal ---------- */
+  /* ---------- sample data ---------- */
 
-  const nodiReplies = [
-    "Good question — once I'm connected to your roadmap data I'll be able to answer that in detail. For now, try breaking the task into two smaller steps and starting with whichever feels easiest.",
-    "I don't have live answers wired up in this preview yet, but that's exactly the kind of thing I'll help with once I'm connected to the backend.",
-    "Here's a general tip: if a task feels stuck, it's often too big. Splitting it into a 20-minute first step usually gets things moving again."
-  ];
+  function buildSampleData(type) {
+    if (type === "flat") {
+      return {
+        title: "Weekly groceries",
+        type: "flat",
+        tasks: [
+          { id: "t1", title: "Milk & eggs", description: "2% milk, one dozen eggs.", estimate: "10 minutes", completed: true },
+          { id: "t2", title: "Fresh vegetables", description: "Tomatoes, onions, peppers, spinach.", estimate: "15 minutes", completed: true },
+          { id: "t3", title: "Rice & pasta", description: "One bag of rice, two boxes of pasta.", estimate: "5 minutes", completed: false },
+          { id: "t4", title: "Chicken breast", description: "About 1kg, for the week's meals.", estimate: "5 minutes", completed: false },
+          { id: "t5", title: "Snacks", description: "Something for the kids' lunchboxes.", estimate: "10 minutes", completed: false },
+          { id: "t6", title: "Dish soap & sponges", description: "Running low under the sink.", estimate: "5 minutes", completed: false }
+        ]
+      };
+    }
+    return {
+      title: "My Figma course",
+      type: "sequential",
+      phases: [
+        {
+          label: "Getting Started",
+          nodes: [
+            { id: "n1", title: "Install Figma & create an account", description: "Download the desktop app or use the browser version, then create your free account.", estimate: "15 minutes", completed: true },
+            { id: "n2", title: "Learn the interface", description: "Get familiar with the toolbar, layers panel, and canvas navigation.", estimate: "30 minutes", completed: true },
+            { id: "n3", title: "Create your first frame", description: "Set up a frame and understand artboard basics.", estimate: "20 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Auto Layout & Components",
+          nodes: [
+            { id: "n4", title: "Understand Auto Layout", description: "Learn how auto layout handles spacing and resizing automatically.", estimate: "45 minutes", completed: false },
+            { id: "n5", title: "Build reusable components", description: "Create your first component and a variant set.", estimate: "40 minutes", completed: false },
+            { id: "n6", title: "Style with color & text styles", description: "Set up shared styles for consistency across your file.", estimate: "25 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Prototyping",
+          nodes: [
+            { id: "n7", title: "Wire up interactions", description: "Connect frames with prototype links and transitions.", estimate: "40 minutes", completed: false },
+            { id: "n8", title: "Present & share your file", description: "Learn to share view/edit links and use presentation mode.", estimate: "15 minutes", completed: false }
+          ]
+        }
+      ]
+    };
+  }
 
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
+  let roadmap = null;
 
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input.focus(), 250);
+  /* ---------- helpers over the data model ---------- */
+
+  function flattenNodes() {
+    if (roadmap.type === "flat") return roadmap.tasks;
+    const all = [];
+    roadmap.phases.forEach((p) => p.nodes.forEach((n) => all.push(n)));
+    return all;
+  }
+
+  function computeProgress() {
+    const all = flattenNodes();
+    if (all.length === 0) return 0;
+    const done = all.filter((n) => n.completed).length;
+    return Math.round((done / all.length) * 100);
+  }
+
+  function nodeState(node, indexInFlat, flat) {
+    if (node.completed) return "complete";
+    const allPreviousComplete = flat.slice(0, indexInFlat).every((n) => n.completed);
+    return allPreviousComplete ? "available" : "locked";
+  }
+
+  function findNodeById(id) {
+    const all = flattenNodes();
+    return all.find((n) => n.id === id) || null;
+  }
+
+  /* ---------- rendering ---------- */
+
+  function renderHeader() {
+    $("#roadmapTitle").textContent = roadmap.title;
+    const badge = $("#roadmapTypeBadge");
+    const label = $("#roadmapTypeLabel");
+    const icon = $("#roadmapTypeIcon");
+    if (roadmap.type === "flat") {
+      badge.classList.add("is-flat");
+      label.textContent = "Flat checklist";
+      icon.setAttribute("href", "#ic-list");
+      $("#stateLegend").style.display = "none";
+    } else {
+      badge.classList.remove("is-flat");
+      label.textContent = "Sequential";
+      icon.setAttribute("href", "#ic-layers");
+      $("#stateLegend").style.display = "";
+    }
+    renderProgressRing();
+  }
+
+  function renderProgressRing() {
+    const pct = computeProgress();
+    const circumference = 150.8;
+    const offset = circumference - (pct / 100) * circumference;
+    $("#progressRingFill").style.strokeDashoffset = offset;
+    $("#progressRingLabel").textContent = pct + "%";
+  }
+
+  function iconForState(state) {
+    if (state === "complete") return "#ic-check";
+    if (state === "locked") return "#ic-lock";
+    return "#ic-check";
+  }
+
+  function renderSequential() {
+    const body = $("#roadmapBody");
+    const flat = flattenNodes();
+    let flatIndex = 0;
+    let html = "";
+
+    roadmap.phases.forEach((phase, pIdx) => {
+      html += '<div class="phase-block">';
+      html += '<div class="phase-label"><span class="phase-index">' + (pIdx + 1) + '</span>' + escapeHtml(phase.label) + '</div>';
+      html += '<div class="node-chain">';
+
+      phase.nodes.forEach((node) => {
+        const state = nodeState(node, flatIndex, flat);
+        const lineDone = node.completed ? "is-done" : "";
+        html += '<div class="node-item is-' + state + '" data-node-id="' + node.id + '">';
+        html += '  <div class="node-chain-line ' + lineDone + '"></div>';
+        html += '  <div class="node-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="' + iconForState(state) + '"></use></svg></div>';
+        html += '  <div class="node-card" data-node-id="' + node.id + '">';
+        html += '    <p class="node-title">' + escapeHtml(node.title) + '</p>';
+        html += '    <div class="node-meta-row">';
+        html += '      <span class="node-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>' + escapeHtml(node.estimate) + '</span>';
+        if (state === "locked") html += '      <span class="locked-tag">Locked</span>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+        flatIndex++;
+      });
+
+      html += '</div></div>';
     });
 
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-      return bubble;
+    body.innerHTML = html;
+    wireNodeCards();
+  }
+
+  function renderFlat() {
+    const body = $("#roadmapBody");
+    let html = '<div class="checklist">';
+    roadmap.tasks.forEach((task, i) => {
+      html += '<div class="checklist-item ' + (task.completed ? "is-complete" : "") + '" data-node-id="' + task.id + '" style="animation-delay:' + (i * 0.05) + 's">';
+      html += '  <span class="checklist-checkbox" data-checkbox-id="' + task.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"></use></svg></span>';
+      html += '  <div class="checklist-body">';
+      html += '    <p class="checklist-title">' + escapeHtml(task.title) + '</p>';
+      html += '    <p class="checklist-meta">' + escapeHtml(task.estimate) + '</p>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+    wireNodeCards();
+  }
+
+  function render() {
+    renderHeader();
+    if (roadmap.type === "flat") renderFlat(); else renderSequential();
+    renderProgressRing();
+  }
+
+  /* ---------- node interactions ---------- */
+
+  function wireNodeCards() {
+    if (roadmap.type === "flat") {
+      $all(".checklist-item").forEach((item) => {
+        item.addEventListener("click", () => openNodeDetail(item.dataset.nodeId));
+      });
+    } else {
+      $all(".node-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          if (item.classList.contains("is-locked")) {
+            showToast("Finish the earlier tasks first to unlock this one.");
+            return;
+          }
+          openNodeDetail(item.dataset.nodeId);
+        });
+      });
     }
+  }
 
-    function sendMessage(text) {
-      const msg = (text || input.value).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      input.value = "";
+  let currentNodeId = null;
 
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
+  function openNodeDetail(id) {
+    const node = findNodeById(id);
+    if (!node) return;
+    currentNodeId = id;
+    $("#nodeDetailTitle").textContent = node.title;
+    $("#nodeDetailDesc").textContent = node.description;
+    $("#nodeDetailEstimate").textContent = node.estimate;
+    const toggle = $("#nodeCompleteToggle");
+    const label = $("#nodeCompleteToggleLabel");
+    toggle.classList.toggle("is-complete", node.completed);
+    label.textContent = node.completed ? "Completed — tap to undo" : "Mark as complete";
+    openModal("nodeDetailOverlay");
+  }
 
+  function wireNodeDetailModal() {
+    $("#nodeCompleteToggle").addEventListener("click", () => {
+      const node = findNodeById(currentNodeId);
+      if (!node) return;
+
+      if (node.completed) {
+        // Uncompleting cascades forward so the chain stays consistent.
+        const flat = flattenNodes();
+        const idx = flat.findIndex((n) => n.id === node.id);
+        let cascaded = false;
+        flat.slice(idx).forEach((n) => { if (n.completed) cascaded = true; n.completed = false; });
+        if (cascaded && flat.slice(idx + 1).some((n) => n.completed === false)) {
+          showToast("Marked incomplete. Later tasks in the chain were reset too.");
+        } else {
+          showToast("Marked incomplete.");
+        }
+      } else {
+        node.completed = true;
+        showToast("Nice work! Task complete.", "success");
+      }
+      render();
+      closeModal("nodeDetailOverlay");
+    });
+
+    $("#nodeEditBtn").addEventListener("click", () => {
+      closeModal("nodeDetailOverlay");
+      openTaskForm(currentNodeId);
+    });
+
+    $("#nodeDeleteBtn").addEventListener("click", () => {
+      closeModal("nodeDetailOverlay");
+      $("#deleteTaskTitle").textContent = findNodeById(currentNodeId).title;
+      openModal("deleteTaskOverlay");
+    });
+
+    $("#confirmDeleteTaskBtn").addEventListener("click", () => {
+      deleteNode(currentNodeId);
+      closeModal("deleteTaskOverlay");
+      showToast("Task deleted.");
+    });
+  }
+
+  function deleteNode(id) {
+    if (roadmap.type === "flat") {
+      roadmap.tasks = roadmap.tasks.filter((n) => n.id !== id);
+    } else {
+      roadmap.phases.forEach((p) => { p.nodes = p.nodes.filter((n) => n.id !== id); });
+    }
+    render();
+  }
+
+  /* ---------- add / edit task form ---------- */
+
+  let editingNodeId = null;
+
+  function siblingListForForm() {
+    // Sequential: siblings = last phase's nodes (new tasks are appended there by default).
+    // Flat: siblings = the whole list.
+    if (roadmap.type === "flat") return roadmap.tasks;
+    return roadmap.phases[roadmap.phases.length - 1].nodes;
+  }
+
+  function populatePositionSelect(excludeId) {
+    const select = $("#taskPositionSelect");
+    const siblings = siblingListForForm().filter((n) => n.id !== excludeId);
+    let html = '<option value="">Start of the list</option>';
+    siblings.forEach((n) => {
+      html += '<option value="' + n.id + '">' + escapeHtml(n.title) + '</option>';
+    });
+    select.innerHTML = html;
+    if (siblings.length) select.value = siblings[siblings.length - 1].id;
+  }
+
+  function openTaskForm(nodeId) {
+    editingNodeId = nodeId || null;
+    const heading = $("#taskFormHeading");
+    const nameInput = $("#taskNameInput");
+    const descInput = $("#taskDescInput");
+    const estInput = $("#taskEstimateInput");
+
+    populatePositionSelect(nodeId);
+
+    if (nodeId) {
+      const node = findNodeById(nodeId);
+      heading.textContent = "Edit task";
+      nameInput.value = node.title;
+      descInput.value = node.description;
+      estInput.value = node.estimate;
+    } else {
+      heading.textContent = "Add a task";
+      nameInput.value = "";
+      descInput.value = "";
+      estInput.value = "";
+    }
+    openModal("taskFormOverlay");
+    setTimeout(() => nameInput.focus(), 200);
+  }
+
+  function wireTaskForm() {
+    $("#addTaskBtn").addEventListener("click", () => openTaskForm(null));
+
+    $("#taskFormSaveBtn").addEventListener("click", () => {
+      const name = $("#taskNameInput").value.trim();
+      if (!name) { $("#taskNameInput").focus(); return; }
+      const description = $("#taskDescInput").value.trim() || "No description yet.";
+      const estimate = $("#taskEstimateInput").value.trim() || "—";
+      const afterId = $("#taskPositionSelect").value;
+
+      if (editingNodeId) {
+        const node = findNodeById(editingNodeId);
+        node.title = name;
+        node.description = description;
+        node.estimate = estimate;
+        showToast("Task updated.", "success");
+      } else {
+        const newNode = { id: "n" + Date.now(), title: name, description, estimate, completed: false };
+        const siblings = siblingListForForm();
+        if (!afterId) {
+          siblings.unshift(newNode);
+        } else {
+          const idx = siblings.findIndex((n) => n.id === afterId);
+          siblings.splice(idx + 1, 0, newNode);
+        }
+        showToast("Task added.", "success");
+      }
+      closeModal("taskFormOverlay");
+      render();
+    });
+  }
+
+  /* ---------- roadmap-level menu ---------- */
+
+  function wireRoadmapMenu() {
+    $("#roadmapMenuBtn").addEventListener("click", () => openModal("roadmapMenuOverlay"));
+
+    $("#renameRoadmapBtn").addEventListener("click", () => {
+      const next = window.prompt("Rename roadmap", roadmap.title);
+      if (next && next.trim()) {
+        roadmap.title = next.trim();
+        renderHeader();
+        showToast("Roadmap renamed.", "success");
+      }
+      closeModal("roadmapMenuOverlay");
+    });
+
+    $("#regenerateRoadmapBtn").addEventListener("click", () => {
+      closeModal("roadmapMenuOverlay");
+      showToast("Regenerating roadmap…");
       setTimeout(() => {
-        typing.remove();
-        const reply = nodiReplies[Math.floor(Math.random() * nodiReplies.length)];
-        appendBubble(reply, "nodi");
-      }, 1100);
-    }
+        flattenNodes().forEach((n, i) => { n.completed = i === 0; });
+        render();
+        showToast("Roadmap regenerated.", "success");
+      }, 1400);
+    });
 
-    sendBtn.addEventListener("click", () => sendMessage());
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => {
-      chip.addEventListener("click", () => sendMessage(chip.textContent));
+    $("#deleteRoadmapBtn").addEventListener("click", () => {
+      closeModal("roadmapMenuOverlay");
+      if (window.confirm('Delete "' + roadmap.title + '"? This can\'t be undone.')) {
+        showToast("Roadmap deleted. Returning to dashboard…");
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 900);
+      }
     });
   }
 
@@ -2064,24 +2260,27 @@ window.TasklyDashboard = (function () {
 
   function init() {
     document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get("type") === "flat" ? "flat" : "sequential";
+      roadmap = buildSampleData(type);
+      if (params.get("title")) roadmap.title = params.get("title");
+
       wireGenericModalClosers();
       wireDrawer();
-      wireChatCard();
-      wireAddRoadmapModal();
-      wireRoadmapCards();
-      wireOptionsModalActions();
       wireStreakPopup();
       wireNotifications();
-      wireNodiModal();
-      animateProgressBars();
-      updateEmptyState();
+      wireNodeDetailModal();
+      wireTaskForm();
+      wireRoadmapMenu();
+
+      render();
     });
   }
 
   return { init };
 })();
 
-TasklyDashboard.init();
+TasklyRoadmap.init();
 
 </script>
 </body>
