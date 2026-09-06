@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taskly — Roadmap</title>
+<title>Taskly — Notifications</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -129,7 +129,7 @@ svg { display: block; }
 .brand-block { text-align: left; }
 
 .brand-mark { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.brand-mark-icon { width: 80px; height: 40px; flex-shrink: 0; display: block; object-fit: contain; }
+.brand-mark-icon { width: 40px; height: 40px; flex-shrink: 0; display: block; object-fit: contain; }
 .brand-wordmark {
   font-family: var(--font-display);
   font-size: 28px;
@@ -182,7 +182,7 @@ svg { display: block; }
   margin-bottom: var(--sp-5);
 }
 @media (min-width: 960px) { .mobile-brand { display: none; } }
-.mobile-brand .brand-mark-icon { width: 80px; height: 40px; }
+.mobile-brand .brand-mark-icon { width: 28px; height: 28px; }
 .mobile-brand .brand-wordmark { font-size: 20px; }
 
 /* --- Avatar --- */
@@ -426,7 +426,7 @@ svg { display: block; }
   margin-bottom: var(--sp-6);
 }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; }
-.sidebar-brand .brand-mark-icon { width: 80px; height: 40px; }
+.sidebar-brand .brand-mark-icon { width: 30px; height: 30px; }
 .sidebar-brand .brand-wordmark { color: var(--color-white); font-size: 19px; }
 .sidebar-brand .brand-wordmark .dot-accent { color: var(--color-orange); }
 
@@ -1479,6 +1479,82 @@ svg { display: block; }
 }
 .manager-empty-filter.is-visible { display: block; }
 
+/* ============================================================
+   FULL NOTIFICATIONS PAGE
+   ============================================================ */
+.notif-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  opacity: 0; transform: translateY(14px);
+  animation: contentEnter .5s var(--ease-snap) forwards;
+}
+
+.notif-group { margin-top: var(--sp-5); }
+.notif-group-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin-bottom: var(--sp-3);
+}
+
+.notif-page-list { display: flex; flex-direction: column; gap: 10px; }
+
+.notif-page-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  opacity: 0; transform: translateY(10px);
+  animation: contentEnter .4s var(--ease-snap) forwards;
+  transition: box-shadow .2s ease, transform .15s ease, border-color .2s ease;
+}
+.notif-page-item:hover {
+  box-shadow: 0 12px 26px -16px rgba(60,42,10,.3);
+  transform: translateY(-1px);
+  border-color: var(--color-orange-tint);
+}
+.notif-page-item.is-read { opacity: .68; }
+.notif-page-item.is-read:hover { opacity: 1; }
+
+.notif-page-icon {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: var(--color-orange-tint); color: var(--color-orange-deep);
+  display: flex; align-items: center; justify-content: center;
+}
+.notif-page-icon.is-teal { background: var(--color-teal-tint); color: var(--color-teal-deep); }
+.notif-page-icon svg { width: 18px; height: 18px; }
+
+.notif-page-body { flex: 1; min-width: 0; }
+.notif-page-text { font-size: 13.5px; line-height: 1.5; color: var(--color-ink); }
+.notif-page-time { font-size: 11.5px; color: var(--color-ink-faint); margin-top: 4px; }
+
+.notif-unread-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-orange);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.notif-empty-state {
+  display: none;
+  text-align: center;
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--color-ink-soft);
+  font-size: 14px;
+}
+.notif-empty-state.is-visible { display: block; }
+.notif-empty-state svg { width: 40px; height: 40px; color: var(--color-orange); margin: 0 auto var(--sp-2); }
+
 </style>
 </head>
 <body>
@@ -1494,19 +1570,11 @@ svg { display: block; }
     <symbol id="ic-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
     <symbol id="ic-close" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
     <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
-    <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
     <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1 1 2 2.5 2 4.5A5.5 5.5 0 0 1 6 14.5C6 9 12 7 12 2Z"/></symbol>
     <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></symbol>
-    <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
-    <symbol id="ic-back" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></symbol>
     <symbol id="ic-clock-small" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
-    <symbol id="ic-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></symbol>
-    <symbol id="ic-list" viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
-    <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></symbol>
-    <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></symbol>
-    <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></symbol>
     <symbol id="ic-send" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="ic-inbox" viewBox="0 0 24 24"><path d="M4 12h4l2 3h4l2-3h4"/><path d="M5.5 5h13l1.5 7v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z"/></symbol>
   </defs>
 </svg>
 
@@ -1518,8 +1586,8 @@ svg { display: block; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <img class="brand-mark-icon" src="assets/tasklylogo.png" alt="Taskly logo">
-        
+        <img class="brand-mark-icon" src="images/logo.svg" alt="Taskly logo">
+        <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
       </div>
       <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
@@ -1531,11 +1599,11 @@ svg { display: block; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-grid"/></svg>
         Dashboard
       </a></li>
-      <li><a class="nav-link is-active" href="roadmapmanager.html">
+      <li><a class="nav-link" href="roadmapmanager.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
         Roadmap Manager
       </a></li>
-      <li><a class="nav-link" href="./notifications.html">
+      <li><a class="nav-link is-active" href="notifications.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
         Notifications
       </a></li>
@@ -1633,164 +1701,37 @@ svg { display: block; }
         </svg>
       </div>
 
-      <div class="content-inner" style="max-width: 720px;">
+      <div class="content-inner">
 
-        <a class="back-link" href="roadmapmanager.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-back"/></svg>
-          Back to manager
-        </a>
-
-        <div class="roadmap-header">
-          <div class="roadmap-header-left">
-            <h1 id="roadmapTitle">Roadmap</h1>
-            <span class="roadmap-type-badge" id="roadmapTypeBadge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-layers" id="roadmapTypeIcon"/></svg>
-              <span id="roadmapTypeLabel">Sequential</span>
-            </span>
+        <div class="notif-page-header">
+          <div>
+            <h1 style="font-family:var(--font-display); font-size:24px; font-weight:700; margin-bottom:6px;">Notifications</h1>
+            <p style="font-size:14px; color:var(--color-ink-soft);">Everything that's happened across your roadmaps.</p>
           </div>
-          <div class="roadmap-header-right">
-            <div class="progress-ring-wrap">
-              <svg viewBox="0 0 56 56">
-                <circle class="progress-ring-track" cx="28" cy="28" r="24"/>
-                <circle class="progress-ring-fill" id="progressRingFill" cx="28" cy="28" r="24"/>
-              </svg>
-              <span class="progress-ring-label" id="progressRingLabel">0%</span>
-            </div>
-            <button class="card-menu-btn" id="roadmapMenuBtn" aria-label="Roadmap options" style="background:var(--color-cream-soft);">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </div>
+          <button class="btn-ghost" id="markAllReadBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;margin-right:6px;vertical-align:-2px;"><use href="#ic-check"/></svg>
+            Mark all as read
+          </button>
         </div>
 
-        <div class="state-legend" id="stateLegend">
-          <div class="state-legend-item"><span class="legend-dot is-complete"></span>Complete</div>
-          <div class="state-legend-item"><span class="legend-dot is-available"></span>Available now</div>
-          <div class="state-legend-item"><span class="legend-dot is-locked"></span>Locked — finish earlier tasks first</div>
-        </div>
+        <div id="notifGroups"><!-- rendered by JS --></div>
 
-        <div class="roadmap-body" id="roadmapBody">
-          <!-- Rendered by JS based on roadmap type -->
+        <div class="notif-empty-state" id="notifEmptyState">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-inbox"/></svg>
+          <strong style="display:block; color:var(--color-ink); font-size:15px; margin-bottom:4px;">You're all caught up</strong>
+          Nothing new right now — check back after you make some progress.
         </div>
-
-        <button class="btn-add-task" id="addTaskBtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><use href="#ic-plus"/></svg>
-          Add a task
-        </button>
 
       </div>
     </main>
   </div>
 </div>
 
-<!-- ============ Node detail modal ============ -->
-<div class="modal-overlay" id="nodeDetailOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Task detail">
-    <div class="modal-header">
-      <h3 id="nodeDetailTitle">Task</h3>
-      <button class="modal-close" data-close-modal="nodeDetailOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
+<button class="help-bubble" id="nodiBtn" type="button">
+  <img src="images/mascot.svg" alt="">
+  Need help? Ask Nodi
+</button>
 
-    <p class="node-detail-desc" id="nodeDetailDesc">Description goes here.</p>
-
-    <div class="node-detail-meta">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"/></svg>
-      <span id="nodeDetailEstimate">30 minutes</span>
-    </div>
-
-    <button class="btn-complete-toggle" id="nodeCompleteToggle" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"/></svg>
-      <span id="nodeCompleteToggleLabel">Mark as complete</span>
-    </button>
-
-    <div class="node-secondary-actions">
-      <button class="btn-ghost" id="nodeEditBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
-        Edit
-      </button>
-      <button class="btn-ghost" id="nodeDeleteBtn" type="button" style="color: var(--color-error); border-color: var(--color-error-tint);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
-        Delete
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Add / edit task modal ============ -->
-<div class="modal-overlay" id="taskFormOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Task form">
-    <div class="modal-header">
-      <h3 id="taskFormHeading">Add a task</h3>
-      <button class="modal-close" data-close-modal="taskFormOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
-
-    <label class="modal-field-label" for="taskNameInput">Task name</label>
-    <input class="modal-input" id="taskNameInput" type="text" maxlength="120" placeholder="e.g. Set up component variants">
-
-    <label class="modal-field-label" for="taskDescInput">Description</label>
-    <textarea class="modal-textarea" id="taskDescInput" maxlength="300" placeholder="What does done look like?" style="min-height:70px; margin-bottom: var(--sp-3);"></textarea>
-
-    <label class="modal-field-label" for="taskEstimateInput">Time estimate</label>
-    <input class="modal-input" id="taskEstimateInput" type="text" maxlength="40" placeholder="e.g. 45 minutes">
-
-    <div id="taskPositionField">
-      <label class="modal-field-label" for="taskPositionSelect">Comes after</label>
-      <select class="modal-select" id="taskPositionSelect"></select>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-ghost" type="button" data-close-modal="taskFormOverlay">Cancel</button>
-      <button class="btn-solid" id="taskFormSaveBtn" type="button">Save task</button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Delete task confirm ============ -->
-<div class="modal-overlay" id="deleteTaskOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Delete task">
-    <div class="confirm-view is-active">
-      <div class="warn-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-warn"/></svg>
-      </div>
-      <p>Delete "<strong id="deleteTaskTitle">this task</strong>"? This can't be undone.</p>
-      <div class="confirm-actions">
-        <button class="btn-ghost" type="button" data-close-modal="deleteTaskOverlay">Cancel</button>
-        <button class="btn-solid is-danger" type="button" id="confirmDeleteTaskBtn">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Roadmap-level options ============ -->
-<div class="modal-overlay" id="roadmapMenuOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Roadmap options">
-    <div class="modal-header">
-      <h3>Roadmap Options</h3>
-      <button class="modal-close" data-close-modal="roadmapMenuOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
-    <div class="option-list">
-      <button class="option-item" type="button" id="renameRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
-        Rename Roadmap
-      </button>
-      <button class="option-item" type="button" id="regenerateRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-refresh"/></svg>
-        Regenerate Roadmap
-      </button>
-      <button class="option-item is-danger" type="button" id="deleteRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
-        Delete Roadmap
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Streak + notifications (shared with dashboard) ============ -->
 <div class="dropdown-panel" id="notifPanel" role="menu" aria-label="Notifications">
   <div class="dropdown-header">Notifications</div>
   <div class="notif-item">
@@ -1808,7 +1749,7 @@ svg { display: block; }
     </div>
   </div>
   <div class="dropdown-footer">
-    <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
+    <button class="view-all-btn" id="viewAllNotifsBtn" type="button">You're on this page</button>
   </div>
 </div>
 
@@ -1832,15 +1773,10 @@ svg { display: block; }
   </div>
 </div>
 
-<button class="help-bubble" id="nodiBtn" type="button">
-  <img src="assets/Nodi.png" alt="">
-  Need help? Ask Nodi
-</button>
-
 <div class="modal-overlay" id="nodiOverlay">
   <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi">
     <div class="nodi-header">
-      <img src="assets/Nodi.png" alt="Nodi">
+      <img src="images/mascot.svg" alt="">
       <div class="nodi-header-text">
         <p class="name">Nodi</p>
         <p class="status">Online</p>
@@ -1849,17 +1785,14 @@ svg { display: block; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
       </button>
     </div>
-
     <div class="nodi-body" id="nodiBody">
       <div class="chat-bubble from-nodi">Hey, I'm Nodi 👋 Ask me anything about your roadmaps, or tell me what you're stuck on.</div>
     </div>
-
     <div class="nodi-suggestions" id="nodiSuggestions">
       <button class="suggestion-chip" type="button">Help me get unstuck</button>
       <button class="suggestion-chip" type="button">Explain this task</button>
       <button class="suggestion-chip" type="button">Suggest resources</button>
     </div>
-
     <div class="nodi-input-row">
       <input class="nodi-input" id="nodiInput" type="text" placeholder="Message Nodi…" maxlength="300">
       <button class="send-btn" id="nodiSendBtn" type="button" aria-label="Send">
@@ -1873,9 +1806,9 @@ svg { display: block; }
 
 <script>
 /* ==========================================================
-   TASKLY — roadmap.js
+   TASKLY — notifications.js
    ========================================================== */
-window.TasklyRoadmap = (function () {
+window.TasklyNotifications = (function () {
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
@@ -1895,7 +1828,7 @@ window.TasklyRoadmap = (function () {
     return d.innerHTML;
   }
 
-  /* ---------- generic modal plumbing (mirrors dashboard.js) ---------- */
+  /* ---------- generic modal + dropdown plumbing ---------- */
 
   function openModal(overlayId) {
     closeAllDropdowns();
@@ -1909,7 +1842,6 @@ window.TasklyRoadmap = (function () {
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
   }
-
   function wireGenericModalClosers() {
     $all("[data-close-modal]").forEach((btn) => {
       btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
@@ -1927,7 +1859,7 @@ window.TasklyRoadmap = (function () {
     });
   }
 
-  /* ---------- shared shell: drawer, streak, notifications ---------- */
+  /* ---------- shared shell ---------- */
 
   function wireDrawer() {
     const sidebar = $("#sidebar");
@@ -1968,7 +1900,7 @@ window.TasklyRoadmap = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
-  function wireNotifications() {
+  function wireNotifDropdown() {
     const btn = $("#notifBtn");
     const panel = $("#notifPanel");
     const dot = $("#notifDot");
@@ -1985,399 +1917,8 @@ window.TasklyRoadmap = (function () {
       }
     });
     const viewAll = $("#viewAllNotifsBtn");
-    viewAll && viewAll.addEventListener("click", () => {
-      panel.classList.remove("is-open");
-      showToast("A full notifications page is coming soon.");
-    });
+    viewAll && viewAll.addEventListener("click", () => panel.classList.remove("is-open"));
   }
-
-  /* ---------- sample data ---------- */
-
-  function buildSampleData(type, blank) {
-    if (blank) {
-      return { title: "New checklist", type: "flat", tasks: [] };
-    }
-    if (type === "flat") {
-      return {
-        title: "Weekly groceries",
-        type: "flat",
-        tasks: [
-          { id: "t1", title: "Milk & eggs", description: "2% milk, one dozen eggs.", estimate: "10 minutes", completed: true },
-          { id: "t2", title: "Fresh vegetables", description: "Tomatoes, onions, peppers, spinach.", estimate: "15 minutes", completed: true },
-          { id: "t3", title: "Rice & pasta", description: "One bag of rice, two boxes of pasta.", estimate: "5 minutes", completed: false },
-          { id: "t4", title: "Chicken breast", description: "About 1kg, for the week's meals.", estimate: "5 minutes", completed: false },
-          { id: "t5", title: "Snacks", description: "Something for the kids' lunchboxes.", estimate: "10 minutes", completed: false },
-          { id: "t6", title: "Dish soap & sponges", description: "Running low under the sink.", estimate: "5 minutes", completed: false }
-        ]
-      };
-    }
-    return {
-      title: "My Figma course",
-      type: "sequential",
-      phases: [
-        {
-          label: "Getting Started",
-          nodes: [
-            { id: "n1", title: "Install Figma & create an account", description: "Download the desktop app or use the browser version, then create your free account.", estimate: "15 minutes", completed: true },
-            { id: "n2", title: "Learn the interface", description: "Get familiar with the toolbar, layers panel, and canvas navigation.", estimate: "30 minutes", completed: true },
-            { id: "n3", title: "Create your first frame", description: "Set up a frame and understand artboard basics.", estimate: "20 minutes", completed: false }
-          ]
-        },
-        {
-          label: "Auto Layout & Components",
-          nodes: [
-            { id: "n4", title: "Understand Auto Layout", description: "Learn how auto layout handles spacing and resizing automatically.", estimate: "45 minutes", completed: false },
-            { id: "n5", title: "Build reusable components", description: "Create your first component and a variant set.", estimate: "40 minutes", completed: false },
-            { id: "n6", title: "Style with color & text styles", description: "Set up shared styles for consistency across your file.", estimate: "25 minutes", completed: false }
-          ]
-        },
-        {
-          label: "Prototyping",
-          nodes: [
-            { id: "n7", title: "Wire up interactions", description: "Connect frames with prototype links and transitions.", estimate: "40 minutes", completed: false },
-            { id: "n8", title: "Present & share your file", description: "Learn to share view/edit links and use presentation mode.", estimate: "15 minutes", completed: false }
-          ]
-        }
-      ]
-    };
-  }
-
-  let roadmap = null;
-
-  /* ---------- helpers over the data model ---------- */
-
-  function flattenNodes() {
-    if (roadmap.type === "flat") return roadmap.tasks;
-    const all = [];
-    roadmap.phases.forEach((p) => p.nodes.forEach((n) => all.push(n)));
-    return all;
-  }
-
-  function computeProgress() {
-    const all = flattenNodes();
-    if (all.length === 0) return 0;
-    const done = all.filter((n) => n.completed).length;
-    return Math.round((done / all.length) * 100);
-  }
-
-  function hasAnyTasks() {
-    return flattenNodes().length > 0;
-  }
-
-  function nodeState(node, indexInFlat, flat) {
-    if (node.completed) return "complete";
-    const allPreviousComplete = flat.slice(0, indexInFlat).every((n) => n.completed);
-    return allPreviousComplete ? "available" : "locked";
-  }
-
-  function findNodeById(id) {
-    const all = flattenNodes();
-    return all.find((n) => n.id === id) || null;
-  }
-
-  /* ---------- rendering ---------- */
-
-  function renderHeader() {
-    $("#roadmapTitle").textContent = roadmap.title;
-    const badge = $("#roadmapTypeBadge");
-    const label = $("#roadmapTypeLabel");
-    const icon = $("#roadmapTypeIcon");
-    if (roadmap.type === "flat") {
-      badge.classList.add("is-flat");
-      label.textContent = "Flat checklist";
-      icon.setAttribute("href", "#ic-list");
-      $("#stateLegend").style.display = "none";
-    } else {
-      badge.classList.remove("is-flat");
-      label.textContent = "Sequential";
-      icon.setAttribute("href", "#ic-layers");
-      $("#stateLegend").style.display = "";
-    }
-    renderProgressRing();
-  }
-
-  function renderProgressRing() {
-    const pct = computeProgress();
-    const circumference = 150.8;
-    const offset = circumference - (pct / 100) * circumference;
-    $("#progressRingFill").style.strokeDashoffset = offset;
-    $("#progressRingLabel").textContent = pct + "%";
-  }
-
-  function iconForState(state) {
-    if (state === "complete") return "#ic-check";
-    if (state === "locked") return "#ic-lock";
-    return "#ic-check";
-  }
-
-  function renderSequential() {
-    const body = $("#roadmapBody");
-    const flat = flattenNodes();
-    let flatIndex = 0;
-    let html = "";
-
-    roadmap.phases.forEach((phase, pIdx) => {
-      html += '<div class="phase-block">';
-      html += '<div class="phase-label"><span class="phase-index">' + (pIdx + 1) + '</span>' + escapeHtml(phase.label) + '</div>';
-      html += '<div class="node-chain">';
-
-      phase.nodes.forEach((node) => {
-        const state = nodeState(node, flatIndex, flat);
-        const lineDone = node.completed ? "is-done" : "";
-        html += '<div class="node-item is-' + state + '" data-node-id="' + node.id + '">';
-        html += '  <div class="node-chain-line ' + lineDone + '"></div>';
-        html += '  <div class="node-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="' + iconForState(state) + '"></use></svg></div>';
-        html += '  <div class="node-card" data-node-id="' + node.id + '">';
-        html += '    <p class="node-title">' + escapeHtml(node.title) + '</p>';
-        html += '    <div class="node-meta-row">';
-        html += '      <span class="node-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>' + escapeHtml(node.estimate) + '</span>';
-        if (state === "locked") html += '      <span class="locked-tag">Locked</span>';
-        html += '    </div>';
-        html += '  </div>';
-        html += '</div>';
-        flatIndex++;
-      });
-
-      html += '</div></div>';
-    });
-
-    body.innerHTML = html;
-    wireNodeCards();
-  }
-
-  function renderFlat() {
-    const body = $("#roadmapBody");
-    if (roadmap.tasks.length === 0) {
-      body.innerHTML =
-        '<div class="empty-roadmaps is-visible">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"></use></svg>' +
-        '<strong>Nothing on this list yet</strong>' +
-        'Tap "Add a task" below to start building it out.' +
-        '</div>';
-      return;
-    }
-    let html = '<div class="checklist">';
-    roadmap.tasks.forEach((task, i) => {
-      html += '<div class="checklist-item ' + (task.completed ? "is-complete" : "") + '" data-node-id="' + task.id + '" style="animation-delay:' + (i * 0.05) + 's">';
-      html += '  <span class="checklist-checkbox" data-checkbox-id="' + task.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"></use></svg></span>';
-      html += '  <div class="checklist-body">';
-      html += '    <p class="checklist-title">' + escapeHtml(task.title) + '</p>';
-      html += '    <p class="checklist-meta">' + escapeHtml(task.estimate) + '</p>';
-      html += '  </div>';
-      html += '</div>';
-    });
-    html += '</div>';
-    body.innerHTML = html;
-    wireNodeCards();
-  }
-
-  function render() {
-    renderHeader();
-    if (roadmap.type === "flat") renderFlat(); else renderSequential();
-    renderProgressRing();
-  }
-
-  /* ---------- node interactions ---------- */
-
-  function wireNodeCards() {
-    if (roadmap.type === "flat") {
-      $all(".checklist-item").forEach((item) => {
-        item.addEventListener("click", () => openNodeDetail(item.dataset.nodeId));
-      });
-    } else {
-      $all(".node-item").forEach((item) => {
-        item.addEventListener("click", () => {
-          if (item.classList.contains("is-locked")) {
-            showToast("Finish the earlier tasks first to unlock this one.");
-            return;
-          }
-          openNodeDetail(item.dataset.nodeId);
-        });
-      });
-    }
-  }
-
-  let currentNodeId = null;
-
-  function openNodeDetail(id) {
-    const node = findNodeById(id);
-    if (!node) return;
-    currentNodeId = id;
-    $("#nodeDetailTitle").textContent = node.title;
-    $("#nodeDetailDesc").textContent = node.description;
-    $("#nodeDetailEstimate").textContent = node.estimate;
-    const toggle = $("#nodeCompleteToggle");
-    const label = $("#nodeCompleteToggleLabel");
-    toggle.classList.toggle("is-complete", node.completed);
-    label.textContent = node.completed ? "Completed — tap to undo" : "Mark as complete";
-    openModal("nodeDetailOverlay");
-  }
-
-  function wireNodeDetailModal() {
-    $("#nodeCompleteToggle").addEventListener("click", () => {
-      const node = findNodeById(currentNodeId);
-      if (!node) return;
-
-      if (node.completed) {
-        // Uncompleting cascades forward so the chain stays consistent.
-        const flat = flattenNodes();
-        const idx = flat.findIndex((n) => n.id === node.id);
-        let cascaded = false;
-        flat.slice(idx).forEach((n) => { if (n.completed) cascaded = true; n.completed = false; });
-        if (cascaded && flat.slice(idx + 1).some((n) => n.completed === false)) {
-          showToast("Marked incomplete. Later tasks in the chain were reset too.");
-        } else {
-          showToast("Marked incomplete.");
-        }
-      } else {
-        node.completed = true;
-        showToast("Nice work! Task complete.", "success");
-      }
-      render();
-      closeModal("nodeDetailOverlay");
-    });
-
-    $("#nodeEditBtn").addEventListener("click", () => {
-      closeModal("nodeDetailOverlay");
-      openTaskForm(currentNodeId);
-    });
-
-    $("#nodeDeleteBtn").addEventListener("click", () => {
-      closeModal("nodeDetailOverlay");
-      $("#deleteTaskTitle").textContent = findNodeById(currentNodeId).title;
-      openModal("deleteTaskOverlay");
-    });
-
-    $("#confirmDeleteTaskBtn").addEventListener("click", () => {
-      deleteNode(currentNodeId);
-      closeModal("deleteTaskOverlay");
-      showToast("Task deleted.");
-    });
-  }
-
-  function deleteNode(id) {
-    if (roadmap.type === "flat") {
-      roadmap.tasks = roadmap.tasks.filter((n) => n.id !== id);
-    } else {
-      roadmap.phases.forEach((p) => { p.nodes = p.nodes.filter((n) => n.id !== id); });
-    }
-    render();
-  }
-
-  /* ---------- add / edit task form ---------- */
-
-  let editingNodeId = null;
-
-  function siblingListForForm() {
-    // Sequential: siblings = last phase's nodes (new tasks are appended there by default).
-    // Flat: siblings = the whole list.
-    if (roadmap.type === "flat") return roadmap.tasks;
-    return roadmap.phases[roadmap.phases.length - 1].nodes;
-  }
-
-  function populatePositionSelect(excludeId) {
-    const select = $("#taskPositionSelect");
-    const siblings = siblingListForForm().filter((n) => n.id !== excludeId);
-    let html = '<option value="">Start of the list</option>';
-    siblings.forEach((n) => {
-      html += '<option value="' + n.id + '">' + escapeHtml(n.title) + '</option>';
-    });
-    select.innerHTML = html;
-    if (siblings.length) select.value = siblings[siblings.length - 1].id;
-  }
-
-  function openTaskForm(nodeId) {
-    editingNodeId = nodeId || null;
-    const heading = $("#taskFormHeading");
-    const nameInput = $("#taskNameInput");
-    const descInput = $("#taskDescInput");
-    const estInput = $("#taskEstimateInput");
-
-    populatePositionSelect(nodeId);
-
-    if (nodeId) {
-      const node = findNodeById(nodeId);
-      heading.textContent = "Edit task";
-      nameInput.value = node.title;
-      descInput.value = node.description;
-      estInput.value = node.estimate;
-    } else {
-      heading.textContent = "Add a task";
-      nameInput.value = "";
-      descInput.value = "";
-      estInput.value = "";
-    }
-    openModal("taskFormOverlay");
-    setTimeout(() => nameInput.focus(), 200);
-  }
-
-  function wireTaskForm() {
-    $("#addTaskBtn").addEventListener("click", () => openTaskForm(null));
-
-    $("#taskFormSaveBtn").addEventListener("click", () => {
-      const name = $("#taskNameInput").value.trim();
-      if (!name) { $("#taskNameInput").focus(); return; }
-      const description = $("#taskDescInput").value.trim() || "No description yet.";
-      const estimate = $("#taskEstimateInput").value.trim() || "—";
-      const afterId = $("#taskPositionSelect").value;
-
-      if (editingNodeId) {
-        const node = findNodeById(editingNodeId);
-        node.title = name;
-        node.description = description;
-        node.estimate = estimate;
-        showToast("Task updated.", "success");
-      } else {
-        const newNode = { id: "n" + Date.now(), title: name, description, estimate, completed: false };
-        const siblings = siblingListForForm();
-        if (!afterId) {
-          siblings.unshift(newNode);
-        } else {
-          const idx = siblings.findIndex((n) => n.id === afterId);
-          siblings.splice(idx + 1, 0, newNode);
-        }
-        showToast("Task added.", "success");
-      }
-      closeModal("taskFormOverlay");
-      render();
-    });
-  }
-
-  /* ---------- roadmap-level menu ---------- */
-
-  function wireRoadmapMenu() {
-    $("#roadmapMenuBtn").addEventListener("click", () => openModal("roadmapMenuOverlay"));
-
-    $("#renameRoadmapBtn").addEventListener("click", () => {
-      const next = window.prompt("Rename roadmap", roadmap.title);
-      if (next && next.trim()) {
-        roadmap.title = next.trim();
-        renderHeader();
-        showToast("Roadmap renamed.", "success");
-      }
-      closeModal("roadmapMenuOverlay");
-    });
-
-    $("#regenerateRoadmapBtn").addEventListener("click", () => {
-      closeModal("roadmapMenuOverlay");
-      showToast("Regenerating roadmap…");
-      setTimeout(() => {
-        flattenNodes().forEach((n, i) => { n.completed = i === 0; });
-        render();
-        showToast("Roadmap regenerated.", "success");
-      }, 1400);
-    });
-
-    $("#deleteRoadmapBtn").addEventListener("click", () => {
-      closeModal("roadmapMenuOverlay");
-      if (window.confirm('Delete "' + roadmap.title + '"? This can\'t be undone.')) {
-        showToast("Roadmap deleted. Returning to dashboard…");
-        setTimeout(() => { window.location.href = "dashboard.html"; }, 900);
-      }
-    });
-  }
-
-  /* ---------- Ask Nodi modal ---------- */
 
   const nodiReplies = [
     "Good question — once I'm connected to your roadmap data I'll be able to answer that in detail. For now, try breaking the task into two smaller steps and starting with whichever feels easiest.",
@@ -2391,44 +1932,136 @@ window.TasklyRoadmap = (function () {
     const sendBtn = $("#nodiSendBtn");
     const body = $("#nodiBody");
     if (!openBtn) return;
-
     openBtn.addEventListener("click", () => {
       openModal("nodiOverlay");
       setTimeout(() => input.focus(), 250);
     });
-
     function appendBubble(text, from) {
       const bubble = document.createElement("div");
       bubble.className = "chat-bubble from-" + from;
       bubble.textContent = text;
       body.appendChild(bubble);
       body.scrollTop = body.scrollHeight;
-      return bubble;
     }
-
     function sendMessage(text) {
       const msg = (text || input.value).trim();
       if (!msg) return;
       appendBubble(msg, "user");
       input.value = "";
-
       const typing = document.createElement("div");
       typing.className = "chat-bubble from-nodi";
       typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
-
       setTimeout(() => {
         typing.remove();
-        const reply = nodiReplies[Math.floor(Math.random() * nodiReplies.length)];
-        appendBubble(reply, "nodi");
+        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
       }, 1100);
     }
-
     sendBtn.addEventListener("click", () => sendMessage());
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => {
-      chip.addEventListener("click", () => sendMessage(chip.textContent));
+    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
+  }
+
+  /* ---------- notifications data ---------- */
+
+  const notifData = [
+    {
+      group: "Today", unread: true, icon: "ic-check", variant: "",
+      text: '<strong>My Figma course</strong> — you finished "Auto layout basics".',
+      time: "12 minutes ago", link: { type: "sequential", title: "My Figma course" }
+    },
+    {
+      group: "Today", unread: true, icon: "ic-flame", variant: "is-teal",
+      text: "You're on a <strong>5 day streak</strong>. Keep it going today!",
+      time: "3 hours ago", link: null, isStreak: true
+    },
+    {
+      group: "Yesterday", unread: true, icon: "ic-route", variant: "",
+      text: 'Your <strong>Jollof Rice recipe</strong> roadmap is almost done — 2 tasks left.',
+      time: "Yesterday, 6:40 PM", link: { type: "flat", title: "Jollof Rice recipe" }
+    },
+    {
+      group: "Yesterday", unread: false, icon: "ic-plus", variant: "is-teal",
+      text: '"Plumbing" roadmap was created and is ready to start.',
+      time: "Yesterday, 9:12 AM", link: { type: "flat", title: "Plumbing" }
+    },
+    {
+      group: "Earlier this week", unread: false, icon: "ic-route", variant: "",
+      text: '<strong>Learn to drive</strong>: "Parallel parking practice" just unlocked.',
+      time: "3 days ago", link: { type: "sequential", title: "Learn to drive" }
+    },
+    {
+      group: "Earlier this week", unread: false, icon: "ic-clock-small", variant: "is-teal",
+      text: "You haven't touched <strong>My Figma course</strong> in a few days — pick up where you left off?",
+      time: "4 days ago", link: { type: "sequential", title: "My Figma course" }
+    }
+  ];
+
+  function renderNotifications() {
+    const container = $("#notifGroups");
+    const groups = ["Today", "Yesterday", "Earlier this week"];
+    let html = "";
+
+    groups.forEach((groupName) => {
+      const items = notifData.filter((n) => n.group === groupName);
+      if (!items.length) return;
+      html += '<div class="notif-group">';
+      html += '<p class="notif-group-label">' + groupName + '</p>';
+      html += '<div class="notif-page-list">';
+      items.forEach((n, i) => {
+        const idx = notifData.indexOf(n);
+        html += '<div class="notif-page-item ' + (n.unread ? "" : "is-read") + '" data-idx="' + idx + '" style="animation-delay:' + (i * 0.05) + 's">';
+        html += '  <div class="notif-page-icon ' + n.variant + '"><svg viewBox="0 0 24 24" fill="' + (n.icon === "ic-flame" ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#' + n.icon + '"></use></svg></div>';
+        html += '  <div class="notif-page-body">';
+        html += '    <p class="notif-page-text">' + n.text + '</p>';
+        html += '    <p class="notif-page-time">' + n.time + '</p>';
+        html += '  </div>';
+        if (n.unread) html += '  <span class="notif-unread-dot"></span>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    });
+
+    container.innerHTML = html;
+    wireNotificationClicks();
+    updateEmptyState();
+  }
+
+  function wireNotificationClicks() {
+    $all(".notif-page-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const idx = Number(item.dataset.idx);
+        const n = notifData[idx];
+        n.unread = false;
+        item.classList.add("is-read");
+        const dot = item.querySelector(".notif-unread-dot");
+        if (dot) dot.remove();
+
+        if (n.isStreak) {
+          openModal("streakOverlay");
+          tickCountdown();
+          clearInterval(streakInterval);
+          streakInterval = setInterval(tickCountdown, 1000);
+        } else if (n.link) {
+          window.location.href = "roadmap.html?type=" + encodeURIComponent(n.link.type) + "&title=" + encodeURIComponent(n.link.title);
+        }
+      });
+    });
+  }
+
+  function updateEmptyState() {
+    $("#notifEmptyState").classList.toggle("is-visible", notifData.length === 0);
+  }
+
+  function wireMarkAllRead() {
+    $("#markAllReadBtn").addEventListener("click", () => {
+      notifData.forEach((n) => { n.unread = false; });
+      $all(".notif-page-item").forEach((item) => item.classList.add("is-read"));
+      $all(".notif-unread-dot").forEach((dot) => dot.remove());
+      const bellDot = $("#notifDot");
+      if (bellDot) bellDot.style.display = "none";
+      showToast("All caught up.", "success");
     });
   }
 
@@ -2436,29 +2069,20 @@ window.TasklyRoadmap = (function () {
 
   function init() {
     document.addEventListener("DOMContentLoaded", () => {
-      const params = new URLSearchParams(window.location.search);
-      const type = params.get("type") === "flat" ? "flat" : "sequential";
-      const blank = params.get("blank") === "1";
-      roadmap = buildSampleData(type, blank);
-      if (params.get("title")) roadmap.title = params.get("title");
-
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();
-      wireNotifications();
-      wireNodeDetailModal();
-      wireTaskForm();
-      wireRoadmapMenu();
+      wireNotifDropdown();
       wireNodiModal();
-
-      render();
+      renderNotifications();
+      wireMarkAllRead();
     });
   }
 
   return { init };
 })();
 
-TasklyRoadmap.init();
+TasklyNotifications.init();
 
 </script>
 </body>
