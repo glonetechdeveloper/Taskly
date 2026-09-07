@@ -556,7 +556,7 @@ svg { display: block; }
 }
 @media (min-width: 960px) { .main-content { padding: var(--sp-6) var(--sp-7) var(--sp-8); } }
 
-.content-inner { position: relative; z-index: 1; max-width: 760px; }
+.content-inner { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; width: 100%; }
 
 .greeting { opacity: 0; transform: translateY(14px); animation: contentEnter .5s var(--ease-snap) forwards; }
 .greeting h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin-bottom: 6px; }
@@ -805,11 +805,18 @@ svg { display: block; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: var(--sp-4); }
 
 .btn-solid, .btn-ghost {
-  padding: 11px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
   border-radius: var(--radius-pill);
   font-size: 13.5px;
   font-weight: 700;
-  transition: background .2s ease, box-shadow .2s ease, transform .12s ease, border-color .2s ease;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s ease, box-shadow .2s ease, transform .12s ease, border-color .2s ease, color .2s ease;
 }
 .btn-solid { border: none; background: var(--color-orange); color: var(--color-white); }
 .btn-solid:hover { background: var(--color-orange-deep); box-shadow: var(--shadow-btn); }
@@ -818,9 +825,24 @@ svg { display: block; }
 .btn-solid.is-danger { background: var(--color-error); }
 .btn-solid.is-danger:hover { background: #a8402c; box-shadow: 0 12px 24px -10px rgba(193,80,58,.5); }
 
-.btn-ghost { border: 1.5px solid var(--color-border); background: none; color: var(--color-ink-soft); }
-.btn-ghost:hover { background: var(--color-cream-soft); color: var(--color-ink); }
+.btn-ghost { border: 1.5px solid var(--color-border); background: var(--color-white); color: var(--color-ink-soft); }
+.btn-ghost:hover { background: var(--color-cream-soft); color: var(--color-ink); border-color: var(--color-ink-soft); }
 .btn-ghost:active { transform: scale(.96); }
+
+#markAllReadBtn {
+  padding: 9px 16px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px -2px rgba(60, 42, 10, 0.08);
+}
+#markAllReadBtn:hover {
+  border-color: var(--color-teal);
+  color: var(--color-teal);
+}
+#markAllReadBtn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
 
 /* --- Add Roadmap modal --- */
 .modal-textarea {
@@ -948,6 +970,25 @@ svg { display: block; }
 }
 
 /* --- Streak modal --- */
+#streakOverlay {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 68px var(--sp-4) var(--sp-4);
+  background: rgba(36, 28, 16, .22);
+}
+#streakOverlay .modal-streak {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  margin-top: 0;
+  text-align: center;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-10px) scale(0.98);
+  transform-origin: top right;
+}
+#streakOverlay.is-open .modal-streak {
+  transform: translateY(0) scale(1);
+}
 .modal-streak { text-align: center; }
 .streak-flame-big {
   width: 60px; height: 60px;
@@ -1039,6 +1080,24 @@ svg { display: block; }
 /* ============================================================
    ASK NODI — chat modal
    ============================================================ */
+#nodiOverlay {
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: var(--sp-4);
+  background: rgba(36, 28, 16, .22);
+}
+#nodiOverlay .modal-nodi {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  margin-bottom: 56px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 24px 60px -16px rgba(60, 42, 10, 0.35);
+  transform: translateY(12px) scale(0.98);
+  transform-origin: bottom right;
+}
+#nodiOverlay.is-open .modal-nodi {
+  transform: translateY(0) scale(1);
+}
 .modal-nodi { max-width: 400px; padding: 0; display: flex; flex-direction: column; }
 
 .nodi-header {
@@ -1607,11 +1666,11 @@ svg { display: block; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
         Notifications
       </a></li>
-      <li><a class="nav-link" href="#">
+      <li><a class="nav-link" href="account.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-user"/></svg>
         Account
       </a></li>
-      <li><a class="nav-link" href="#">
+      <li><a class="nav-link" href="settings.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
         Settings
       </a></li>
@@ -1709,8 +1768,8 @@ svg { display: block; }
             <p style="font-size:14px; color:var(--color-ink-soft);">Everything that's happened across your roadmaps.</p>
           </div>
           <button class="btn-ghost" id="markAllReadBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;margin-right:6px;vertical-align:-2px;"><use href="#ic-check"/></svg>
-            Mark all as read
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"/></svg>
+            <span>Mark all as read</span>
           </button>
         </div>
 
