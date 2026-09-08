@@ -1,17 +1,20 @@
 /* ==========================================================
    TASKLY — auth.js
    Shared logic for login.html and signup.html
+   Integrated with FastAPI backend endpoints:
+   - POST /auth/login
+   - POST /auth/register
    ========================================================== */
+
 window.Taskly = (function () {
 
-  // Point this at your FastAPI backend. Override before this
-  // script loads with: <script>window.TASKLY_API_BASE = "https://api.taskly.app";</script>
-  const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
-  const TOKEN_KEY = "taskly_access_token";
+  const API_BASE = window.API_BASE || window.TASKLY_API_BASE || localStorage.getItem("TASKLY_API_BASE") || "https://your-service.onrender.com";
+  const TOKEN_KEY = "access_token";
 
   /* ---------- small utilities ---------- */
 
   function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
   function showToast(message, type) {
     const toast = $("#toast");
@@ -20,6 +23,19 @@ window.Taskly = (function () {
     toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 4200);
+  }
+
+  function setGlobalError(message) {
+    const errorEl = document.getElementById("error-message");
+    if (errorEl) {
+      if (message) {
+        errorEl.textContent = message;
+        errorEl.style.display = "block";
+      } else {
+        errorEl.textContent = "";
+        errorEl.style.display = "none";
+      }
+    }
   }
 
   function setFieldError(fieldEl, message) {
@@ -44,27 +60,17 @@ window.Taskly = (function () {
   function setButtonLoading(btn, isLoading) {
     if (!btn) return;
     btn.classList.toggle("is-loading", isLoading);
+    btn.disabled = isLoading;
   }
 
-  async function apiRequest(path, body) {
-    const res = await fetch(API_BASE + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    let data = null;
-    try { data = await res.json(); } catch (e) { /* no body */ }
-    if (!res.ok) {
-      const msg = (data && (data.detail || data.message)) || "Something went wrong. Please try again.";
-      throw new Error(typeof msg === "string" ? msg : "Something went wrong. Please try again.");
-    }
-    return data || {};
-  }
-
-  function storeToken(data) {
-    const token = data.access_token || data.token || null;
+  function storeToken(token) {
     if (token) {
-      try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* storage unavailable */ }
+      try {
+        localStorage.setItem("access_token", token);
+        localStorage.setItem("taskly_access_token", token);
+      } catch (e) {
+        console.warn("Storage unavailable", e);
+      }
     }
     return token;
   }
@@ -72,7 +78,7 @@ window.Taskly = (function () {
   /* ---------- password visibility toggle ---------- */
 
   function wirePasswordToggles(root) {
-    root.querySelectorAll(".field-toggle-visibility").forEach((btn) => {
+    (root || document).querySelectorAll(".field-toggle-visibility").forEach((btn) => {
       btn.addEventListener("click", () => {
         const input = document.getElementById(btn.dataset.target);
         if (!input) return;
@@ -83,7 +89,7 @@ window.Taskly = (function () {
     });
   }
 
-  /* ---------- background parallax (subtle, non-intrusive) ---------- */
+  /* ---------- background parallax ---------- */
 
   function wireParallax() {
     const bg = document.getElementById("bgPattern");
@@ -116,99 +122,232 @@ window.Taskly = (function () {
     requestAnimationFrame(() => card.classList.add("is-visible"));
   }
 
+  /* ---------- login handler ---------- */
+
+  async function handleLoginSubmit(e) {
+    if (e) e.preventDefault();
+    setGlobalError("");
+
+    const form = document.getElementById("login-form") || document.getElementById("formSignin");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const emailField = document.getElementById("fieldEmail");
+    const passwordField = document.getElementById("fieldPassword");
+    const btn = form ? form.querySelector(".btn-primary") : null;
+
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+    const password = passwordInput ? passwordInput.value : "";
+
+    let valid = true;
+    if (!isValidEmail(email)) {
+      setFieldError(emailField, "Enter a valid email address");
+      valid = false;
+    } else {
+      setFieldError(emailField, null);
+    }
+
+    if (!password) {
+      setFieldError(passwordField, "Enter your password");
+      valid = false;
+    } else {
+      setFieldError(passwordField, null);
+    }
+
+    if (!valid) return;
+
+    setButtonLoading(btn, true);
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (err) {
+        data = {};
+      }
+
+      if (!response.ok) {
+        const errorMsg = data.detail || data.message || "Invalid email or password";
+        const formattedMsg = typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg);
+        setGlobalError(formattedMsg);
+        showToast(formattedMsg, "error");
+        setFieldError(passwordField, formattedMsg);
+        return;
+      }
+
+      if (data.access_token) {
+        storeToken(data.access_token);
+      }
+
+      showToast("Signed in. Taking you to your dashboard…", "success");
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 500);
+
+    } catch (err) {
+      const msg = err.message || "Could not connect to server. Please try again.";
+      setGlobalError(msg);
+      showToast(msg, "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  /* ---------- signup handler ---------- */
+
+  async function handleSignupSubmit(e) {
+    if (e) e.preventDefault();
+    setGlobalError("");
+
+    const form = document.getElementById("signup-form") || document.getElementById("formSignup");
+    const nameInput = document.getElementById("fullName");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const nameField = document.getElementById("fieldFullName");
+    const emailField = document.getElementById("fieldEmail");
+    const passwordField = document.getElementById("fieldPassword");
+    const btn = form ? form.querySelector(".btn-primary") : null;
+
+    const fullName = nameInput ? nameInput.value.trim() : "";
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+    const password = passwordInput ? passwordInput.value : "";
+
+    let valid = true;
+    if (nameField && !fullName) {
+      setFieldError(nameField, "Enter your name");
+      valid = false;
+    } else if (nameField) {
+      setFieldError(nameField, null);
+    }
+
+    if (!isValidEmail(email)) {
+      setFieldError(emailField, "Enter a valid email address");
+      valid = false;
+    } else {
+      setFieldError(emailField, null);
+    }
+
+    if (password.length < 8) {
+      setFieldError(passwordField, "Use at least 8 characters");
+      valid = false;
+    } else {
+      setFieldError(passwordField, null);
+    }
+
+    if (!valid) return;
+
+    setButtonLoading(btn, true);
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (err) {
+        data = {};
+      }
+
+      if (!response.ok) {
+        const errorMsg = data.detail || data.message || "Registration failed. Please try again.";
+        const formattedMsg = typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg);
+        setGlobalError(formattedMsg);
+        showToast(formattedMsg, "error");
+        setFieldError(emailField, formattedMsg);
+        return;
+      }
+
+      if (data.access_token) {
+        storeToken(data.access_token);
+      }
+
+      if (fullName) {
+        try { localStorage.setItem("taskly_user_name", fullName); } catch (e) {}
+      }
+
+      showToast("Account created. Welcome to Taskly!", "success");
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 500);
+
+    } catch (err) {
+      const msg = err.message || "Could not connect to server. Please try again.";
+      setGlobalError(msg);
+      showToast(msg, "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
   /* ---------- form wiring ---------- */
 
   function initLogin() {
-    const form = document.getElementById("formSignin");
+    const form = document.getElementById("login-form") || document.getElementById("formSignin");
     if (!form) return;
-    const btn = form.querySelector(".btn-primary");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const emailField = document.getElementById("fieldEmail");
-      const passwordField = document.getElementById("fieldPassword");
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      let valid = true;
-      if (!isValidEmail(email)) { setFieldError(emailField, "Enter a valid email address"); valid = false; }
-      else setFieldError(emailField, null);
-
-      if (!password) { setFieldError(passwordField, "Enter your password"); valid = false; }
-      else setFieldError(passwordField, null);
-
-      if (!valid) return;
-
-      setButtonLoading(btn, true);
-      try {
-        const data = await apiRequest("/auth/login", { email, password });
-        storeToken(data);
-        showToast("Signed in. Taking you to your dashboard…", "success");
-        // window.location.href = "dashboard.html";
-      } catch (err) {
-        showToast(err.message, "error");
-      } finally {
-        setButtonLoading(btn, false);
-      }
-    });
+    form.addEventListener("submit", handleLoginSubmit);
   }
 
   function initSignup() {
-    const form = document.getElementById("formSignup");
+    const form = document.getElementById("signup-form") || document.getElementById("formSignup");
     if (!form) return;
-    const btn = form.querySelector(".btn-primary");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const nameField = document.getElementById("fieldFullName");
-      const emailField = document.getElementById("fieldEmail");
-      const passwordField = document.getElementById("fieldPassword");
-      const fullName = document.getElementById("fullName").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      let valid = true;
-      if (!fullName) { setFieldError(nameField, "Enter your name"); valid = false; }
-      else setFieldError(nameField, null);
-
-      if (!isValidEmail(email)) { setFieldError(emailField, "Enter a valid email address"); valid = false; }
-      else setFieldError(emailField, null);
-
-      if (password.length < 8) { setFieldError(passwordField, "Use at least 8 characters"); valid = false; }
-      else setFieldError(passwordField, null);
-
-      if (!valid) return;
-
-      setButtonLoading(btn, true);
-      try {
-        // NOTE: the backend spec (/auth/register) only accepts email + password.
-        // fullName is collected for the UI but not sent yet — add it to the
-        // payload once the backend supports a name field.
-        const data = await apiRequest("/auth/register", { email, password });
-        storeToken(data);
-        showToast("Account created. Let's build your first roadmap…", "success");
-        // window.location.href = "dashboard.html";
-      } catch (err) {
-        showToast(err.message, "error");
-      } finally {
-        setButtonLoading(btn, false);
-      }
-    });
+    form.addEventListener("submit", handleSignupSubmit);
   }
 
   /* ---------- public entry point ---------- */
 
   function initForm(opts) {
-    document.addEventListener("DOMContentLoaded", () => {
+    const init = () => {
       wirePasswordToggles(document);
       wireParallax();
       playEntrance();
-      if (opts.mode === "login") initLogin();
-      if (opts.mode === "signup") initSignup();
-    });
+      if (opts && opts.mode === "login") initLogin();
+      else if (opts && opts.mode === "signup") initSignup();
+      else {
+        initLogin();
+        initSignup();
+      }
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
   }
 
-  return { initForm };
+  // Also auto-wire on DOMContentLoaded if standard IDs are present
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("login-form") || document.getElementById("formSignin");
+    if (loginForm && !loginForm._wired) {
+      loginForm._wired = true;
+      loginForm.addEventListener("submit", handleLoginSubmit);
+    }
+
+    const signupForm = document.getElementById("signup-form") || document.getElementById("formSignup");
+    if (signupForm && !signupForm._wired) {
+      signupForm._wired = true;
+      signupForm.addEventListener("submit", handleSignupSubmit);
+    }
+
+    wirePasswordToggles(document);
+    wireParallax();
+    playEntrance();
+  });
+
+  return {
+    initForm,
+    handleLoginSubmit,
+    handleSignupSubmit,
+    storeToken,
+    getToken: () => localStorage.getItem("access_token"),
+  };
 })();

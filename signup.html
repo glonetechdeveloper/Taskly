@@ -98,6 +98,7 @@
 
         <h2>Welcome to Taskly</h2>
         <p class="sub">Turn your goals into clear, actionable steps today. Create your account right away!</p>
+        <div id="error-message" class="auth-alert" style="display:none; color: #e53e3e; background: #fff5f5; border: 1px solid #feb2b2; padding: 10px 14px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1rem; text-align: center;"></div>
 
         <form class="auth-form" id="formSignup" novalidate>
 
@@ -147,6 +148,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script>Taskly.initForm({ mode: 'signup' });</script>
 </body>

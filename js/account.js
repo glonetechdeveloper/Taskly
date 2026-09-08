@@ -307,6 +307,8 @@ window.TasklyAccount = (function () {
 
   /* ---------- logout ---------- */
 
+  /* ---------- logout ---------- */
+
   function wireLogout() {
     const openBtn = $("#openLogoutBtn");
     const confirmBtn = $("#confirmLogoutBtn");
@@ -315,11 +317,32 @@ window.TasklyAccount = (function () {
     openBtn.addEventListener("click", () => openModal("logoutOverlay"));
 
     confirmBtn && confirmBtn.addEventListener("click", () => {
-      try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* storage unavailable */ }
+      try {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("taskly_access_token");
+      } catch (e) { /* storage unavailable */ }
       closeModal("logoutOverlay");
       showToast("You've been logged out.");
-      setTimeout(() => { window.location.href = "login.html"; }, 700);
+      setTimeout(() => { window.location.href = "login.html"; }, 500);
     });
+  }
+
+  /* ---------- load profile ---------- */
+
+  async function loadUserProfile() {
+    try {
+      if (typeof authGetMe === "function") {
+        const user = await authGetMe();
+        if (user && user.email) {
+          const emailDisplay = $("#userEmailDisplay");
+          const emailInput = $("#emailInput");
+          if (emailDisplay) emailDisplay.textContent = user.email;
+          if (emailInput) emailInput.value = user.email;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load user profile:", e);
+    }
   }
 
   /* ---------- init ---------- */
@@ -336,6 +359,7 @@ window.TasklyAccount = (function () {
       wireProfileDetailsForm();
       wirePasswordForm();
       wireLogout();
+      loadUserProfile();
     });
   }
 

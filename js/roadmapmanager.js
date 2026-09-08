@@ -4,13 +4,17 @@
 window.TasklyManager = (function () {
 
   const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
-  const TOKEN_KEY = "taskly_access_token";
+  const TOKEN_KEY = "access_token";
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
   function getToken() {
-    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+    try {
+      return localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
+    } catch (e) {
+      return null;
+    }
   }
 
   function showToast(message, type) {
