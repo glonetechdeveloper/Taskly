@@ -5,7 +5,7 @@ window.TasklyDashboard = (function () {
 
   // Point this at your FastAPI backend. Set window.TASKLY_API_BASE
   // to your API URL in a script tag before this file loads.
-  const API_BASE = window.TASKLY_API_BASE || "http://localhost:8000";
+  const API_BASE = window.API_BASE || window.TASKLY_API_BASE || localStorage.getItem("TASKLY_API_BASE") || "https://your-service.onrender.com";
   const TOKEN_KEY = "access_token";
   const MAX_CHARS = 500;
 
