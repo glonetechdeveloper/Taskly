@@ -158,15 +158,22 @@ window.TasklyAccount = (function () {
 
   /* ---------- password visibility toggles ---------- */
 
+  const EYE_OPEN_SVG = `<svg class="icon-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const EYE_OFF_SVG = `<svg class="icon-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+
   function wirePasswordToggle() {
     $all(".field-toggle-visibility").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      if (btn._wired) return;
+      btn._wired = true;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
         const targetId = btn.dataset.target;
         const input = document.getElementById(targetId);
         if (!input) return;
         const nowVisible = input.type === "password";
         input.type = nowVisible ? "text" : "password";
         btn.setAttribute("aria-label", nowVisible ? "Hide password" : "Show password");
+        btn.innerHTML = nowVisible ? EYE_OFF_SVG : EYE_OPEN_SVG;
       });
     });
   }
