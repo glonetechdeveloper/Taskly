@@ -163,7 +163,7 @@
       <div class="content-inner">
 
         <div class="greeting">
-          <h1>Welcome back, Sarah!</h1>
+          <h1 id="greetingHeading">Welcome back!</h1>
           <p>What would you like to get done? Tell Taskly and we'll guide you all the way.</p>
         </div>
 
@@ -193,66 +193,10 @@
         <h2 class="section-heading">Your Roadmaps</h2>
 
         <div class="roadmap-list" id="roadmapList">
-
-          <article class="roadmap-card" data-id="rm-1" data-title="My Figma course" data-icon="ic-laptop" data-icon-variant="is-teal">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-laptop"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">My Figma course</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="42"></div></div>
-              <p class="roadmap-meta">10 out of 24 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-2" data-title="Learn to drive" data-icon="ic-car" data-icon-variant="">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-car"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Learn to drive</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="60"></div></div>
-              <p class="roadmap-meta">3 out of 5 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-3" data-title="Jollof Rice recipe" data-icon="ic-pot" data-icon-variant="is-teal">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pot"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Jollof Rice recipe</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="87"></div></div>
-              <p class="roadmap-meta">13 out of 15 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-4" data-title="Plumbing" data-icon="ic-wrench" data-icon-variant="">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-wrench"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Plumbing</p>
-              <div class="progress-track"><div class="progress-fill" data-progress="0"></div></div>
-              <p class="roadmap-meta">0 out of 12 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
+          <!-- Dynamically populated from GET /roadmaps endpoint -->
         </div>
 
-        <div class="empty-roadmaps" id="emptyRoadmaps">
+        <div class="empty-roadmaps is-visible" id="emptyRoadmaps">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
           <strong>No roadmaps yet</strong>
           Type a goal above or tap "Add New Roadmap" to get your first checkable path.
