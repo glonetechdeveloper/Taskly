@@ -187,66 +187,10 @@
         </div>
 
         <div class="manager-list" id="managerList">
-
-          <article class="roadmap-card" data-id="rm-1" data-title="My Figma course" data-icon="ic-laptop" data-icon-variant="is-teal" data-type="sequential">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-laptop"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">My Figma course <span class="roadmap-type-badge manager-card-type-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-layers"/></svg>Sequential</span></p>
-              <div class="progress-track"><div class="progress-fill" data-progress="42"></div></div>
-              <p class="roadmap-meta">10 out of 24 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-2" data-title="Learn to drive" data-icon="ic-car" data-icon-variant="" data-type="sequential">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-car"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Learn to drive <span class="roadmap-type-badge manager-card-type-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-layers"/></svg>Sequential</span></p>
-              <div class="progress-track"><div class="progress-fill" data-progress="60"></div></div>
-              <p class="roadmap-meta">3 out of 5 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-3" data-title="Jollof Rice recipe" data-icon="ic-pot" data-icon-variant="is-teal" data-type="flat">
-            <div class="roadmap-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pot"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Jollof Rice recipe <span class="roadmap-type-badge is-flat manager-card-type-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"/></svg>Checklist</span></p>
-              <div class="progress-track"><div class="progress-fill" data-progress="87"></div></div>
-              <p class="roadmap-meta">13 out of 15 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
-          <article class="roadmap-card" data-id="rm-4" data-title="Plumbing" data-icon="ic-wrench" data-icon-variant="" data-type="flat">
-            <div class="roadmap-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-wrench"/></svg>
-            </div>
-            <div class="roadmap-body">
-              <p class="roadmap-title">Plumbing <span class="roadmap-type-badge is-flat manager-card-type-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"/></svg>Checklist</span></p>
-              <div class="progress-track"><div class="progress-fill" data-progress="0"></div></div>
-              <p class="roadmap-meta">0 out of 12 tasks completed</p>
-            </div>
-            <button class="card-menu-btn" aria-label="Roadmap options">
-              <svg viewBox="0 0 24 24"><use href="#ic-dots"/></svg>
-            </button>
-          </article>
-
+          <!-- Dynamically populated from GET /roadmaps endpoint & local storage -->
         </div>
 
-        <p class="manager-empty-filter" id="managerEmptyFilter">Nothing here yet for this filter.</p>
+        <p class="manager-empty-filter is-visible" id="managerEmptyFilter">No roadmaps created yet. Tap "Add New Roadmap" or "Create Checklist" to begin.</p>
 
       </div>
     </main>
