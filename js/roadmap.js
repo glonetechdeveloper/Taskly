@@ -1,5 +1,6 @@
 /* ==========================================================
    TASKLY — roadmap.js
+   Dynamic Roadmap Engine, Domain-Aware Goal Generator & Persistence
    ========================================================== */
 window.TasklyRoadmap = (function () {
 
@@ -16,9 +17,12 @@ window.TasklyRoadmap = (function () {
   }
 
   function escapeHtml(str) {
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
+    if (typeof document !== "undefined" && typeof document.createElement === "function") {
+      const d = document.createElement("div");
+      d.textContent = str || "";
+      return d.innerHTML;
+    }
+    return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   /* ---------- generic modal plumbing (mirrors dashboard.js) ---------- */
@@ -113,58 +117,251 @@ window.TasklyRoadmap = (function () {
     const viewAll = $("#viewAllNotifsBtn");
     viewAll && viewAll.addEventListener("click", () => {
       panel.classList.remove("is-open");
-      showToast("A full notifications page is coming soon.");
+      window.location.href = "notifications.html";
     });
   }
 
-  /* ---------- sample data ---------- */
+  /* ---------- Dynamic Goal Generator & Storage Helpers ---------- */
 
-  function buildSampleData(type, blank) {
-    if (blank) {
-      return { title: "New checklist", type: "flat", tasks: [] };
+  function getStorageKey() {
+    const email = localStorage.getItem("taskly_user_email") || "default";
+    return "taskly_roadmaps_" + email.replace(/[^a-zA-Z0-9_]/g, "_");
+  }
+
+  function getStoredRoadmaps() {
+    try {
+      const raw = localStorage.getItem(getStorageKey()) || localStorage.getItem("taskly_user_roadmaps");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
     }
-    if (type === "flat") {
-      return {
-        title: "Weekly groceries",
-        type: "flat",
-        tasks: [
-          { id: "t1", title: "Milk & eggs", description: "2% milk, one dozen eggs.", estimate: "10 minutes", completed: true },
-          { id: "t2", title: "Fresh vegetables", description: "Tomatoes, onions, peppers, spinach.", estimate: "15 minutes", completed: true },
-          { id: "t3", title: "Rice & pasta", description: "One bag of rice, two boxes of pasta.", estimate: "5 minutes", completed: false },
-          { id: "t4", title: "Chicken breast", description: "About 1kg, for the week's meals.", estimate: "5 minutes", completed: false },
-          { id: "t5", title: "Snacks", description: "Something for the kids' lunchboxes.", estimate: "10 minutes", completed: false },
-          { id: "t6", title: "Dish soap & sponges", description: "Running low under the sink.", estimate: "5 minutes", completed: false }
-        ]
-      };
+  }
+
+  function saveStoredRoadmaps(roadmaps) {
+    try {
+      const serialized = JSON.stringify(roadmaps);
+      localStorage.setItem(getStorageKey(), serialized);
+      localStorage.setItem("taskly_user_roadmaps", serialized);
+    } catch (e) {
+      console.warn("Could not save roadmaps to storage", e);
     }
-    return {
-      title: "My Figma course",
-      type: "sequential",
-      phases: [
+  }
+
+  function generateDomainPhases(goal, title) {
+    const text = (title + " " + goal).toLowerCase();
+
+    // 1. Coding & Software Development (Rust, Python, React, JS, Go, Web, Backend, etc.)
+    if (text.includes("rust") || text.includes("python") || text.includes("code") || text.includes("program") || text.includes("react") || text.includes("javascript") || text.includes("java") || text.includes("web") || text.includes("app") || text.includes("developer") || text.includes("backend") || text.includes("frontend") || text.includes("node") || text.includes("golang") || text.includes("c++")) {
+      const subject = title || "Programming";
+      return [
+        {
+          label: "Getting Started & Environment",
+          nodes: [
+            { id: "n1", title: `Install toolchain & IDE for ${subject}`, description: "Set up the compiler/runtime, code editor, and verify environment setup with a Hello World program.", estimate: "20 minutes", completed: true },
+            { id: "n2", title: "Syntax fundamentals & data types", description: "Learn variables, control flow, functions, loops, and basic error handling.", estimate: "45 minutes", completed: false },
+            { id: "n3", title: "Working with data structures", description: "Understand arrays, lists, maps/hashmaps, and memory representation.", estimate: "40 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Core Architecture & Patterns",
+          nodes: [
+            { id: "n4", title: "Modular code & dependencies", description: "Organize project packages, imports, and third-party libraries.", estimate: "50 minutes", completed: false },
+            { id: "n5", title: "Asynchronous programming & I/O", description: "Master concurrency, async/await, file handling, and network requests.", estimate: "60 minutes", completed: false },
+            { id: "n6", title: "Unit testing & debugging", description: "Write automated test cases, inspect stack traces, and handle edge cases.", estimate: "35 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Project Building & Polish",
+          nodes: [
+            { id: "n7", title: `Build a complete working ${subject} project`, description: "Develop an end-to-end practical application showcasing core features.", estimate: "90 minutes", completed: false },
+            { id: "n8", title: "Code review & optimization", description: "Refactor code for performance, readability, and write documentation.", estimate: "30 minutes", completed: false }
+          ]
+        }
+      ];
+    }
+
+    // 2. UI / UX & Design (Figma, Sketch, UI, UX, Wireframe)
+    if (text.includes("figma") || text.includes("design") || text.includes("ui") || text.includes("ux") || text.includes("prototyp") || text.includes("wireframe") || text.includes("graphic")) {
+      return [
         {
           label: "Getting Started",
           nodes: [
-            { id: "n1", title: "Install Figma & create an account", description: "Download the desktop app or use the browser version, then create your free account.", estimate: "15 minutes", completed: true },
-            { id: "n2", title: "Learn the interface", description: "Get familiar with the toolbar, layers panel, and canvas navigation.", estimate: "30 minutes", completed: true },
-            { id: "n3", title: "Create your first frame", description: "Set up a frame and understand artboard basics.", estimate: "20 minutes", completed: false }
+            { id: "n1", title: "Install Figma & create workspace", description: "Download the desktop app or use browser, then create your design project canvas.", estimate: "15 minutes", completed: true },
+            { id: "n2", title: "Master canvas & vector tools", description: "Learn toolbars, layers panel, pen tools, and typography hierarchy.", estimate: "30 minutes", completed: false },
+            { id: "n3", title: "Layout grids & spacing systems", description: "Set up 8pt spacing grids, margins, and column layouts for responsive design.", estimate: "25 minutes", completed: false }
           ]
         },
         {
-          label: "Auto Layout & Components",
+          label: "Auto Layout & Design Systems",
           nodes: [
-            { id: "n4", title: "Understand Auto Layout", description: "Learn how auto layout handles spacing and resizing automatically.", estimate: "45 minutes", completed: false },
-            { id: "n5", title: "Build reusable components", description: "Create your first component and a variant set.", estimate: "40 minutes", completed: false },
-            { id: "n6", title: "Style with color & text styles", description: "Set up shared styles for consistency across your file.", estimate: "25 minutes", completed: false }
+            { id: "n4", title: "Understand Auto Layout & constraints", description: "Build adaptive components that scale seamlessly with text and screen resize.", estimate: "45 minutes", completed: false },
+            { id: "n5", title: "Build reusable components & variants", description: "Create component sets with interactive variant properties and booleans.", estimate: "40 minutes", completed: false },
+            { id: "n6", title: "Design tokens & style guides", description: "Create color variables, typography styles, and elevation standards.", estimate: "30 minutes", completed: false }
           ]
         },
         {
-          label: "Prototyping",
+          label: "Prototyping & Handoff",
           nodes: [
-            { id: "n7", title: "Wire up interactions", description: "Connect frames with prototype links and transitions.", estimate: "40 minutes", completed: false },
-            { id: "n8", title: "Present & share your file", description: "Learn to share view/edit links and use presentation mode.", estimate: "15 minutes", completed: false }
+            { id: "n7", title: "Wire up interactions & animations", description: "Connect frames with smart animate transitions and prototype flows.", estimate: "40 minutes", completed: false },
+            { id: "n8", title: "Dev handoff & presentation", description: "Organize specs for developers and present prototype to stakeholders.", estimate: "20 minutes", completed: false }
           ]
         }
-      ]
+      ];
+    }
+
+    // 3. Event Planning & Travel (Wedding, Party, Vacation, Trip)
+    if (text.includes("wedding") || text.includes("plan") || text.includes("trip") || text.includes("travel") || text.includes("event") || text.includes("party") || text.includes("vacation")) {
+      return [
+        {
+          label: "Vision & Budgeting",
+          nodes: [
+            { id: "n1", title: "Define scope, date & budget", description: "Set the core objectives, target dates, guest/attendee headcount, and budget allocation.", estimate: "30 minutes", completed: true },
+            { id: "n2", title: "Research & shortlist venues / destinations", description: "Compare top options based on availability, capacity, and logistics.", estimate: "60 minutes", completed: false },
+            { id: "n3", title: "Finalize reservations & key bookings", description: "Lock in core venue, travel arrangements, and essential vendors.", estimate: "45 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Details & Operations",
+          nodes: [
+            { id: "n4", title: "Coordinate vendors & equipment", description: "Confirm catering, photography, sound/equipment, and specific contracts.", estimate: "50 minutes", completed: false },
+            { id: "n5", title: "Send invitations & track RSVPs", description: "Distribute digital/physical invites and manage guest confirmations.", estimate: "40 minutes", completed: false },
+            { id: "n6", title: "Prepare detailed day-of timeline", description: "Create hour-by-hour operational run of show.", estimate: "30 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Final Countdown",
+          nodes: [
+            { id: "n7", title: "Pre-event walk-through & rehearsal", description: "Conduct dry run and review backup contingencies.", estimate: "45 minutes", completed: false },
+            { id: "n8", title: "Execution & follow-up", description: "Enjoy the milestone and handle post-event wrap up and thank-yous.", estimate: "30 minutes", completed: false }
+          ]
+        }
+      ];
+    }
+
+    // 4. Fitness, Sports & Health
+    if (text.includes("fitness") || text.includes("workout") || text.includes("gym") || text.includes("run") || text.includes("marathon") || text.includes("health") || text.includes("diet") || text.includes("weight")) {
+      return [
+        {
+          label: "Foundation & Baseline",
+          nodes: [
+            { id: "n1", title: "Set measurable fitness benchmarks", description: "Record baseline metrics, clear training space, and check essential gear.", estimate: "20 minutes", completed: true },
+            { id: "n2", title: "Establish workout routine & schedule", description: "Block dedicated 30-45 minute training sessions 4 times a week.", estimate: "25 minutes", completed: false },
+            { id: "n3", title: "Form & movement fundamentals", description: "Master proper breathing and technique on foundational exercises.", estimate: "40 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Progression & Nutrition",
+          nodes: [
+            { id: "n4", title: "Daily hydration & meal planning", description: "Align daily caloric intake, protein targets, and meal prep routines.", estimate: "35 minutes", completed: false },
+            { id: "n5", title: "Progressive intensity boost", description: "Increase volume, resistance, or pace across weekly targets.", estimate: "45 minutes", completed: false },
+            { id: "n6", title: "Active recovery & mobility", description: "Incorporate stretching, foam rolling, and sleep optimization.", estimate: "25 minutes", completed: false }
+          ]
+        },
+        {
+          label: "Target Benchmark",
+          nodes: [
+            { id: "n7", title: "Midway assessment & adjustments", description: "Test milestone performance and refine training splits.", estimate: "30 minutes", completed: false },
+            { id: "n8", title: "Reach peak goal milestone", description: "Execute target distance, personal record, or fitness achievement.", estimate: "60 minutes", completed: false }
+          ]
+        }
+      ];
+    }
+
+    // 5. Default General Goal
+    const goalTitle = title || "Goal";
+    return [
+      {
+        label: "Phase 1: Discovery & Foundation",
+        nodes: [
+          { id: "n1", title: `Define success criteria for ${goalTitle}`, description: "Clarify the target outcome, gather reference material, and set realistic milestones.", estimate: "20 minutes", completed: true },
+          { id: "n2", title: "Gather required resources & tools", description: "Set up the workspace, acquire necessary tools, and eliminate distractions.", estimate: "30 minutes", completed: false },
+          { id: "n3", title: "Complete initial foundation exercises", description: "Build initial momentum with the first actionable steps.", estimate: "45 minutes", completed: false }
+        ]
+      },
+      {
+        label: "Phase 2: Core Execution & Milestones",
+        nodes: [
+          { id: "n4", title: "Execute primary milestone deliverables", description: "Work through the most challenging core components systematically.", estimate: "60 minutes", completed: false },
+          { id: "n5", title: "Review progress & iterate", description: "Assess quality against initial standards and make needed course corrections.", estimate: "40 minutes", completed: false },
+          { id: "n6", title: "Deep dive into advanced aspects", description: "Refine technique, streamline workflow, and master the details.", estimate: "50 minutes", completed: false }
+        ]
+      },
+      {
+        label: "Phase 3: Finalization & Mastery",
+        nodes: [
+          { id: "n7", title: "Assemble final deliverables", description: "Bring all pieces together into a cohesive, polished final result.", estimate: "45 minutes", completed: false },
+          { id: "n8", title: "Review, evaluate & celebrate success", description: "Verify completion against your goal and establish habits to sustain results.", estimate: "25 minutes", completed: false }
+        ]
+      }
+    ];
+  }
+
+  function generateDomainTasks(goal, title) {
+    const text = (title + " " + goal).toLowerCase();
+    if (text.includes("grocer") || text.includes("shop") || text.includes("buy") || text.includes("market") || text.includes("food")) {
+      return [
+        { id: "t1", title: "Fresh produce (Fruits & vegetables)", description: "Tomatoes, onions, spinach, bananas, apples.", estimate: "10 minutes", completed: false },
+        { id: "t2", title: "Protein & Dairy", description: "Eggs, milk, chicken breast or tofu, Greek yogurt.", estimate: "10 minutes", completed: false },
+        { id: "t3", title: "Grains & Pantry essentials", description: "Rice, whole wheat pasta, olive oil, spices.", estimate: "5 minutes", completed: false },
+        { id: "t4", title: "Healthy snacks & Breakfast", description: "Oats, peanut butter, mixed nuts.", estimate: "5 minutes", completed: false },
+        { id: "t5", title: "Household & cleaning items", description: "Dish soap, paper towels, sponges.", estimate: "5 minutes", completed: false }
+      ];
+    }
+    if (text.includes("pack") || text.includes("trip") || text.includes("travel")) {
+      return [
+        { id: "t1", title: "Travel documents & ID", description: "Passport, tickets, insurance, wallet.", estimate: "10 minutes", completed: false },
+        { id: "t2", title: "Electronics & chargers", description: "Phone charger, power bank, adapter, laptop/headphones.", estimate: "15 minutes", completed: false },
+        { id: "t3", title: "Clothing & footwear", description: "Outfits for each day, jacket, comfortable shoes.", estimate: "25 minutes", completed: false },
+        { id: "t4", title: "Toiletries & medications", description: "Toothbrush, shampoo, essential meds, skincare.", estimate: "15 minutes", completed: false },
+        { id: "t5", title: "Pre-departure home check", description: "Lock doors, turn off appliances, adjust thermostat.", estimate: "10 minutes", completed: false }
+      ];
+    }
+    const name = title || "Checklist";
+    return [
+      { id: "t1", title: `Initial prep for ${name}`, description: "Gather materials and list requirements.", estimate: "15 minutes", completed: false },
+      { id: "t2", title: "Primary task item 1", description: "Complete high-priority milestone first.", estimate: "25 minutes", completed: false },
+      { id: "t3", title: "Primary task item 2", description: "Execute second milestone.", estimate: "25 minutes", completed: false },
+      { id: "t4", title: "Review and quality check", description: "Ensure everything meets requirements.", estimate: "15 minutes", completed: false },
+      { id: "t5", title: "Wrap up & next actions", description: "Finalize and archive completed checklist.", estimate: "10 minutes", completed: false }
+    ];
+  }
+
+  function buildOrLoadRoadmapData(id, type, title, blank) {
+    if (id) {
+      const stored = window.TasklyAPI ? window.TasklyAPI.getStoredRoadmapDetail(id) : null;
+      if (stored && (stored.phases || stored.tasks)) {
+        return stored;
+      }
+    }
+
+    if (blank) {
+      return {
+        id: id || ("rm-" + Date.now()),
+        title: title || "New checklist",
+        type: "flat",
+        tasks: []
+      };
+    }
+
+    const goalTitle = title || "My Roadmap";
+    if (type === "flat") {
+      const tasks = generateDomainTasks(goalTitle, goalTitle);
+      return {
+        id: id || ("rm-" + Date.now()),
+        title: goalTitle,
+        goal_text: goalTitle,
+        type: "flat",
+        tasks
+      };
+    }
+
+    const phases = generateDomainPhases(goalTitle, goalTitle);
+    return {
+      id: id || ("rm-" + Date.now()),
+      title: goalTitle,
+      goal_text: goalTitle,
+      type: "sequential",
+      phases
     };
   }
 
@@ -173,9 +370,10 @@ window.TasklyRoadmap = (function () {
   /* ---------- helpers over the data model ---------- */
 
   function flattenNodes() {
-    if (roadmap.type === "flat") return roadmap.tasks;
+    if (!roadmap) return [];
+    if (roadmap.type === "flat") return roadmap.tasks || [];
     const all = [];
-    roadmap.phases.forEach((p) => p.nodes.forEach((n) => all.push(n)));
+    (roadmap.phases || []).forEach((p) => (p.nodes || []).forEach((n) => all.push(n)));
     return all;
   }
 
@@ -186,8 +384,32 @@ window.TasklyRoadmap = (function () {
     return Math.round((done / all.length) * 100);
   }
 
-  function hasAnyTasks() {
-    return flattenNodes().length > 0;
+  function persistRoadmapChanges() {
+    if (!roadmap || !roadmap.id) return;
+
+    const all = flattenNodes();
+    const total = all.length;
+    const completed = all.filter(n => n.completed).length;
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    roadmap.total_tasks = total;
+    roadmap.completed_tasks = completed;
+    roadmap.progress = progress;
+
+    if (window.TasklyAPI) {
+      window.TasklyAPI.saveStoredRoadmapDetail(roadmap.id, roadmap);
+      window.TasklyAPI.updateRoadmap(roadmap.id, {
+        title: roadmap.title,
+        type: roadmap.type,
+        total_tasks: total,
+        completed_tasks: completed,
+        progress: progress
+      });
+    } else {
+      try {
+        localStorage.setItem(`taskly_roadmap_detail_${roadmap.id}`, JSON.stringify(roadmap));
+      } catch (e) {}
+    }
   }
 
   function nodeState(node, indexInFlat, flat) {
@@ -204,20 +426,22 @@ window.TasklyRoadmap = (function () {
   /* ---------- rendering ---------- */
 
   function renderHeader() {
-    $("#roadmapTitle").textContent = roadmap.title;
+    const titleEl = $("#roadmapTitle");
+    if (titleEl && roadmap) titleEl.textContent = roadmap.title;
     const badge = $("#roadmapTypeBadge");
     const label = $("#roadmapTypeLabel");
     const icon = $("#roadmapTypeIcon");
-    if (roadmap.type === "flat") {
-      badge.classList.add("is-flat");
-      label.textContent = "Flat checklist";
-      icon.setAttribute("href", "#ic-list");
-      $("#stateLegend").style.display = "none";
+    const legend = $("#stateLegend");
+    if (roadmap && roadmap.type === "flat") {
+      if (badge) badge.classList.add("is-flat");
+      if (label) label.textContent = "Flat checklist";
+      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-list");
+      if (legend) legend.style.display = "none";
     } else {
-      badge.classList.remove("is-flat");
-      label.textContent = "Sequential";
-      icon.setAttribute("href", "#ic-layers");
-      $("#stateLegend").style.display = "";
+      if (badge) badge.classList.remove("is-flat");
+      if (label) label.textContent = "Sequential";
+      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-layers");
+      if (legend) legend.style.display = "";
     }
     renderProgressRing();
   }
@@ -226,8 +450,10 @@ window.TasklyRoadmap = (function () {
     const pct = computeProgress();
     const circumference = 150.8;
     const offset = circumference - (pct / 100) * circumference;
-    $("#progressRingFill").style.strokeDashoffset = offset;
-    $("#progressRingLabel").textContent = pct + "%";
+    const ringFill = $("#progressRingFill");
+    const ringLabel = $("#progressRingLabel");
+    if (ringFill) ringFill.style.strokeDashoffset = offset;
+    if (ringLabel) ringLabel.textContent = pct + "%";
   }
 
   function iconForState(state) {
@@ -242,12 +468,12 @@ window.TasklyRoadmap = (function () {
     let flatIndex = 0;
     let html = "";
 
-    roadmap.phases.forEach((phase, pIdx) => {
+    (roadmap.phases || []).forEach((phase, pIdx) => {
       html += '<div class="phase-block">';
       html += '<div class="phase-label"><span class="phase-index">' + (pIdx + 1) + '</span>' + escapeHtml(phase.label) + '</div>';
       html += '<div class="node-chain">';
 
-      phase.nodes.forEach((node) => {
+      (phase.nodes || []).forEach((node) => {
         const state = nodeState(node, flatIndex, flat);
         const lineDone = node.completed ? "is-done" : "";
         html += '<div class="node-item is-' + state + '" data-node-id="' + node.id + '">';
@@ -273,7 +499,7 @@ window.TasklyRoadmap = (function () {
 
   function renderFlat() {
     const body = $("#roadmapBody");
-    if (roadmap.tasks.length === 0) {
+    if (!roadmap.tasks || roadmap.tasks.length === 0) {
       body.innerHTML =
         '<div class="empty-roadmaps is-visible">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"></use></svg>' +
@@ -301,6 +527,7 @@ window.TasklyRoadmap = (function () {
     renderHeader();
     if (roadmap.type === "flat") renderFlat(); else renderSequential();
     renderProgressRing();
+    persistRoadmapChanges();
   }
 
   /* ---------- node interactions ---------- */
@@ -358,6 +585,9 @@ window.TasklyRoadmap = (function () {
       } else {
         node.completed = true;
         showToast("Nice work! Task complete.", "success");
+        if (window.TasklyAPI && window.TasklyAPI.checkInStreak) {
+          window.TasklyAPI.checkInStreak().catch(() => {});
+        }
       }
       render();
       closeModal("nodeDetailOverlay");
@@ -370,7 +600,8 @@ window.TasklyRoadmap = (function () {
 
     $("#nodeDeleteBtn").addEventListener("click", () => {
       closeModal("nodeDetailOverlay");
-      $("#deleteTaskTitle").textContent = findNodeById(currentNodeId).title;
+      const node = findNodeById(currentNodeId);
+      if (node) $("#deleteTaskTitle").textContent = node.title;
       openModal("deleteTaskOverlay");
     });
 
@@ -383,9 +614,9 @@ window.TasklyRoadmap = (function () {
 
   function deleteNode(id) {
     if (roadmap.type === "flat") {
-      roadmap.tasks = roadmap.tasks.filter((n) => n.id !== id);
+      roadmap.tasks = (roadmap.tasks || []).filter((n) => n.id !== id);
     } else {
-      roadmap.phases.forEach((p) => { p.nodes = p.nodes.filter((n) => n.id !== id); });
+      (roadmap.phases || []).forEach((p) => { p.nodes = (p.nodes || []).filter((n) => n.id !== id); });
     }
     render();
   }
@@ -395,10 +626,16 @@ window.TasklyRoadmap = (function () {
   let editingNodeId = null;
 
   function siblingListForForm() {
-    // Sequential: siblings = last phase's nodes (new tasks are appended there by default).
-    // Flat: siblings = the whole list.
-    if (roadmap.type === "flat") return roadmap.tasks;
-    return roadmap.phases[roadmap.phases.length - 1].nodes;
+    if (roadmap.type === "flat") {
+      if (!roadmap.tasks) roadmap.tasks = [];
+      return roadmap.tasks;
+    }
+    if (!roadmap.phases || roadmap.phases.length === 0) {
+      roadmap.phases = [{ label: "Phase 1", nodes: [] }];
+    }
+    const lastPhase = roadmap.phases[roadmap.phases.length - 1];
+    if (!lastPhase.nodes) lastPhase.nodes = [];
+    return lastPhase.nodes;
   }
 
   function populatePositionSelect(excludeId) {
@@ -478,7 +715,7 @@ window.TasklyRoadmap = (function () {
       const next = window.prompt("Rename roadmap", roadmap.title);
       if (next && next.trim()) {
         roadmap.title = next.trim();
-        renderHeader();
+        render();
         showToast("Roadmap renamed.", "success");
       }
       closeModal("roadmapMenuOverlay");
@@ -486,30 +723,37 @@ window.TasklyRoadmap = (function () {
 
     $("#regenerateRoadmapBtn").addEventListener("click", () => {
       closeModal("roadmapMenuOverlay");
-      showToast("Regenerating roadmap…");
+      showToast("Regenerating tailored roadmap milestones…");
       setTimeout(() => {
-        flattenNodes().forEach((n, i) => { n.completed = i === 0; });
+        if (roadmap.type === "flat") {
+          roadmap.tasks = generateDomainTasks(roadmap.title, roadmap.title);
+        } else {
+          roadmap.phases = generateDomainPhases(roadmap.title, roadmap.title);
+        }
         render();
-        showToast("Roadmap regenerated.", "success");
-      }, 1400);
+        showToast("Roadmap generated.", "success");
+      }, 1000);
     });
 
     $("#deleteRoadmapBtn").addEventListener("click", () => {
       closeModal("roadmapMenuOverlay");
       if (window.confirm('Delete "' + roadmap.title + '"? This can\'t be undone.')) {
-        showToast("Roadmap deleted. Returning to dashboard…");
-        setTimeout(() => { window.location.href = "dashboard.html"; }, 900);
+        if (window.TasklyAPI && window.TasklyAPI.deleteRoadmap) {
+          window.TasklyAPI.deleteRoadmap(roadmap.id);
+        } else {
+          try {
+            localStorage.removeItem(`taskly_roadmap_detail_${roadmap.id}`);
+            const remaining = getStoredRoadmaps().filter(r => r.id !== roadmap.id);
+            saveStoredRoadmaps(remaining);
+          } catch (e) {}
+        }
+        showToast("Roadmap deleted. Returning to Roadmap Manager…");
+        setTimeout(() => { window.location.href = "roadmapmanager.html"; }, 900);
       }
     });
   }
 
   /* ---------- Ask Nodi modal ---------- */
-
-  const nodiReplies = [
-    "Good question — once I'm connected to your roadmap data I'll be able to answer that in detail. For now, try breaking the task into two smaller steps and starting with whichever feels easiest.",
-    "I don't have live answers wired up in this preview yet, but that's exactly the kind of thing I'll help with once I'm connected to the backend.",
-    "Here's a general tip: if a task feels stuck, it's often too big. Splitting it into a 20-minute first step usually gets things moving again."
-  ];
 
   function wireNodiModal() {
     const openBtn = $("#nodiBtn");
@@ -532,7 +776,7 @@ window.TasklyRoadmap = (function () {
       return bubble;
     }
 
-    function sendMessage(text) {
+    async function sendMessage(text) {
       const msg = (text || input.value).trim();
       if (!msg) return;
       appendBubble(msg, "user");
@@ -544,11 +788,19 @@ window.TasklyRoadmap = (function () {
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
 
+      if (window.TasklyAPI && window.TasklyAPI.askNodiAI) {
+        try {
+          const res = await window.TasklyAPI.askNodiAI(msg, { roadmapTitle: roadmap.title, progress: computeProgress() });
+          typing.remove();
+          appendBubble(res.reply, "nodi");
+          return;
+        } catch (e) {}
+      }
+
       setTimeout(() => {
         typing.remove();
-        const reply = nodiReplies[Math.floor(Math.random() * nodiReplies.length)];
-        appendBubble(reply, "nodi");
-      }, 1100);
+        appendBubble(`For "${roadmap.title}", try breaking down the next available step into a 20-minute session. Consistent daily practice is key!`, "nodi");
+      }, 900);
     }
 
     sendBtn.addEventListener("click", () => sendMessage());
@@ -560,13 +812,20 @@ window.TasklyRoadmap = (function () {
 
   /* ---------- init ---------- */
 
-  function init() {
-    document.addEventListener("DOMContentLoaded", () => {
-      const params = new URLSearchParams(window.location.search);
+  async function init() {
+    const run = async () => {
+      const search = (typeof window !== "undefined" && window.location && window.location.search) ? window.location.search : "";
+      const params = new URLSearchParams(search);
+      const id = params.get("id");
       const type = params.get("type") === "flat" ? "flat" : "sequential";
       const blank = params.get("blank") === "1";
-      roadmap = buildSampleData(type, blank);
-      if (params.get("title")) roadmap.title = params.get("title");
+      const title = params.get("title");
+
+      roadmap = buildOrLoadRoadmapData(id, type, title, blank);
+      if (title && !id) roadmap.title = title;
+
+      // Save initial state so other views immediately see this roadmap
+      persistRoadmapChanges();
 
       wireGenericModalClosers();
       wireDrawer();
@@ -578,10 +837,18 @@ window.TasklyRoadmap = (function () {
       wireNodiModal();
 
       render();
-    });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", run);
+    } else {
+      run();
+    }
   }
 
-  return { init };
+  return { init, getRoadmapData: () => roadmap };
 })();
 
-TasklyRoadmap.init();
+if (typeof window !== "undefined" && window.TasklyRoadmap) {
+  window.TasklyRoadmap.init();
+}

@@ -44,8 +44,9 @@ window.TasklyManager = (function () {
     return d.innerHTML;
   }
 
-  function goToRoadmap(type, title, blank) {
+  function goToRoadmap(type, title, blank, id) {
     let url = "roadmap.html?type=" + encodeURIComponent(type || "sequential") + "&title=" + encodeURIComponent(title || "Roadmap");
+    if (id) url += "&id=" + encodeURIComponent(id);
     if (blank) url += "&blank=1";
     window.location.href = url;
   }
@@ -407,7 +408,7 @@ window.TasklyManager = (function () {
   function wireOneManagerCard(card) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".card-menu-btn")) return;
-      goToRoadmap(card.dataset.type, card.dataset.title, false);
+      goToRoadmap(card.dataset.type, card.dataset.title, false, card.dataset.id);
     });
     const menuBtn = card.querySelector(".card-menu-btn");
     if (menuBtn) {
@@ -430,12 +431,19 @@ window.TasklyManager = (function () {
   }
 
   function wireOptionsModalActions() {
-    $("#viewRoadmapOption").addEventListener("click", () => {
+    const viewBtn = $("#viewRoadmapOption");
+    const renameBtn = $("#renameRoadmapOption");
+    const regenBtn = $("#regenerateRoadmapOption");
+    const deleteBtn = $("#deleteRoadmapOption");
+    const cancelDelBtn = $("#cancelDeleteBtn");
+    const confirmDelBtn = $("#confirmDeleteBtn");
+
+    viewBtn && viewBtn.addEventListener("click", () => {
       if (!currentOptionsCard) return;
-      goToRoadmap(currentOptionsCard.dataset.type, currentOptionsCard.dataset.title, false);
+      goToRoadmap(currentOptionsCard.dataset.type, currentOptionsCard.dataset.title, false, currentOptionsCard.dataset.id);
     });
 
-    $("#renameRoadmapOption").addEventListener("click", () => {
+    renameBtn && renameBtn.addEventListener("click", () => {
       if (!currentOptionsCard) return;
       const current = currentOptionsCard.dataset.title;
       const next = window.prompt("Rename roadmap", current);
@@ -444,11 +452,11 @@ window.TasklyManager = (function () {
         const id = currentOptionsCard.dataset.id;
         currentOptionsCard.dataset.title = trimmed;
         
-        const titleTextNode = currentOptionsCard.querySelector(".roadmap-title").firstChild;
+        const titleTextNode = currentOptionsCard.querySelector(".roadmap-title") && currentOptionsCard.querySelector(".roadmap-title").firstChild;
         if (titleTextNode) {
           titleTextNode.textContent = trimmed + " ";
         }
-        $("#optionsRoadmapTitle").textContent = trimmed;
+        if ($("#optionsRoadmapTitle")) $("#optionsRoadmapTitle").textContent = trimmed;
 
         const item = userRoadmaps.find(r => r.id === id);
         if (item) {
@@ -460,7 +468,7 @@ window.TasklyManager = (function () {
       }
     });
 
-    $("#regenerateRoadmapOption").addEventListener("click", () => {
+    regenBtn && regenBtn.addEventListener("click", () => {
       if (!currentOptionsCard) return;
       closeModal("roadmapOptionsOverlay");
       const bar = currentOptionsCard.querySelector(".progress-fill");
@@ -470,19 +478,19 @@ window.TasklyManager = (function () {
       setTimeout(() => { if (bar) bar.style.width = original + "%"; showToast("Roadmap regenerated.", "success"); }, 1400);
     });
 
-    $("#deleteRoadmapOption").addEventListener("click", () => {
+    deleteBtn && deleteBtn.addEventListener("click", () => {
       if (!currentOptionsCard) return;
-      $("#deleteConfirmTitle").textContent = currentOptionsCard.dataset.title;
-      $("#roadmapOptionsView").style.display = "none";
-      $("#deleteConfirmView").classList.add("is-active");
+      if ($("#deleteConfirmTitle")) $("#deleteConfirmTitle").textContent = currentOptionsCard.dataset.title;
+      if ($("#roadmapOptionsView")) $("#roadmapOptionsView").style.display = "none";
+      if ($("#deleteConfirmView")) $("#deleteConfirmView").classList.add("is-active");
     });
 
-    $("#cancelDeleteBtn").addEventListener("click", () => {
-      $("#roadmapOptionsView").style.display = "";
-      $("#deleteConfirmView").classList.remove("is-active");
+    cancelDelBtn && cancelDelBtn.addEventListener("click", () => {
+      if ($("#roadmapOptionsView")) $("#roadmapOptionsView").style.display = "";
+      if ($("#deleteConfirmView")) $("#deleteConfirmView").classList.remove("is-active");
     });
 
-    $("#confirmDeleteBtn").addEventListener("click", async () => {
+    confirmDelBtn && confirmDelBtn.addEventListener("click", async () => {
       if (!currentOptionsCard) return;
       const card = currentOptionsCard;
       const id = card.dataset.id;
@@ -575,7 +583,7 @@ window.TasklyManager = (function () {
     });
 
     function updateCount() {
-      if (!textarea) return;
+      if (!textarea || typeof textarea.value !== "string") return;
       const len = textarea.value.length;
       if (charCount) charCount.textContent = len;
       if (generateBtn) generateBtn.disabled = len === 0;
@@ -611,8 +619,9 @@ window.TasklyManager = (function () {
         }
       }, 900);
 
+      let createdItem = null;
       try {
-        await createRoadmapRequest(goal, "sequential");
+        createdItem = await createRoadmapRequest(goal, "sequential");
       } catch (err) {
         console.warn(err);
       }
@@ -624,7 +633,7 @@ window.TasklyManager = (function () {
         genState.classList.remove("is-active");
         if (textarea) textarea.value = "";
         updateCount();
-        goToRoadmap("sequential", goal, false);
+        goToRoadmap("sequential", goal, false, createdItem ? createdItem.id : null);
       }, 2400);
     });
 
@@ -634,8 +643,8 @@ window.TasklyManager = (function () {
       const title = window.prompt("Checklist title:", "New checklist");
       if (title && title.trim()) {
         const trimmed = title.trim();
-        await createRoadmapRequest(trimmed, "flat");
-        goToRoadmap("flat", trimmed, true);
+        const createdChecklist = await createRoadmapRequest(trimmed, "flat");
+        goToRoadmap("flat", trimmed, true, createdChecklist ? createdChecklist.id : null);
       }
     });
   }
@@ -724,4 +733,6 @@ window.TasklyManager = (function () {
   };
 })();
 
-TasklyManager.init();
+if (typeof window !== "undefined" && window.TasklyManager) {
+  window.TasklyManager.init();
+}

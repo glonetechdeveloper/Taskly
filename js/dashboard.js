@@ -293,6 +293,7 @@ window.TasklyDashboard = (function () {
     card.dataset.title = title;
     card.dataset.icon = iconId;
     card.dataset.iconVariant = variant;
+    card.dataset.type = rm.type || "sequential";
 
     card.innerHTML = `
       <div class="roadmap-icon ${variant}">
@@ -346,8 +347,8 @@ window.TasklyDashboard = (function () {
     const list = $("#roadmapList");
     const empty = $("#emptyRoadmaps");
     if (!list || !empty) return;
-    const hasItems = list.children.length > 0;
-    empty.classList.toggle("is-visible", !hasItems);
+    const hasItems = list.children ? (list.children.length > 0) : (userRoadmaps && userRoadmaps.length > 0);
+    if (empty && empty.classList) empty.classList.toggle("is-visible", !hasItems);
   }
 
   /* ---------- Create roadmap endpoint handler (POST /roadmaps) ---------- */
@@ -552,7 +553,9 @@ window.TasklyDashboard = (function () {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".card-menu-btn")) return;
       const title = card.dataset.title || "";
-      window.location.href = `roadmap.html?title=${encodeURIComponent(title)}`;
+      const id = card.dataset.id || "";
+      const type = card.dataset.type || "sequential";
+      window.location.href = `roadmap.html?title=${encodeURIComponent(title)}&id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`;
     });
     const menuBtn = card.querySelector(".card-menu-btn");
     if (menuBtn) {
@@ -567,8 +570,10 @@ window.TasklyDashboard = (function () {
     $("#viewRoadmapOption").addEventListener("click", () => {
       if (!currentOptionsCard) return;
       const title = currentOptionsCard.dataset.title || "";
+      const id = currentOptionsCard.dataset.id || "";
+      const type = currentOptionsCard.dataset.type || "sequential";
       closeModal("roadmapOptionsOverlay");
-      window.location.href = `roadmap.html?title=${encodeURIComponent(title)}`;
+      window.location.href = `roadmap.html?title=${encodeURIComponent(title)}&id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}`;
     });
 
     $("#renameRoadmapOption").addEventListener("click", () => {
@@ -796,4 +801,6 @@ window.TasklyDashboard = (function () {
   };
 })();
 
-TasklyDashboard.init();
+if (typeof window !== "undefined" && window.TasklyDashboard) {
+  window.TasklyDashboard.init();
+}

@@ -275,4 +275,6 @@ window.TasklyNotifications = (function () {
   return { init };
 })();
 
-TasklyNotifications.init();
+if (typeof window !== "undefined" && window.TasklyNotifications) {
+  window.TasklyNotifications.init();
+}

@@ -698,3 +698,182 @@ svg { display: block; }
 .typing-dots span:nth-child(2) { animation-delay: .15s; }
 .typing-dots span:nth-child(3) { animation-delay: .3s; }
 @keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+/* ============================================================
+   API & ENDPOINT DIAGNOSTICS CARD
+   ============================================================ */
+.api-url-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.api-url-input {
+  flex: 1;
+  min-width: 260px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.api-url-input:focus {
+  outline: none;
+  border-color: var(--color-teal);
+  box-shadow: var(--shadow-focus);
+}
+.btn-secondary {
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all .2s ease;
+}
+.btn-secondary:hover {
+  background: var(--color-cream-soft);
+  border-color: var(--color-ink-soft);
+}
+.btn-action-primary {
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--color-teal);
+  color: var(--color-white);
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+.btn-action-primary:hover {
+  background: var(--color-teal-deep);
+  box-shadow: 0 4px 12px rgba(46,142,134,0.3);
+}
+.btn-action-primary svg {
+  width: 15px;
+  height: 15px;
+}
+.quick-tests-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.quick-test-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-cream-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  transition: all .2s ease;
+}
+.quick-test-btn:hover {
+  background: var(--color-teal-tint);
+  color: var(--color-teal-deep);
+  border-color: var(--color-teal);
+}
+.diag-results-box {
+  margin-top: 18px;
+  border-radius: var(--radius-sm);
+  background: #18191D;
+  color: #E2E8F0;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 12.5px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: none;
+}
+.diag-results-box.is-visible {
+  display: block;
+}
+.diag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2D3748;
+}
+.diag-title {
+  color: #F6AD55;
+  font-weight: 700;
+  font-size: 13px;
+}
+.diag-summary-pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #2D3748;
+  color: #CBD5E0;
+}
+.diag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px;
+  border-bottom: 1px solid #23272F;
+  gap: 8px;
+}
+.diag-row:last-child {
+  border-bottom: none;
+}
+.diag-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diag-method {
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+}
+.diag-method.get { background: rgba(56, 178, 172, 0.2); color: #4FD1C5; }
+.diag-method.post { background: rgba(237, 137, 54, 0.2); color: #F6AD55; }
+.diag-method.options { background: rgba(160, 174, 192, 0.2); color: #CBD5E0; }
+.diag-method.put { background: rgba(104, 211, 145, 0.2); color: #68D391; }
+.diag-method.delete { background: rgba(245, 101, 101, 0.2); color: #FC8181; }
+
+.diag-name {
+  color: #F7FAFC;
+  font-weight: 500;
+}
+.diag-path {
+  color: #A0AEC0;
+  font-size: 11px;
+}
+.diag-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.diag-latency {
+  color: #718096;
+  font-size: 11px;
+}
+.diag-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.diag-badge.ok { background: rgba(72, 187, 120, 0.2); color: #68D391; }
+.diag-badge.auth { background: rgba(66, 153, 225, 0.2); color: #63B3ED; }
+.diag-badge.warn { background: rgba(237, 137, 54, 0.2); color: #F6AD55; }
+.diag-badge.err { background: rgba(245, 101, 101, 0.2); color: #FC8181; }
+

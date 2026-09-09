@@ -373,4 +373,6 @@ window.TasklyAccount = (function () {
   return { init };
 })();
 
-TasklyAccount.init();
+if (typeof window !== "undefined" && window.TasklyAccount) {
+  window.TasklyAccount.init();
+}
