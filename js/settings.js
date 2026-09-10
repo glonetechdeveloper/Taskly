@@ -367,6 +367,24 @@ window.TasklySettings = (function () {
     $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
+  /* ---------- Sidebar Logout ---------- */
+
+  function wireSidebarLogout() {
+    const btn = $("#sidebarLogoutBtn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      if (typeof window.TasklyAPI !== "undefined") {
+        window.TasklyAPI.clearToken();
+      }
+      try {
+        localStorage.removeItem("taskly_user_email");
+        localStorage.removeItem("taskly_user_name");
+        localStorage.removeItem("taskly_user_avatar");
+      } catch (e) {}
+      window.location.href = "login.html";
+    });
+  }
+
   /* ---------- Initialization ---------- */
 
   async function init() {
@@ -376,6 +394,7 @@ window.TasklySettings = (function () {
       wireStreakPopup();
       wireNotifDropdown();
       wireNodiModal();
+      wireSidebarLogout();
       initLocalPreferences();
 
       await Promise.all([

@@ -449,16 +449,35 @@ window.TasklyAccount = (function () {
   function wireLogout() {
     const openBtn = $("#openLogoutBtn");
     const confirmBtn = $("#confirmLogoutBtn");
-    if (!openBtn) return;
+    const sidebarBtn = $("#sidebarLogoutBtn");
 
-    openBtn.addEventListener("click", () => openModal("logoutOverlay"));
+    if (openBtn) {
+      openBtn.addEventListener("click", () => openModal("logoutOverlay"));
+    }
 
     confirmBtn && confirmBtn.addEventListener("click", () => {
       window.TasklyAPI.clearToken();
+      try {
+        localStorage.removeItem("taskly_user_email");
+        localStorage.removeItem("taskly_user_name");
+        localStorage.removeItem("taskly_user_avatar");
+      } catch (e) {}
       closeModal("logoutOverlay");
       showToast("Signed out.");
       setTimeout(() => { window.location.href = "login.html"; }, 300);
     });
+
+    if (sidebarBtn) {
+      sidebarBtn.addEventListener("click", () => {
+        window.TasklyAPI.clearToken();
+        try {
+          localStorage.removeItem("taskly_user_email");
+          localStorage.removeItem("taskly_user_name");
+          localStorage.removeItem("taskly_user_avatar");
+        } catch (e) {}
+        window.location.href = "login.html";
+      });
+    }
   }
 
   /* ---------- Load Profile (GET /auth/me) ---------- */

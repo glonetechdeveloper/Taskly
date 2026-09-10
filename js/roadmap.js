@@ -960,6 +960,75 @@ window.TasklyRoadmap = (function () {
     });
   }
 
+  /* ---------- Ask Nodi ---------- */
+
+  const nodiReplies = [
+    "I'm here to help you turn your goals into clear, actionable roadmaps.",
+    "Whenever you want to start learning something new, enter your goal and I'll generate a step-by-step path for you.",
+    "Tip: Breaking tasks down into smaller milestones makes them much easier to finish!"
+  ];
+
+  function wireNodiModal() {
+    const openBtn = $("#nodiBtn");
+    const input = $("#nodiInput");
+    const sendBtn = $("#nodiSendBtn");
+    const body = $("#nodiBody");
+    if (!openBtn) return;
+
+    openBtn.addEventListener("click", () => {
+      openModal("nodiOverlay");
+      setTimeout(() => input && input.focus(), 250);
+    });
+
+    function appendBubble(text, from) {
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble from-" + from;
+      bubble.textContent = text;
+      body.appendChild(bubble);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function sendMessage(text) {
+      const msg = (text || (input ? input.value : "")).trim();
+      if (!msg) return;
+      appendBubble(msg, "user");
+      if (input) input.value = "";
+
+      const typing = document.createElement("div");
+      typing.className = "chat-bubble from-nodi";
+      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
+
+      setTimeout(() => {
+        typing.remove();
+        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
+      }, 900);
+    }
+
+    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
+    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
+  }
+
+  /* ---------- Sidebar Logout ---------- */
+
+  function wireSidebarLogout() {
+    const btn = $("#sidebarLogoutBtn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      if (typeof window.TasklyAPI !== "undefined") {
+        window.TasklyAPI.clearToken();
+      }
+      try {
+        localStorage.removeItem("taskly_user_email");
+        localStorage.removeItem("taskly_user_name");
+        localStorage.removeItem("taskly_user_avatar");
+      } catch (e) {}
+      window.location.href = "login.html";
+    });
+  }
+
   /* ==========================================================
      INIT
      ========================================================== */
@@ -974,6 +1043,8 @@ window.TasklyRoadmap = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifications();
+      wireNodiModal();
+      wireSidebarLogout();
       wireNodeDetailModal();
       wireTaskForm();
       wireRoadmapMenu();
