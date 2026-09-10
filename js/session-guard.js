@@ -4,7 +4,9 @@
    ========================================================== */
 
 (function () {
-  const token = localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
+  const token = localStorage.getItem("access_token") || 
+                localStorage.getItem("taskly_access_token") || 
+                localStorage.getItem("taskly_token");
   const path = window.location.pathname.toLowerCase();
   const isAuthPage = path.endsWith("login.html") || path.endsWith("signup.html");
 

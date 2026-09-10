@@ -1,163 +1,285 @@
 /* ==========================================================
    TASKLY — api.js
-   Centralized API Client and Authentication Helpers
+   Centralized API Client for Taskly FastAPI Backend
    ========================================================== */
 
-const DEFAULT_PLACEHOLDER = "https://your-service.onrender.com";
-const API_BASE = window.API_BASE || window.TASKLY_API_BASE || localStorage.getItem("TASKLY_API_BASE") || DEFAULT_PLACEHOLDER;
+const DEFAULT_API_BASE = "https://taskly-6yme.onrender.com";
+const TOKEN_KEYS = ["access_token", "taskly_access_token", "taskly_token"];
 
 function getToken() {
-  return localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
+  for (const key of TOKEN_KEYS) {
+    try {
+      const val = localStorage.getItem(key);
+      if (val) return val;
+    } catch (e) {}
+  }
+  return null;
 }
 
 function setToken(token) {
-  if (token) {
-    localStorage.setItem("access_token", token);
-    localStorage.setItem("taskly_access_token", token);
+  if (!token) return;
+  TOKEN_KEYS.forEach(key => {
+    try {
+      localStorage.setItem(key, token);
+    } catch (e) {}
+  });
+}
+
+function clearToken() {
+  TOKEN_KEYS.forEach(key => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  });
+}
+
+function getApiBase() {
+  try {
+    return localStorage.getItem("TASKLY_API_BASE") || window.API_BASE || DEFAULT_API_BASE;
+  } catch (e) {
+    return DEFAULT_API_BASE;
   }
 }
 
-function removeToken() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("taskly_access_token");
+function setApiBase(url) {
+  if (!url || !url.trim()) return;
+  const clean = url.trim().replace(/\/+$/, "");
+  try {
+    localStorage.setItem("TASKLY_API_BASE", clean);
+  } catch (e) {}
+  window.API_BASE = clean;
 }
 
-async function apiFetch(path, options = {}) {
+async function apiRequest(path, options = {}) {
+  const base = getApiBase();
+  const url = `${base}${path}`;
   const token = getToken();
+
   const headers = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...options.headers
   };
-  if (token) {
+
+  const isPublicAuth = path.startsWith("/auth/login") || path.startsWith("/auth/register");
+  if (token && !isPublicAuth) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  let response;
   try {
-    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    response = await fetch(url, { ...options, headers });
+  } catch (networkErr) {
+    console.error(`Network error requesting ${url}:`, networkErr);
+    throw new Error("Unable to reach the server. Please check your internet connection.");
+  }
 
-    if (response.status === 401) {
-      removeToken();
+  if (response.status === 401 && !isPublicAuth) {
+    clearToken();
+    const currentPath = window.location.pathname.toLowerCase();
+    if (!currentPath.endsWith("login.html") && !currentPath.endsWith("signup.html")) {
       window.location.href = "login.html";
-      return response;
     }
+    throw new Error("Session expired. Please sign in again.");
+  }
 
-    return response;
-  } catch (err) {
-    console.error("API Fetch Error:", err);
+  if (response.status === 204) {
+    return null;
+  }
+
+  let data = null;
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try { data = await response.json(); } catch (e) { data = null; }
+  } else {
+    try {
+      const text = await response.text();
+      data = text ? { message: text } : null;
+    } catch (e) { data = null; }
+  }
+
+  if (!response.ok) {
+    let errorMsg = (data && (data.detail || data.message || data.error)) || `Request failed with status ${response.status}`;
+    if (typeof errorMsg === "object") {
+      errorMsg = Array.isArray(errorMsg) ? errorMsg.map(e => e.msg || JSON.stringify(e)).join(", ") : JSON.stringify(errorMsg);
+    }
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    err.data = data;
     throw err;
   }
+
+  return data;
 }
 
-async function authLogin(email, password) {
-  const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-  const normalizedEmail = email.trim().toLowerCase();
+const TasklyAPI = {
+  getApiBase,
+  setApiBase,
+  getToken,
+  setToken,
+  clearToken,
+  request: apiRequest,
 
-  if (!isPlaceholder) {
+  async register({ email, password }) {
+    const data = await apiRequest("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+    });
+    if (data && data.access_token) setToken(data.access_token);
+    return data;
+  },
+
+  async login({ email, password }) {
+    const data = await apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+    });
+    if (data && data.access_token) setToken(data.access_token);
+    return data;
+  },
+
+  async getMe() {
+    return await apiRequest("/auth/me", { method: "GET" });
+  },
+
+  async createRoadmap({ title, goal_text }) {
+    const goal = goal_text || title || "";
+    const name = title || goal_text || "";
+    return await apiRequest("/roadmaps", {
+      method: "POST",
+      body: JSON.stringify({ title: name, goal_text: goal })
+    });
+  },
+
+  async getRoadmaps() {
+    return await apiRequest("/roadmaps", { method: "GET" });
+  },
+
+  async getRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}`, { method: "GET" });
+  },
+
+  async updateRoadmap(id, { title, goal_text }) {
+    const payload = {};
+    if (title !== undefined) payload.title = title;
+    if (goal_text !== undefined) payload.goal_text = goal_text;
+    return await apiRequest(`/roadmaps/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}`, { method: "DELETE" });
+  },
+
+  async regenerateRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}/regenerate`, { method: "POST" });
+  },
+
+  async getGenerationStatus(id) {
+    return await apiRequest(`/roadmaps/${id}/generation-status`, { method: "GET" });
+  },
+
+  async getRoadmapProgress(id) {
+    return await apiRequest(`/roadmaps/${id}/progress`, { method: "GET" });
+  },
+
+  async createNode(roadmapId, { name, description = "", time_estimate = "15m", depends_on = [] }) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes`, {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description: description || "",
+        time_estimate: time_estimate || "—",
+        depends_on: Array.isArray(depends_on) ? depends_on : []
+      })
+    });
+  },
+
+  async updateNode(roadmapId, nodeId, { name, description, time_estimate, depends_on }) {
+    const payload = {};
+    if (name !== undefined) payload.name = name;
+    if (description !== undefined) payload.description = description;
+    if (time_estimate !== undefined) payload.time_estimate = time_estimate;
+    if (depends_on !== undefined) payload.depends_on = Array.isArray(depends_on) ? depends_on : [];
+
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+      method: "DELETE"
+    });
+  },
+
+  async completeNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
+      method: "POST"
+    });
+  },
+
+  async uncompleteNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/uncomplete`, {
+      method: "POST"
+    });
+  },
+
+  async reorderNodes(roadmapId, items) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/reorder`, {
+      method: "PATCH",
+      body: JSON.stringify(items)
+    });
+  },
+
+  async getDashboard() {
     try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password }),
-      });
-
-      let data = {};
-      try { data = await response.json(); } catch (e) { data = {}; }
-
-      if (!response.ok) {
-        const message = (data && (data.detail || data.message)) || "Invalid email or password";
-        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
-      }
-
-      if (data.access_token) {
-        setToken(data.access_token);
-      }
-      return data;
-    } catch (err) {
-      console.warn("authLogin network error, using local session:", err);
-    }
-  }
-
-  // Fallback local session
-  const localToken = "taskly_token_" + btoa(normalizedEmail + ":" + Date.now());
-  setToken(localToken);
-  try {
-    localStorage.setItem("taskly_user_email", normalizedEmail);
-  } catch (e) {}
-  return { access_token: localToken, token_type: "bearer" };
-}
-
-async function authRegister(email, password, fullName) {
-  const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-  const normalizedEmail = email.trim().toLowerCase();
-
-  if (!isPlaceholder) {
-    try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password }),
-      });
-
-      let data = {};
-      try { data = await response.json(); } catch (e) { data = {}; }
-
-      if (!response.ok) {
-        const message = (data && (data.detail || data.message)) || "Registration failed. Please try again.";
-        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
-      }
-
-      if (data.access_token) {
-        setToken(data.access_token);
-      }
-      return data;
-    } catch (err) {
-      console.warn("authRegister network error, using local session:", err);
-    }
-  }
-
-  // Fallback local registration
-  const localToken = "taskly_token_" + btoa(normalizedEmail + ":" + Date.now());
-  setToken(localToken);
-  try {
-    localStorage.setItem("taskly_user_email", normalizedEmail);
-    if (fullName) localStorage.setItem("taskly_user_name", fullName);
-  } catch (e) {}
-  return { access_token: localToken, token_type: "bearer" };
-}
-
-async function authGetMe() {
-  const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-  if (!isPlaceholder) {
-    try {
-      const response = await apiFetch("/auth/me");
-      if (response.ok) {
-        return await response.json();
-      }
+      return await apiRequest("/dashboard", { method: "GET" });
     } catch (e) {
-      console.warn("authGetMe network error, using local cached profile:", e);
+      return await apiRequest("/roadmaps", { method: "GET" });
     }
+  },
+
+  async getStreak() {
+    return await apiRequest("/streak", { method: "GET" });
+  },
+
+  async getNotificationPreferences() {
+    return await apiRequest("/notifications/preferences", { method: "GET" });
+  },
+
+  async updateNotificationPreferences(payload) {
+    return await apiRequest("/notifications/preferences", {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getNotifications() {
+    return await apiRequest("/notifications", { method: "GET" });
+  },
+
+  computeNodeState(node, nodeMap = {}) {
+    if (!node) return "available";
+    if (node.completed === true) return "completed";
+
+    const deps = Array.isArray(node.depends_on) ? node.depends_on : [];
+    if (deps.length === 0) return "available";
+
+    const allDepsDone = deps.every(depId => {
+      const parent = nodeMap[String(depId)];
+      return parent && parent.completed === true;
+    });
+
+    return allDepsDone ? "available" : "locked";
   }
+};
 
-  // Fallback to local profile info
-  return {
-    email: localStorage.getItem("taskly_user_email") || "user@taskly.app",
-    full_name: localStorage.getItem("taskly_user_name") || "Taskly User",
-  };
-}
-
-function authLogout() {
-  removeToken();
-  window.location.href = "login.html";
-}
-
-// Expose globally
-window.API_BASE = API_BASE;
-window.getToken = getToken;
-window.setToken = setToken;
-window.removeToken = removeToken;
-window.apiFetch = apiFetch;
-window.authLogin = authLogin;
-window.authRegister = authRegister;
-window.authGetMe = authGetMe;
-window.authLogout = authLogout;
-
+window.TasklyAPI = TasklyAPI;
+window.apiFetch = (path, opts) => apiRequest(path, opts);
+window.authLogin = (email, pass) => TasklyAPI.login({ email, password: pass });
+window.authRegister = (email, pass) => TasklyAPI.register({ email, password: pass });
+window.authGetMe = () => TasklyAPI.getMe();
+window.API_BASE = getApiBase();

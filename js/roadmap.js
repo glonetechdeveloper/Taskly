@@ -2,7 +2,14 @@
    TASKLY — roadmap.js
    Dynamic Graph Roadmap Engine with Real Backend Integration
    ========================================================== */
+
 window.TasklyRoadmap = (function () {
+
+  let roadmap = null;
+  let roadmapId = null;
+  let pollIntervalId = null;
+  let currentNodeId = null;
+  let editingNodeId = null;
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
@@ -32,10 +39,16 @@ window.TasklyRoadmap = (function () {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.add("is-open");
   }
+
   function closeModal(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.remove("is-open");
   }
+
+  function closeAllModals() {
+    $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
+  }
+
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
   }
@@ -51,7 +64,7 @@ window.TasklyRoadmap = (function () {
     });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
-        $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
+        closeAllModals();
         closeAllDropdowns();
       }
     });
@@ -74,6 +87,27 @@ window.TasklyRoadmap = (function () {
   }
 
   let streakInterval = null;
+
+  async function loadStreak() {
+    try {
+      const data = await window.TasklyAPI.getStreak();
+      if (data && typeof data.current_streak === "number") {
+        const count = data.current_streak;
+        const streakBtn = $("#streakBtn");
+        if (streakBtn) {
+          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
+          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+        }
+        const modalCount = $("#streakCountBig");
+        if (modalCount) {
+          modalCount.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load streak:", err);
+    }
+  }
+
   function wireStreakPopup() {
     const btn = $("#streakBtn");
     if (!btn) return;
@@ -84,6 +118,7 @@ window.TasklyRoadmap = (function () {
       streakInterval = setInterval(tickCountdown, 1000);
     });
   }
+
   function tickCountdown() {
     const el = $("#streakCountdown");
     if (!el) return;
@@ -98,6 +133,102 @@ window.TasklyRoadmap = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
+  function getStoredNotifications() {
+    try {
+      const raw = localStorage.getItem("taskly_notifications");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveStoredNotifications(notifs) {
+    try {
+      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+    } catch (e) {}
+  }
+
+  async function loadNotifications() {
+    try {
+      const freshNotifs = await window.TasklyAPI.getNotifications();
+      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
+        const existing = getStoredNotifications();
+        const existingIds = new Set(existing.map(n => n.id));
+        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
+        saveStoredNotifications(merged);
+      }
+    } catch (err) {
+      console.warn("Could not fetch notifications:", err);
+    }
+    renderNotificationDropdown();
+  }
+
+  function renderNotificationDropdown() {
+    const panel = $("#notifPanel");
+    const dot = $("#notifDot");
+    if (!panel) return;
+
+    const notifs = getStoredNotifications();
+    if (dot) dot.style.display = notifs.length > 0 ? "block" : "none";
+
+    panel.innerHTML = `
+      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Notifications</span>
+        ${notifs.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-ink-soft); font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 6px;">Clear all</button>' : ''}
+      </div>
+      <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
+        ${notifs.length === 0 ? `
+          <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
+            No new notifications
+          </div>
+        ` : notifs.map(n => `
+          <div class="notif-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
+            <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}">
+              <svg viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <use href="${n.type === 'milestone' ? '#ic-flame' : '#ic-check'}"></use>
+              </svg>
+            </div>
+            <div>
+              <p class="notif-text">${escapeHtml(n.message || 'Milestone update')}</p>
+              <p class="notif-time">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="dropdown-footer">
+        <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
+      </div>
+    `;
+
+    const clearBtn = $("#clearNotifsBtn", panel);
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        localStorage.removeItem("taskly_notifications");
+        renderNotificationDropdown();
+        showToast("Notifications cleared.");
+      });
+    }
+
+    const viewAllBtn = $("#viewAllNotifsBtn", panel);
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener("click", () => {
+        panel.classList.remove("is-open");
+        window.location.href = "notifications.html";
+      });
+    }
+
+    $all(".notif-item[data-roadmap-id]", panel).forEach(item => {
+      const rmId = item.dataset.roadmapId;
+      if (rmId) {
+        item.addEventListener("click", () => {
+          panel.classList.remove("is-open");
+          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
+        });
+      }
+    });
+  }
+
   function wireNotifications() {
     const btn = $("#notifBtn");
     const panel = $("#notifPanel");
@@ -107,81 +238,21 @@ window.TasklyRoadmap = (function () {
       e.stopPropagation();
       const willOpen = !panel.classList.contains("is-open");
       closeAllDropdowns();
-      if (willOpen) { panel.classList.add("is-open"); if (dot) dot.style.display = "none"; }
+      if (willOpen) {
+        panel.classList.add("is-open");
+        if (dot) dot.style.display = "none";
+      }
     });
     document.addEventListener("click", (e) => {
       if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
         panel.classList.remove("is-open");
       }
     });
-    const viewAll = $("#viewAllNotifsBtn");
-    viewAll && viewAll.addEventListener("click", () => {
-      panel.classList.remove("is-open");
-      window.location.href = "notifications.html";
-    });
   }
 
   /* ==========================================================
-     API CLIENT HELPER ACCESS
+     STATE & NODE HELPERS
      ========================================================== */
-
-  async function apiGet(path) {
-    if (window.apiFetch) {
-      const res = await window.apiFetch(path);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    }
-    const token = localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
-    const base = window.API_BASE || localStorage.getItem("TASKLY_API_BASE") || "";
-    const res = await fetch(`${base}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { "Authorization": `Bearer ${token}` } : {})
-      }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  }
-
-  async function apiSend(path, method = "POST", body = null) {
-    const opts = { method };
-    if (body) opts.body = JSON.stringify(body);
-
-    if (window.apiFetch) {
-      const res = await window.apiFetch(path, opts);
-      let data = {};
-      try { data = await res.json(); } catch (e) {}
-      if (!res.ok) {
-        throw new Error(data.detail || data.message || `Request failed (${res.status})`);
-      }
-      return data;
-    }
-
-    const token = localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
-    const base = window.API_BASE || localStorage.getItem("TASKLY_API_BASE") || "";
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
-    const res = await fetch(`${base}${path}`, {
-      method,
-      headers,
-      ...(body ? { body: JSON.stringify(body) } : {})
-    });
-    let data = {};
-    try { data = await res.json(); } catch (e) {}
-    if (!res.ok) {
-      throw new Error(data.detail || data.message || `Request failed (${res.status})`);
-    }
-    return data;
-  }
-
-  /* ==========================================================
-     STATE & DATA MANAGEMENT
-     ========================================================== */
-
-  let roadmap = null;
-  let roadmapId = null;
-  let pollIntervalId = null;
 
   function getNodeMap() {
     const map = {};
@@ -193,18 +264,7 @@ window.TasklyRoadmap = (function () {
   }
 
   function getNodeState(node, nodeMap) {
-    if (node.completed) return "complete";
-
-    const deps = Array.isArray(node.depends_on) ? node.depends_on : [];
-    if (deps.length === 0) return "available";
-
-    // Available if ALL dependencies are completed
-    const allDepsMet = deps.every(depId => {
-      const parent = nodeMap[String(depId)];
-      return parent && Boolean(parent.completed);
-    });
-
-    return allDepsMet ? "available" : "locked";
+    return window.TasklyAPI.computeNodeState(node, nodeMap);
   }
 
   function getDependencyNames(node, nodeMap) {
@@ -220,9 +280,6 @@ window.TasklyRoadmap = (function () {
     if (!roadmap) return 0;
     if (typeof roadmap.progress_percentage === "number") {
       return Math.round(roadmap.progress_percentage);
-    }
-    if (typeof roadmap.progress === "number") {
-      return Math.round(roadmap.progress);
     }
     const nodes = Array.isArray(roadmap.nodes) ? roadmap.nodes : [];
     if (nodes.length === 0) return 0;
@@ -249,13 +306,7 @@ window.TasklyRoadmap = (function () {
     renderLoadingState("Loading roadmap…");
 
     try {
-      let data = null;
-      if (window.TasklyAPI && window.TasklyAPI.getRoadmapById) {
-        data = await window.TasklyAPI.getRoadmapById(roadmapId);
-      } else {
-        data = await apiGet(`/roadmaps/${roadmapId}`);
-      }
-
+      const data = await window.TasklyAPI.getRoadmap(roadmapId);
       roadmap = (data && (data.roadmap || data.data)) ? (data.roadmap || data.data) : data;
 
       if (!roadmap || !roadmap.id) {
@@ -263,7 +314,6 @@ window.TasklyRoadmap = (function () {
         return;
       }
 
-      // Check status: pending | generating_phases | generating_tasks | done | failed
       const status = (roadmap.status || "").toLowerCase();
 
       if (status === "done") {
@@ -271,7 +321,7 @@ window.TasklyRoadmap = (function () {
         render();
       } else if (status === "failed") {
         stopPolling();
-        renderFailedState();
+        renderFailedState(roadmap.error_message);
       } else {
         // Status is pending, generating_phases, or generating_tasks
         renderWaitingState(status);
@@ -287,22 +337,20 @@ window.TasklyRoadmap = (function () {
     stopPolling();
     pollIntervalId = setInterval(async () => {
       try {
-        let statusData = null;
-        if (window.TasklyAPI && window.TasklyAPI.getRoadmapGenerationStatus) {
-          statusData = await window.TasklyAPI.getRoadmapGenerationStatus(roadmapId);
-        } else {
-          statusData = await apiGet(`/roadmaps/${roadmapId}/generation-status`);
-        }
-
+        const statusData = await window.TasklyAPI.getGenerationStatus(roadmapId);
         const currentStatus = (statusData && (statusData.status || (statusData.roadmap && statusData.roadmap.status) || "")).toLowerCase();
 
         if (currentStatus === "done") {
           stopPolling();
-          showToast("Roadmap is ready!", "success");
-          await loadRoadmap(roadmapId);
+          showToast("Roadmap generation complete!", "success");
+          // Fetch full roadmap with generated nodes
+          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
+          roadmap = (freshData && (freshData.roadmap || freshData.data)) || freshData;
+          render();
+          await loadNotifications();
         } else if (currentStatus === "failed") {
           stopPolling();
-          renderFailedState();
+          renderFailedState(statusData && statusData.error_message);
         } else if (currentStatus) {
           roadmap.status = currentStatus;
           renderWaitingState(currentStatus);
@@ -326,18 +374,26 @@ window.TasklyRoadmap = (function () {
 
   function renderHeader() {
     const titleEl = $("#roadmapTitle");
-    const title = (roadmap && (roadmap.title || roadmap.name || roadmap.goal_text)) || "Roadmap";
+    const title = (roadmap && (roadmap.title || roadmap.goal_text)) || "Roadmap";
     if (titleEl) titleEl.textContent = title;
 
+    const type = (roadmap && roadmap.type === "flat") ? "flat" : "sequential";
     const badge = $("#roadmapTypeBadge");
     const label = $("#roadmapTypeLabel");
     const icon = $("#roadmapTypeIcon");
     const legend = $("#stateLegend");
 
-    if (badge) badge.classList.remove("is-flat");
-    if (label) label.textContent = "Milestone Graph";
-    if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-layers");
-    if (legend) legend.style.display = "";
+    if (type === "flat") {
+      if (badge) badge.classList.add("is-flat");
+      if (label) label.textContent = "Checklist";
+      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-list");
+      if (legend) legend.style.display = "none";
+    } else {
+      if (badge) badge.classList.remove("is-flat");
+      if (label) label.textContent = "Milestone Graph";
+      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-layers");
+      if (legend) legend.style.display = "";
+    }
 
     const addBtn = $("#addTaskBtn");
     if (addBtn) addBtn.style.display = "";
@@ -356,7 +412,7 @@ window.TasklyRoadmap = (function () {
   }
 
   function iconForState(state) {
-    if (state === "complete") return "#ic-check";
+    if (state === "completed") return "#ic-check";
     if (state === "locked") return "#ic-lock";
     return "#ic-check";
   }
@@ -389,7 +445,7 @@ window.TasklyRoadmap = (function () {
     `;
   }
 
-  function renderFailedState() {
+  function renderFailedState(errMsg) {
     const body = $("#roadmapBody");
     const addBtn = $("#addTaskBtn");
     if (addBtn) addBtn.style.display = "none";
@@ -400,10 +456,26 @@ window.TasklyRoadmap = (function () {
           <use href="#ic-warn"/>
         </svg>
         <strong style="color:var(--color-error);">Roadmap generation failed</strong>
-        <p style="margin-top:6px; margin-bottom:16px;">We were unable to complete generation for this roadmap.</p>
-        <a href="roadmapmanager.html" class="btn-solid" style="display:inline-flex; text-decoration:none;">Back to Roadmap Manager</a>
+        <p style="margin-top:6px; margin-bottom:16px;">${escapeHtml(errMsg || "We were unable to complete generation for this roadmap.")}</p>
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <button class="btn-solid" id="retryRegenBtn" type="button" style="display:inline-flex;">Retry Generation</button>
+          <a href="roadmapmanager.html" class="btn-ghost" style="display:inline-flex; text-decoration:none;">Back to Manager</a>
+        </div>
       </div>
     `;
+
+    const retryBtn = $("#retryRegenBtn");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", async () => {
+        try {
+          await window.TasklyAPI.regenerateRoadmap(roadmapId);
+          showToast("Retrying roadmap generation…", "success");
+          await loadRoadmap(roadmapId);
+        } catch (err) {
+          showToast(err.message || "Failed to regenerate", "error");
+        }
+      });
+    }
   }
 
   function renderLoadingState(msg) {
@@ -461,15 +533,54 @@ window.TasklyRoadmap = (function () {
         <div class="empty-roadmaps is-visible">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"/></svg>
           <strong>No tasks in this roadmap yet</strong>
-          <p style="margin-top:4px;">Tap "Add a task" below to start building your milestone graph.</p>
+          <p style="margin-top:4px;">Tap "Add a task" below to start building your steps.</p>
         </div>
       `;
       return;
     }
 
-    const nodeMap = getNodeMap();
+    const type = (roadmap.type === "flat") ? "flat" : "sequential";
 
-    // Group nodes by phase if any phase exists
+    if (type === "flat") {
+      // Flat / Checklist Mode: Sorted by order, no phase grouping, no lock states
+      const sorted = [...nodes].sort((a, b) => (a.order || 0) - (b.order || 0));
+      let html = '<div class="phase-block"><div class="node-chain">';
+
+      sorted.forEach((node) => {
+        const state = node.completed ? "completed" : "available";
+        const lineDone = node.completed ? "is-done" : "";
+        const title = node.name || "Untitled task";
+        const estimate = node.time_estimate || "—";
+
+        html += `<div class="node-item is-${state}" data-node-id="${escapeHtml(String(node.id))}">
+          <div class="node-chain-line ${lineDone}"></div>
+          <div class="node-icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <use href="#ic-check"></use>
+            </svg>
+          </div>
+          <div class="node-card" data-node-id="${escapeHtml(String(node.id))}">
+            <p class="node-title">${escapeHtml(title)}</p>
+            ${node.description ? `<p class="node-meta-item" style="margin-bottom:6px; color:var(--color-ink-soft); font-size:12.5px; line-height:1.4;">${escapeHtml(node.description)}</p>` : ''}
+            <div class="node-meta-row">
+              <span class="node-meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>
+                ${escapeHtml(estimate)}
+              </span>
+              ${node.completed ? '<span style="color:var(--color-success); font-weight:600; font-size:11px;">Completed</span>' : '<span style="color:var(--color-ink-soft); font-weight:600; font-size:11px;">To Do</span>'}
+            </div>
+          </div>
+        </div>`;
+      });
+
+      html += '</div></div>';
+      body.innerHTML = html;
+      wireNodeCards();
+      return;
+    }
+
+    // Sequential Mode: Graph grouped by phase with computed locked/available/completed states
+    const nodeMap = getNodeMap();
     const hasPhases = nodes.some(n => Boolean(n.phase));
 
     let groups = [];
@@ -477,14 +588,11 @@ window.TasklyRoadmap = (function () {
       const phaseMap = new Map();
       nodes.forEach(node => {
         const phaseName = (node.phase && node.phase.trim()) || "General Tasks";
-        if (!phaseMap.has(phaseName)) {
-          phaseMap.set(phaseName, []);
-        }
+        if (!phaseMap.has(phaseName)) phaseMap.set(phaseName, []);
         phaseMap.get(phaseName).push(node);
       });
 
       phaseMap.forEach((pNodes, label) => {
-        // Sort within phase by order if present
         pNodes.sort((a, b) => (a.order || 0) - (b.order || 0));
         groups.push({ label, nodes: pNodes });
       });
@@ -501,33 +609,34 @@ window.TasklyRoadmap = (function () {
       }
       html += '<div class="node-chain">';
 
-      group.nodes.forEach((node, nIdx) => {
+      group.nodes.forEach((node) => {
         const state = getNodeState(node, nodeMap);
         const lineDone = node.completed ? "is-done" : "";
-        const title = node.name || node.title || "Untitled task";
-        const estimate = node.time_estimate || node.estimate || "—";
+        const title = node.name || "Untitled task";
+        const estimate = node.time_estimate || "—";
         const depNames = getDependencyNames(node, nodeMap);
 
-        html += '<div class="node-item is-' + state + '" data-node-id="' + escapeHtml(String(node.id)) + '">';
-        html += '  <div class="node-chain-line ' + lineDone + '"></div>';
-        html += '  <div class="node-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="' + iconForState(state) + '"></use></svg></div>';
-        html += '  <div class="node-card" data-node-id="' + escapeHtml(String(node.id)) + '">';
-        html += '    <p class="node-title">' + escapeHtml(title) + '</p>';
-        if (node.description) {
-          html += '    <p class="node-meta-item" style="margin-bottom:6px; color:var(--color-ink-soft); font-size:12.5px; line-height:1.4;">' + escapeHtml(node.description) + '</p>';
-        }
-        html += '    <div class="node-meta-row">';
-        html += '      <span class="node-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>' + escapeHtml(estimate) + '</span>';
-        if (state === "locked") {
-          html += '      <span class="locked-tag">Locked' + (depNames.length ? ' — requires ' + escapeHtml(depNames.join(", ")) : '') + '</span>';
-        } else if (state === "available") {
-          html += '      <span style="color:var(--color-orange-deep); font-weight:600; font-size:11px;">Available now</span>';
-        } else if (state === "complete") {
-          html += '      <span style="color:var(--color-success); font-weight:600; font-size:11px;">Completed</span>';
-        }
-        html += '    </div>';
-        html += '  </div>';
-        html += '</div>';
+        html += `<div class="node-item is-${state}" data-node-id="${escapeHtml(String(node.id))}">
+          <div class="node-chain-line ${lineDone}"></div>
+          <div class="node-icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <use href="${iconForState(state)}"></use>
+            </svg>
+          </div>
+          <div class="node-card" data-node-id="${escapeHtml(String(node.id))}">
+            <p class="node-title">${escapeHtml(title)}</p>
+            ${node.description ? `<p class="node-meta-item" style="margin-bottom:6px; color:var(--color-ink-soft); font-size:12.5px; line-height:1.4;">${escapeHtml(node.description)}</p>` : ''}
+            <div class="node-meta-row">
+              <span class="node-meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>
+                ${escapeHtml(estimate)}
+              </span>
+              ${state === "locked" ? `<span class="locked-tag">Locked${depNames.length ? ' — complete ' + escapeHtml(depNames.join(", ")) + ' first' : ''}</span>` : ''}
+              ${state === "available" ? '<span style="color:var(--color-orange-deep); font-weight:600; font-size:11px;">Available now</span>' : ''}
+              ${state === "completed" ? '<span style="color:var(--color-success); font-weight:600; font-size:11px;">Completed</span>' : ''}
+            </div>
+          </div>
+        </div>`;
       });
 
       html += '</div></div>';
@@ -554,30 +663,33 @@ window.TasklyRoadmap = (function () {
         const node = findNodeById(nodeId);
         if (!node) return;
 
-        const nodeMap = getNodeMap();
-        const state = getNodeState(node, nodeMap);
+        const type = (roadmap && roadmap.type === "flat") ? "flat" : "sequential";
 
-        if (state === "locked") {
-          const depNames = getDependencyNames(node, nodeMap);
-          const reqText = depNames.length ? `Complete "${depNames.join(', ')}" first.` : "Finish the earlier tasks first to unlock this one.";
-          showToast(reqText);
-          return;
+        if (type !== "flat") {
+          const nodeMap = getNodeMap();
+          const state = getNodeState(node, nodeMap);
+
+          if (state === "locked") {
+            const depNames = getDependencyNames(node, nodeMap);
+            const reqText = depNames.length ? `Complete "${depNames.join(', ')}" first.` : "Finish prerequisite tasks first to unlock this milestone.";
+            showToast(reqText, "error");
+            return;
+          }
         }
+
         openNodeDetail(nodeId);
       });
     });
   }
-
-  let currentNodeId = null;
 
   function openNodeDetail(id) {
     const node = findNodeById(id);
     if (!node) return;
     currentNodeId = id;
 
-    const title = node.name || node.title || "Task";
+    const title = node.name || "Task";
     const desc = node.description || "No description provided.";
-    const estimate = node.time_estimate || node.estimate || "—";
+    const estimate = node.time_estimate || "—";
 
     $("#nodeDetailTitle").textContent = title;
     $("#nodeDetailDesc").textContent = desc;
@@ -600,51 +712,33 @@ window.TasklyRoadmap = (function () {
       if (!node || !roadmapId) return;
 
       const isCompleted = Boolean(node.completed);
-      const actionLabel = isCompleted ? "uncomplete" : "complete";
-      const targetPath = `/roadmaps/${roadmapId}/nodes/${node.id}/${actionLabel}`;
-
       completeBtn.disabled = true;
 
       try {
         if (isCompleted) {
-          if (window.TasklyAPI && window.TasklyAPI.uncompleteRoadmapNode) {
-            await window.TasklyAPI.uncompleteRoadmapNode(roadmapId, node.id);
-          } else {
-            await apiSend(targetPath, "POST");
-          }
+          await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
           node.completed = false;
           showToast("Marked incomplete.");
         } else {
-          if (window.TasklyAPI && window.TasklyAPI.completeRoadmapNode) {
-            await window.TasklyAPI.completeRoadmapNode(roadmapId, node.id);
-          } else {
-            await apiSend(targetPath, "POST");
-          }
+          await window.TasklyAPI.completeNode(roadmapId, node.id);
           node.completed = true;
           showToast("Nice work! Task complete.", "success");
         }
 
         closeModal("nodeDetailOverlay");
 
-        // Re-fetch roadmap to ensure full sync with backend progress_percentage
+        // Sync with live backend progress
         try {
-          let freshData = null;
-          if (window.TasklyAPI && window.TasklyAPI.getRoadmapById) {
-            freshData = await window.TasklyAPI.getRoadmapById(roadmapId);
-          } else {
-            freshData = await apiGet(`/roadmaps/${roadmapId}`);
-          }
-          if (freshData) {
-            roadmap = (freshData.roadmap || freshData.data) || freshData;
-          }
-        } catch (e) {
-          // If refetch fails, local node state was already updated
-        }
+          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
+          if (freshData) roadmap = (freshData.roadmap || freshData.data) || freshData;
+          await loadStreak();
+          await loadNotifications();
+        } catch (e) {}
 
         render();
       } catch (err) {
-        console.error(`Failed to ${actionLabel} node:`, err);
-        showToast(err.message || `Failed to update task status`, "error");
+        console.error("Failed to toggle completion:", err);
+        showToast(err.message || "Failed to update task status", "error");
       } finally {
         completeBtn.disabled = false;
       }
@@ -658,7 +752,7 @@ window.TasklyRoadmap = (function () {
     $("#nodeDeleteBtn").addEventListener("click", () => {
       closeModal("nodeDetailOverlay");
       const node = findNodeById(currentNodeId);
-      if (node) $("#deleteTaskTitle").textContent = node.name || node.title || "this task";
+      if (node) $("#deleteTaskTitle").textContent = node.name || "this task";
       openModal("deleteTaskOverlay");
     });
 
@@ -668,26 +762,22 @@ window.TasklyRoadmap = (function () {
       delBtn.disabled = true;
 
       try {
-        if (window.TasklyAPI && window.TasklyAPI.deleteRoadmapNode) {
-          await window.TasklyAPI.deleteRoadmapNode(roadmapId, currentNodeId);
-        } else {
-          await apiSend(`/roadmaps/${roadmapId}/nodes/${currentNodeId}`, "DELETE");
-        }
-
-        roadmap.nodes = (roadmap.nodes || []).filter(n => String(n.id) !== String(currentNodeId));
-        closeModal("deleteTaskOverlay");
+        await window.TasklyAPI.deleteNode(roadmapId, currentNodeId);
         showToast("Task deleted.");
+        closeModal("deleteTaskOverlay");
 
-        // Refetch to sync progress
-        try {
-          const fresh = await apiGet(`/roadmaps/${roadmapId}`);
-          if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
-        } catch (e) {}
+        // Refetch full roadmap
+        const fresh = await window.TasklyAPI.getRoadmap(roadmapId);
+        if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
 
         render();
       } catch (err) {
         console.error("Failed to delete node:", err);
-        showToast(err.message || "Failed to delete task", "error");
+        if (err.status === 409) {
+          showToast("Cannot delete: another task depends on this one.", "error");
+        } else {
+          showToast(err.message || "Failed to delete task", "error");
+        }
       } finally {
         delBtn.disabled = false;
       }
@@ -698,8 +788,6 @@ window.TasklyRoadmap = (function () {
      ADD / EDIT TASK FORM & DIRECT API CRUD
      ========================================================== */
 
-  let editingNodeId = null;
-
   function populateDependencySelect(excludeId, selectedDepId) {
     const select = $("#taskPositionSelect");
     if (!select) return;
@@ -709,7 +797,7 @@ window.TasklyRoadmap = (function () {
 
     let html = '<option value="">None (Available from start)</option>';
     availableParents.forEach((n) => {
-      const title = n.name || n.title || `Task #${n.id}`;
+      const title = n.name || `Task #${n.id}`;
       html += `<option value="${escapeHtml(String(n.id))}">${escapeHtml(title)}</option>`;
     });
     select.innerHTML = html;
@@ -732,9 +820,9 @@ window.TasklyRoadmap = (function () {
     if (nodeId) {
       const node = findNodeById(nodeId);
       heading.textContent = "Edit task";
-      nameInput.value = (node && (node.name || node.title)) || "";
+      nameInput.value = (node && node.name) || "";
       descInput.value = (node && node.description) || "";
-      estInput.value = (node && (node.time_estimate || node.estimate)) || "";
+      estInput.value = (node && node.time_estimate) || "";
       if (phaseInput) phaseInput.value = (node && node.phase) || "";
 
       const primaryDep = (node && Array.isArray(node.depends_on) && node.depends_on.length > 0) ? node.depends_on[0] : null;
@@ -746,7 +834,6 @@ window.TasklyRoadmap = (function () {
       estInput.value = "";
       if (phaseInput) phaseInput.value = "";
 
-      // Default dependency to last node in list if available
       const nodes = (roadmap && Array.isArray(roadmap.nodes)) ? roadmap.nodes : [];
       const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
       populateDependencySelect(null, lastNode ? lastNode.id : null);
@@ -768,7 +855,7 @@ window.TasklyRoadmap = (function () {
       if (!name) { $("#taskNameInput").focus(); return; }
 
       const description = ($("#taskDescInput").value || "").trim();
-      const estimate = ($("#taskEstimateInput").value || "").trim();
+      const estimate = ($("#taskEstimateInput").value || "").trim() || "15m";
       const phaseInput = $("#taskPhaseInput");
       const phase = phaseInput ? phaseInput.value.trim() : "";
       const dependsOnVal = $("#taskPositionSelect") ? $("#taskPositionSelect").value : "";
@@ -778,51 +865,29 @@ window.TasklyRoadmap = (function () {
 
       try {
         if (editingNodeId) {
-          // Edit Node (PATCH /roadmaps/{id}/nodes/{node_id})
-          const patchPayload = {
+          // PATCH /roadmaps/{roadmap_id}/nodes/{node_id}
+          await window.TasklyAPI.updateNode(roadmapId, editingNodeId, {
             name,
             description,
-            time_estimate: estimate || "—",
-            depends_on: dependsOn,
-            phase: phase || null
-          };
-
-          if (window.TasklyAPI && window.TasklyAPI.updateRoadmapNode) {
-            await window.TasklyAPI.updateRoadmapNode(roadmapId, editingNodeId, patchPayload);
-          } else {
-            await apiSend(`/roadmaps/${roadmapId}/nodes/${editingNodeId}`, "PATCH", patchPayload);
-          }
-
+            time_estimate: estimate,
+            depends_on: dependsOn
+          });
           showToast("Task updated.", "success");
         } else {
-          // Add Node (POST /roadmaps/{id}/nodes)
-          const postPayload = {
+          // POST /roadmaps/{roadmap_id}/nodes
+          await window.TasklyAPI.createNode(roadmapId, {
             name,
             description,
-            time_estimate: estimate || "—",
-            depends_on: dependsOn,
-            phase: phase || null,
-            order: (roadmap.nodes || []).length + 1
-          };
-
-          if (window.TasklyAPI && window.TasklyAPI.createRoadmapNode) {
-            await window.TasklyAPI.createRoadmapNode(roadmapId, postPayload);
-          } else {
-            await apiSend(`/roadmaps/${roadmapId}/nodes`, "POST", postPayload);
-          }
-
+            time_estimate: estimate,
+            depends_on: dependsOn
+          });
           showToast("Task added.", "success");
         }
 
         closeModal("taskFormOverlay");
 
-        // Refetch full roadmap to sync order and dependencies
-        let fresh = null;
-        if (window.TasklyAPI && window.TasklyAPI.getRoadmapById) {
-          fresh = await window.TasklyAPI.getRoadmapById(roadmapId);
-        } else {
-          fresh = await apiGet(`/roadmaps/${roadmapId}`);
-        }
+        // Refetch full roadmap to sync server truth
+        const fresh = await window.TasklyAPI.getRoadmap(roadmapId);
         if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
 
         render();
@@ -836,7 +901,7 @@ window.TasklyRoadmap = (function () {
   }
 
   /* ==========================================================
-     ROADMAP-LEVEL OPTIONS (Rename / Delete)
+     ROADMAP-LEVEL OPTIONS (Rename / Regenerate / Delete)
      ========================================================== */
 
   function wireRoadmapMenu() {
@@ -845,17 +910,13 @@ window.TasklyRoadmap = (function () {
 
     const renameBtn = $("#renameRoadmapBtn");
     renameBtn && renameBtn.addEventListener("click", async () => {
-      const current = (roadmap && (roadmap.title || roadmap.name || roadmap.goal_text)) || "";
+      const current = (roadmap && (roadmap.title || roadmap.goal_text)) || "";
       const next = window.prompt("Rename roadmap", current);
       if (next && next.trim()) {
         const trimmed = next.trim();
         closeModal("roadmapMenuOverlay");
         try {
-          if (window.TasklyAPI && window.TasklyAPI.updateRoadmap) {
-            await window.TasklyAPI.updateRoadmap(roadmapId, { title: trimmed });
-          } else {
-            await apiSend(`/roadmaps/${roadmapId}`, "PUT", { title: trimmed });
-          }
+          await window.TasklyAPI.updateRoadmap(roadmapId, { title: trimmed });
           if (roadmap) roadmap.title = trimmed;
           renderHeader();
           showToast("Roadmap renamed.", "success");
@@ -869,26 +930,29 @@ window.TasklyRoadmap = (function () {
 
     const regenBtn = $("#regenerateRoadmapBtn");
     if (regenBtn) {
-      // Prompt notes there is no /ai/generate-roadmap endpoint; remove or disable client simulation
-      regenBtn.addEventListener("click", () => {
+      regenBtn.addEventListener("click", async () => {
         closeModal("roadmapMenuOverlay");
-        showToast("Roadmap regeneration is managed via the Roadmap Manager.", "info");
+        if (window.confirm("Regenerate roadmap? This will clear current tasks and re-generate milestones.")) {
+          try {
+            await window.TasklyAPI.regenerateRoadmap(roadmapId);
+            showToast("Roadmap regeneration started.", "success");
+            await loadRoadmap(roadmapId);
+          } catch (err) {
+            showToast(err.message || "Could not regenerate roadmap", "error");
+          }
+        }
       });
     }
 
     const deleteBtn = $("#deleteRoadmapBtn");
     deleteBtn && deleteBtn.addEventListener("click", async () => {
       closeModal("roadmapMenuOverlay");
-      const title = (roadmap && (roadmap.title || roadmap.name)) || "this roadmap";
+      const title = (roadmap && (roadmap.title || roadmap.goal_text)) || "this roadmap";
       if (window.confirm(`Delete "${title}"? This cannot be undone.`)) {
         try {
-          if (window.TasklyAPI && window.TasklyAPI.deleteRoadmap) {
-            await window.TasklyAPI.deleteRoadmap(roadmapId);
-          } else {
-            await apiSend(`/roadmaps/${roadmapId}`, "DELETE");
-          }
+          await window.TasklyAPI.deleteRoadmap(roadmapId);
           showToast("Roadmap deleted. Returning to Roadmap Manager…");
-          setTimeout(() => { window.location.href = "roadmapmanager.html"; }, 800);
+          setTimeout(() => { window.location.href = "roadmapmanager.html"; }, 700);
         } catch (err) {
           showToast(err.message || "Failed to delete roadmap", "error");
         }
@@ -914,6 +978,11 @@ window.TasklyRoadmap = (function () {
       wireTaskForm();
       wireRoadmapMenu();
 
+      await Promise.all([
+        loadStreak(),
+        loadNotifications()
+      ]);
+
       if (id) {
         await loadRoadmap(id);
       } else {
@@ -938,4 +1007,3 @@ window.TasklyRoadmap = (function () {
 if (typeof window !== "undefined" && window.TasklyRoadmap) {
   window.TasklyRoadmap.init();
 }
-

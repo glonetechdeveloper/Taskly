@@ -174,12 +174,12 @@
 
           <div class="setting-row">
             <div class="setting-info">
-              <p class="setting-title">Push Notifications</p>
-              <p class="setting-desc">Receive instant alerts when roadmap milestones are updated.</p>
+              <p class="setting-title">Milestone Notifications</p>
+              <p class="setting-desc">Receive notifications when roadmap generation completes and progress milestones are reached.</p>
             </div>
             <div class="setting-control">
               <label class="switch-label">
-                <input type="checkbox" id="pushNotifToggle" checked>
+                <input type="checkbox" id="milestoneNotifToggle" checked>
                 <span class="switch-slider"></span>
               </label>
             </div>
@@ -188,7 +188,7 @@
           <div class="setting-row">
             <div class="setting-info">
               <p class="setting-title">Email Reminders</p>
-              <p class="setting-desc">Receive weekly study summaries and roadmap milestones by email.</p>
+              <p class="setting-desc">Receive milestone updates and reminders by email.</p>
             </div>
             <div class="setting-control">
               <label class="switch-label">
@@ -265,50 +265,6 @@
                 <option value="est">EST (Eastern Standard Time)</option>
                 <option value="pst">PST (Pacific Standard Time)</option>
               </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. Backend Connection & API Diagnostics Card -->
-        <div class="settings-card">
-          <div class="settings-card-header">
-            <div class="settings-card-icon is-teal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-            </div>
-            <div class="settings-card-title-group">
-              <h3>Backend Connection & API Diagnostics</h3>
-              <p>Configure and test connections to Taskly backend endpoints, feature connectors, and OpenAPI services.</p>
-            </div>
-          </div>
-
-          <div class="setting-row" style="flex-direction: column; align-items: stretch;">
-            <div class="setting-info" style="margin-bottom: 8px;">
-              <p class="setting-title">API Base URL</p>
-              <p class="setting-desc">Set your FastAPI/Node backend URL. Leave as default or localhost for testing.</p>
-            </div>
-            <div class="api-url-row">
-              <input type="url" class="api-url-input" id="apiBaseUrlInput" placeholder="https://your-service.onrender.com">
-              <button class="btn-secondary" id="saveApiBaseBtn" type="button">Save Base URL</button>
-              <button class="btn-action-primary" id="runDiagnosticsBtn" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                Test All Endpoints
-              </button>
-            </div>
-
-            <div class="quick-tests-row">
-              <span style="font-size: 11px; font-weight: 700; color: var(--color-ink-soft); display: flex; align-items: center;">Quick Presets:</span>
-              <button class="quick-test-btn" type="button" data-url="https://your-service.onrender.com">Offline / Demo Mode</button>
-              <button class="quick-test-btn" type="button" data-url="http://localhost:8000">Localhost:8000 (FastAPI)</button>
-              <button class="quick-test-btn" type="button" data-url="http://localhost:3000">Localhost:3000 (Node)</button>
-            </div>
-
-            <!-- Diagnostics Console Output -->
-            <div class="diag-results-box" id="diagResultsBox">
-              <div class="diag-header">
-                <span class="diag-title">API Diagnostic Report</span>
-                <span class="diag-summary-pill" id="diagSummaryPill">Ready</span>
-              </div>
-              <div id="diagResultsList"></div>
             </div>
           </div>
         </div>

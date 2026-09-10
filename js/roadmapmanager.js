@@ -1,39 +1,22 @@
 /* ==========================================================
    TASKLY — roadmapmanager.js
+   Roadmap Manager logic connected to live FastAPI backend
    ========================================================== */
-window.TasklyManager = (function () {
 
-  const DEFAULT_PLACEHOLDER = "https://your-service.onrender.com";
-  const API_BASE = window.API_BASE || window.TASKLY_API_BASE || localStorage.getItem("TASKLY_API_BASE") || DEFAULT_PLACEHOLDER;
-  const TOKEN_KEY = "access_token";
+window.TasklyManager = (function () {
 
   let userRoadmaps = [];
   let currentFilter = "all";
+  let activeRoadmap = null;
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
-
-  function getToken() {
-    try {
-      return localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function getUserEmail() {
-    try {
-      return localStorage.getItem("taskly_user_email") || "default";
-    } catch (e) {
-      return "default";
-    }
-  }
 
   function showToast(message, type) {
     const toast = $("#toast");
     if (!toast) return;
     toast.textContent = message;
-    toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
+    toast.className = "toast is-visible" + (type === "success" ? " is-success" : (type === "error" ? " is-error" : ""));
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 3600);
   }
@@ -42,39 +25,6 @@ window.TasklyManager = (function () {
     const d = document.createElement("div");
     d.textContent = str || "";
     return d.innerHTML;
-  }
-
-  function goToRoadmap(type, title, blank, id) {
-    let url = "roadmap.html?type=" + encodeURIComponent(type || "sequential") + "&title=" + encodeURIComponent(title || "Roadmap");
-    if (id) url += "&id=" + encodeURIComponent(id);
-    if (blank) url += "&blank=1";
-    window.location.href = url;
-  }
-
-  /* ---------- Storage helpers ---------- */
-
-  function getStorageKey() {
-    const email = getUserEmail();
-    return "taskly_roadmaps_" + email.replace(/[^a-zA-Z0-9_]/g, "_");
-  }
-
-  function getStoredRoadmaps() {
-    try {
-      const raw = localStorage.getItem(getStorageKey()) || localStorage.getItem("taskly_user_roadmaps");
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveStoredRoadmaps(roadmaps) {
-    try {
-      const serialized = JSON.stringify(roadmaps);
-      localStorage.setItem(getStorageKey(), serialized);
-      localStorage.setItem("taskly_user_roadmaps", serialized);
-    } catch (e) {
-      console.warn("Could not save roadmaps to storage", e);
-    }
   }
 
   function getIconForTitle(title) {
@@ -94,20 +44,27 @@ window.TasklyManager = (function () {
     return "ic-route";
   }
 
-  /* ---------- generic modal + dropdown plumbing ---------- */
+  /* ---------- Modal & Drawer Plumbing ---------- */
 
   function openModal(overlayId) {
     closeAllDropdowns();
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.add("is-open");
   }
+
   function closeModal(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.remove("is-open");
   }
+
+  function closeAllModals() {
+    $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
+  }
+
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
   }
+
   function wireGenericModalClosers() {
     $all("[data-close-modal]").forEach((btn) => {
       btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
@@ -119,13 +76,11 @@ window.TasklyManager = (function () {
     });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
-        $all(".modal-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
+        closeAllModals();
         closeAllDropdowns();
       }
     });
   }
-
-  /* ---------- shared shell ---------- */
 
   function wireDrawer() {
     const sidebar = $("#sidebar");
@@ -133,6 +88,7 @@ window.TasklyManager = (function () {
     const openBtn = $("#hamburgerBtn");
     const closeBtn = $("#sidebarCloseBtn");
     if (!sidebar || !overlay) return;
+
     function open() { sidebar.classList.add("is-open"); overlay.classList.add("is-visible"); }
     function close() { sidebar.classList.remove("is-open"); overlay.classList.remove("is-visible"); }
     openBtn && openBtn.addEventListener("click", open);
@@ -141,7 +97,30 @@ window.TasklyManager = (function () {
     $all(".nav-link").forEach((link) => link.addEventListener("click", close));
   }
 
+  /* ---------- Streak Handling (GET /streak) ---------- */
+
   let streakInterval = null;
+
+  async function loadStreak() {
+    try {
+      const data = await window.TasklyAPI.getStreak();
+      if (data && typeof data.current_streak === "number") {
+        const count = data.current_streak;
+        const streakBtn = $("#streakBtn");
+        if (streakBtn) {
+          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
+          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+        }
+        const modalCount = $("#streakCountBig");
+        if (modalCount) {
+          modalCount.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load streak:", err);
+    }
+  }
+
   function wireStreakPopup() {
     const btn = $("#streakBtn");
     if (!btn) return;
@@ -152,6 +131,7 @@ window.TasklyManager = (function () {
       streakInterval = setInterval(tickCountdown, 1000);
     });
   }
+
   function tickCountdown() {
     const el = $("#streakCountdown");
     if (!el) return;
@@ -166,188 +146,221 @@ window.TasklyManager = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
-  function wireNotifications() {
+  /* ---------- Notifications Handling ---------- */
+
+  function getStoredNotifications() {
+    try {
+      const raw = localStorage.getItem("taskly_notifications");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveStoredNotifications(notifs) {
+    try {
+      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+    } catch (e) {}
+  }
+
+  async function loadNotifications() {
+    try {
+      const freshNotifs = await window.TasklyAPI.getNotifications();
+      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
+        const existing = getStoredNotifications();
+        const existingIds = new Set(existing.map(n => n.id));
+        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
+        saveStoredNotifications(merged);
+      }
+    } catch (err) {
+      console.warn("Could not fetch notifications:", err);
+    }
+    renderNotificationDropdown();
+  }
+
+  function renderNotificationDropdown() {
+    const panel = $("#notifPanel");
+    const dot = $("#notifDot");
+    if (!panel) return;
+
+    const notifs = getStoredNotifications();
+    if (dot) {
+      dot.style.display = notifs.length > 0 ? "block" : "none";
+    }
+
+    panel.innerHTML = `
+      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Notifications</span>
+        ${notifs.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-ink-soft); font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 6px;">Clear all</button>' : ''}
+      </div>
+      <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
+        ${notifs.length === 0 ? `
+          <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
+            No new notifications
+          </div>
+        ` : notifs.map(n => `
+          <div class="notif-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
+            <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}">
+              <svg viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <use href="${n.type === 'milestone' ? '#ic-flame' : '#ic-check'}"></use>
+              </svg>
+            </div>
+            <div>
+              <p class="notif-text">${escapeHtml(n.message || 'Milestone update')}</p>
+              <p class="notif-time">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="dropdown-footer">
+        <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
+      </div>
+    `;
+
+    const clearBtn = $("#clearNotifsBtn", panel);
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        localStorage.removeItem("taskly_notifications");
+        renderNotificationDropdown();
+        showToast("Notifications cleared.");
+      });
+    }
+
+    const viewAllBtn = $("#viewAllNotifsBtn", panel);
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener("click", () => {
+        panel.classList.remove("is-open");
+        window.location.href = "notifications.html";
+      });
+    }
+
+    $all(".notif-item[data-roadmap-id]", panel).forEach(item => {
+      const rmId = item.dataset.roadmapId;
+      if (rmId) {
+        item.addEventListener("click", () => {
+          panel.classList.remove("is-open");
+          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
+        });
+      }
+    });
+  }
+
+  function wireNotifDropdown() {
     const btn = $("#notifBtn");
     const panel = $("#notifPanel");
     const dot = $("#notifDot");
     if (!btn || !panel) return;
+
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const willOpen = !panel.classList.contains("is-open");
       closeAllDropdowns();
-      if (willOpen) { panel.classList.add("is-open"); if (dot) dot.style.display = "none"; }
+      if (willOpen) {
+        panel.classList.add("is-open");
+        if (dot) dot.style.display = "none";
+      }
     });
+
     document.addEventListener("click", (e) => {
       if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
         panel.classList.remove("is-open");
       }
     });
-    const viewAll = $("#viewAllNotifsBtn");
-    viewAll && viewAll.addEventListener("click", () => {
-      panel.classList.remove("is-open");
-      window.location.href = "notifications.html";
-    });
   }
 
-  /* ---------- Fetch and Normalize Roadmaps (GET /roadmaps) ---------- */
+  /* ---------- Fetch Roadmaps (GET /roadmaps) ---------- */
 
   async function fetchUserRoadmaps() {
-    const token = getToken();
-    const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-    let serverRoadmaps = null;
-
-    if (!isPlaceholder && token) {
-      try {
-        const res = await fetch(API_BASE + "/roadmaps", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            serverRoadmaps = data;
-          } else if (data && Array.isArray(data.roadmaps)) {
-            serverRoadmaps = data.roadmaps;
-          } else if (data && Array.isArray(data.data)) {
-            serverRoadmaps = data.data;
-          } else if (data && typeof data === "object") {
-            serverRoadmaps = [data];
-          }
-        }
-      } catch (err) {
-        console.warn("GET /roadmaps failed, using locally stored roadmaps:", err);
+    try {
+      const data = await window.TasklyAPI.getRoadmaps();
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data && Array.isArray(data.roadmaps)) {
+        list = data.roadmaps;
+      } else if (data && typeof data === "object") {
+        list = [data];
       }
-    }
-
-    if (serverRoadmaps && serverRoadmaps.length > 0) {
-      userRoadmaps = serverRoadmaps.map(normalizeRoadmapData);
-      saveStoredRoadmaps(userRoadmaps);
-    } else {
-      userRoadmaps = getStoredRoadmaps();
+      userRoadmaps = list;
+    } catch (err) {
+      console.warn("Error fetching roadmaps:", err);
+      userRoadmaps = [];
     }
 
     renderRoadmapList();
   }
 
-  function normalizeRoadmapData(raw) {
-    const id = raw.id || raw._id || ("rm-" + Math.random().toString(36).substr(2, 9));
-    const title = raw.title || raw.goal_text || raw.name || "My Roadmap";
-    const type = raw.type === "flat" || raw.type === "checklist" ? "flat" : "sequential";
-
-    let totalTasks = 8;
-    let completedTasks = 0;
-
-    if (typeof raw.total_tasks === "number") {
-      totalTasks = raw.total_tasks;
-    } else if (raw.tasks && Array.isArray(raw.tasks)) {
-      totalTasks = raw.tasks.length || 1;
-      completedTasks = raw.tasks.filter(t => t.completed).length;
-    } else if (raw.phases && Array.isArray(raw.phases)) {
-      let count = 0;
-      let comp = 0;
-      raw.phases.forEach(p => {
-        if (p.nodes && Array.isArray(p.nodes)) {
-          count += p.nodes.length;
-          comp += p.nodes.filter(n => n.completed).length;
-        }
-      });
-      if (count > 0) {
-        totalTasks = count;
-        completedTasks = comp;
-      }
-    }
-
-    if (typeof raw.completed_tasks === "number") {
-      completedTasks = raw.completed_tasks;
-    }
-
-    let progress = 0;
-    if (typeof raw.progress === "number") {
-      progress = raw.progress;
-    } else if (totalTasks > 0) {
-      progress = Math.round((completedTasks / totalTasks) * 100);
-    }
-
-    const icon = raw.icon || getIconForTitle(title);
-
-    return {
-      id,
-      title,
-      goal_text: raw.goal_text || title,
-      type,
-      total_tasks: totalTasks,
-      completed_tasks: completedTasks,
-      progress,
-      icon,
-      created_at: raw.created_at || raw.createdAt || new Date().toISOString()
-    };
-  }
-
-  /* ---------- Render Manager List Cards ---------- */
-
   function renderRoadmapList() {
-    const list = $("#managerList");
-    if (!list) return;
-    list.innerHTML = "";
+    const grid = $("#roadmapGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
 
-    if (!userRoadmaps || userRoadmaps.length === 0) {
-      updateEmptyFilterState();
-      return;
-    }
+    const filtered = filterRoadmaps(userRoadmaps, currentFilter);
 
-    userRoadmaps.forEach((rm, index) => {
+    filtered.forEach((rm, index) => {
       const card = createCardElement(rm, index);
-      list.appendChild(card);
-      wireOneManagerCard(card);
+      grid.appendChild(card);
+      wireCardEvents(card, rm);
     });
 
-    applyCurrentFilter();
-    animateProgressBars();
+    updateEmptyFilterState(filtered.length);
+  }
+
+  function filterRoadmaps(list, filter) {
+    if (!list) return [];
+    if (filter === "all") return list;
+    if (filter === "sequential") return list.filter(r => r.type !== "flat" && r.type !== "checklist");
+    if (filter === "flat") return list.filter(r => r.type === "flat" || r.type === "checklist");
+    if (filter === "completed") return list.filter(r => (r.progress_percentage || 0) === 100);
+    return list;
   }
 
   function createCardElement(rm, index) {
     const variant = index % 2 === 0 ? "is-teal" : "";
-    const iconId = rm.icon || getIconForTitle(rm.title);
     const title = rm.title || rm.goal_text || "Roadmap";
-    const total = rm.total_tasks || 8;
-    const completed = rm.completed_tasks || 0;
-    const progress = typeof rm.progress === "number" ? rm.progress : Math.round((completed / total) * 100);
-    const isFlat = rm.type === "flat";
+    const iconId = getIconForTitle(title);
+    const type = rm.type === "flat" || rm.type === "checklist" ? "flat" : "sequential";
+    const typeLabel = type === "flat" ? "Checklist" : "Milestone Graph";
+    const status = (rm.status || "done").toLowerCase();
+    const isDone = status === "done";
+    const isFailed = status === "failed";
+    const isGenerating = !isDone && !isFailed;
 
-    const badgeIcon = isFlat ? "ic-list" : "ic-layers";
-    const badgeText = isFlat ? "Checklist" : "Sequential";
-    const badgeClass = isFlat ? "roadmap-type-badge is-flat manager-card-type-badge" : "roadmap-type-badge manager-card-type-badge";
+    const progress = typeof rm.progress_percentage === "number" ? Math.round(rm.progress_percentage) : (typeof rm.progress === "number" ? Math.round(rm.progress) : 0);
 
     const card = document.createElement("article");
     card.className = "roadmap-card";
     card.dataset.id = rm.id;
-    card.dataset.title = title;
-    card.dataset.icon = iconId;
-    card.dataset.iconVariant = variant;
-    card.dataset.type = rm.type || "sequential";
+    card.dataset.type = type;
+
+    let metaHtml = "";
+    if (isGenerating) {
+      metaHtml = `<span style="color:var(--color-orange-deep); font-weight:600; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+        <span class="spinner-ring" style="width:12px; height:12px; border-width:1.5px; border-top-color:var(--color-orange-deep);"></span>
+        Generating roadmap…
+      </span>`;
+    } else if (isFailed) {
+      metaHtml = `<span style="color:var(--color-error); font-weight:600; font-size:12px;">Generation failed</span>`;
+    } else {
+      metaHtml = `<p class="roadmap-meta">${progress}% completed</p>`;
+    }
 
     card.innerHTML = `
-      <div class="roadmap-icon ${variant}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <use href="#${iconId}"></use>
-        </svg>
+      <div class="roadmap-card-header">
+        <div class="roadmap-icon ${variant}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#${iconId}"></use>
+          </svg>
+        </div>
+        <span class="roadmap-type-pill ${type === 'flat' ? 'is-flat' : ''}">${typeLabel}</span>
       </div>
       <div class="roadmap-body">
-        <p class="roadmap-title">
-          ${escapeHtml(title)} 
-          <span class="${badgeClass}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#${badgeIcon}"></use></svg>
-            ${badgeText}
-          </span>
-        </p>
+        <p class="roadmap-title">${escapeHtml(title)}</p>
         <div class="progress-track">
-          <div class="progress-fill" data-progress="${progress}" style="width: ${progress}%"></div>
+          <div class="progress-fill ${isGenerating ? 'is-pulse' : ''}" style="width: ${isGenerating ? '60%' : progress + '%'}"></div>
         </div>
-        <p class="roadmap-meta">${completed} out of ${total} tasks completed</p>
+        ${metaHtml}
       </div>
       <button class="card-menu-btn" type="button" aria-label="Roadmap options">
         <svg viewBox="0 0 24 24"><use href="#ic-dots"></use></svg>
@@ -357,213 +370,132 @@ window.TasklyManager = (function () {
     return card;
   }
 
-  function animateProgressBars() {
-    $all(".progress-fill").forEach((bar) => {
-      const target = bar.dataset.progress || "0";
-      setTimeout(() => { bar.style.width = target + "%"; }, 200);
-    });
-  }
-
-  /* ---------- filter tabs ---------- */
-
-  function applyCurrentFilter() {
-    $all(".roadmap-card").forEach((card) => {
-      const match = currentFilter === "all" || card.dataset.type === currentFilter;
-      card.style.display = match ? "" : "none";
-    });
-    updateEmptyFilterState();
-  }
-
-  function updateEmptyFilterState() {
-    const list = $("#managerList");
-    const emptyMsg = $("#managerEmptyFilter");
-    if (!list || !emptyMsg) return;
-
-    if (!userRoadmaps || userRoadmaps.length === 0) {
-      emptyMsg.textContent = "No roadmaps created yet. Tap \"Add New Roadmap\" or \"Create Checklist\" to begin.";
-      emptyMsg.classList.add("is-visible");
-      return;
-    }
-
-    const anyVisible = $all(".roadmap-card", list).some((c) => c.style.display !== "none");
-    emptyMsg.textContent = "Nothing here yet for this filter.";
-    emptyMsg.classList.toggle("is-visible", !anyVisible);
-  }
-
-  function wireFilterTabs() {
-    $all(".filter-tab").forEach((tab) => {
-      tab.addEventListener("click", () => {
-        $all(".filter-tab").forEach((t) => t.classList.remove("is-active"));
-        tab.classList.add("is-active");
-        currentFilter = tab.dataset.filter || "all";
-        applyCurrentFilter();
-      });
-    });
-  }
-
-  /* ---------- roadmap cards: click to open, menu for options ---------- */
-
-  let currentOptionsCard = null;
-
-  function wireOneManagerCard(card) {
+  function wireCardEvents(card, rm) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".card-menu-btn")) return;
-      goToRoadmap(card.dataset.type, card.dataset.title, false, card.dataset.id);
+      window.location.href = `roadmap.html?id=${encodeURIComponent(rm.id)}`;
     });
+
     const menuBtn = card.querySelector(".card-menu-btn");
     if (menuBtn) {
       menuBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openOptionsForCard(card);
+        openRoadmapOptionsMenu(rm);
       });
     }
   }
 
-  function openOptionsForCard(card) {
-    currentOptionsCard = card;
-    const title = card.dataset.title || "Roadmap";
-    const metaEl = card.querySelector(".roadmap-meta");
+  function updateEmptyFilterState(count) {
+    const empty = $("#emptyFilterState");
+    const grid = $("#roadmapGrid");
+    if (!empty || !grid) return;
+    const hasItems = count > 0;
+    empty.classList.toggle("is-visible", !hasItems);
+  }
+
+  function wireFilterChips() {
+    $all(".filter-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        $all(".filter-chip").forEach(c => c.classList.remove("is-active"));
+        chip.classList.add("is-active");
+        currentFilter = chip.dataset.filter || "all";
+        renderRoadmapList();
+      });
+    });
+  }
+
+  /* ---------- Roadmap Options Modal (Rename, Regenerate, Delete) ---------- */
+
+  function openRoadmapOptionsMenu(rm) {
+    activeRoadmap = rm;
+    const title = rm.title || rm.goal_text || "Roadmap";
+    const status = (rm.status || "done").toLowerCase();
+
     $("#optionsRoadmapTitle").textContent = title;
-    $("#optionsRoadmapMeta").textContent = metaEl ? metaEl.textContent : "";
-    $("#roadmapOptionsView").style.display = "";
-    $("#deleteConfirmView").classList.remove("is-active");
+    $("#optionsRoadmapMeta").textContent = status === "done" ? `${rm.progress_percentage || 0}% completed` : status;
+
+    const iconUse = $("#optionsRoadmapIconUse");
+    if (iconUse) {
+      iconUse.setAttribute("href", "#" + getIconForTitle(title));
+    }
+
+    $("#optionsMenuRoot").style.display = "block";
+    $("#deleteConfirmView").style.display = "none";
+
     openModal("roadmapOptionsOverlay");
   }
 
-  function wireOptionsModalActions() {
+  function wireRoadmapOptionsMenu() {
     const viewBtn = $("#viewRoadmapOption");
-    const renameBtn = $("#renameRoadmapOption");
-    const regenBtn = $("#regenerateRoadmapOption");
-    const deleteBtn = $("#deleteRoadmapOption");
-    const cancelDelBtn = $("#cancelDeleteBtn");
-    const confirmDelBtn = $("#confirmDeleteBtn");
-
     viewBtn && viewBtn.addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      goToRoadmap(currentOptionsCard.dataset.type, currentOptionsCard.dataset.title, false, currentOptionsCard.dataset.id);
-    });
-
-    renameBtn && renameBtn.addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      const current = currentOptionsCard.dataset.title;
-      const next = window.prompt("Rename roadmap", current);
-      if (next && next.trim()) {
-        const trimmed = next.trim();
-        const id = currentOptionsCard.dataset.id;
-        currentOptionsCard.dataset.title = trimmed;
-        
-        const titleTextNode = currentOptionsCard.querySelector(".roadmap-title") && currentOptionsCard.querySelector(".roadmap-title").firstChild;
-        if (titleTextNode) {
-          titleTextNode.textContent = trimmed + " ";
-        }
-        if ($("#optionsRoadmapTitle")) $("#optionsRoadmapTitle").textContent = trimmed;
-
-        const item = userRoadmaps.find(r => r.id === id);
-        if (item) {
-          item.title = trimmed;
-          saveStoredRoadmaps(userRoadmaps);
-        }
-
-        showToast("Roadmap renamed.", "success");
+      closeModal("roadmapOptionsOverlay");
+      if (activeRoadmap) {
+        window.location.href = `roadmap.html?id=${encodeURIComponent(activeRoadmap.id)}`;
       }
     });
 
-    regenBtn && regenBtn.addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      closeModal("roadmapOptionsOverlay");
-      const bar = currentOptionsCard.querySelector(".progress-fill");
-      const original = bar ? bar.dataset.progress : "0";
-      if (bar) bar.style.width = "0%";
-      showToast("Regenerating roadmap…");
-      setTimeout(() => { if (bar) bar.style.width = original + "%"; showToast("Roadmap regenerated.", "success"); }, 1400);
-    });
-
-    deleteBtn && deleteBtn.addEventListener("click", () => {
-      if (!currentOptionsCard) return;
-      if ($("#deleteConfirmTitle")) $("#deleteConfirmTitle").textContent = currentOptionsCard.dataset.title;
-      if ($("#roadmapOptionsView")) $("#roadmapOptionsView").style.display = "none";
-      if ($("#deleteConfirmView")) $("#deleteConfirmView").classList.add("is-active");
-    });
-
-    cancelDelBtn && cancelDelBtn.addEventListener("click", () => {
-      if ($("#roadmapOptionsView")) $("#roadmapOptionsView").style.display = "";
-      if ($("#deleteConfirmView")) $("#deleteConfirmView").classList.remove("is-active");
-    });
-
-    confirmDelBtn && confirmDelBtn.addEventListener("click", async () => {
-      if (!currentOptionsCard) return;
-      const card = currentOptionsCard;
-      const id = card.dataset.id;
-      closeModal("roadmapOptionsOverlay");
-
-      const token = getToken();
-      const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-      if (!isPlaceholder && token && id) {
+    const renameBtn = $("#renameRoadmapOption");
+    renameBtn && renameBtn.addEventListener("click", async () => {
+      if (!activeRoadmap) return;
+      const currentTitle = activeRoadmap.title || activeRoadmap.goal_text || "";
+      const newTitle = window.prompt("Rename roadmap:", currentTitle);
+      if (newTitle && newTitle.trim()) {
+        closeModal("roadmapOptionsOverlay");
         try {
-          await fetch(`${API_BASE}/roadmaps/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-        } catch (e) {}
+          await window.TasklyAPI.updateRoadmap(activeRoadmap.id, { title: newTitle.trim() });
+          showToast("Roadmap renamed.", "success");
+          await fetchUserRoadmaps();
+        } catch (err) {
+          showToast(err.message || "Failed to rename roadmap", "error");
+        }
       }
+    });
 
-      userRoadmaps = userRoadmaps.filter(r => r.id !== id);
-      saveStoredRoadmaps(userRoadmaps);
+    const regenBtn = $("#regenerateRoadmapOption");
+    regenBtn && regenBtn.addEventListener("click", async () => {
+      if (!activeRoadmap) return;
+      closeModal("roadmapOptionsOverlay");
+      try {
+        await window.TasklyAPI.regenerateRoadmap(activeRoadmap.id);
+        showToast("Roadmap regeneration started.", "success");
+        window.location.href = `roadmap.html?id=${encodeURIComponent(activeRoadmap.id)}`;
+      } catch (err) {
+        showToast(err.message || "Failed to regenerate roadmap", "error");
+      }
+    });
 
-      card.style.transition = "opacity .25s ease, transform .25s ease";
-      card.style.opacity = "0";
-      card.style.transform = "translateY(-8px)";
-      setTimeout(() => {
-        card.remove();
-        updateEmptyFilterState();
-      }, 250);
-      showToast("Roadmap deleted.");
+    const deleteOptionBtn = $("#deleteRoadmapOption");
+    deleteOptionBtn && deleteOptionBtn.addEventListener("click", () => {
+      if (!activeRoadmap) return;
+      $("#deleteConfirmTitle").textContent = activeRoadmap.title || "this roadmap";
+      $("#optionsMenuRoot").style.display = "none";
+      $("#deleteConfirmView").style.display = "block";
+    });
+
+    const cancelDeleteBtn = $("#cancelDeleteBtn");
+    cancelDeleteBtn && cancelDeleteBtn.addEventListener("click", () => {
+      $("#optionsMenuRoot").style.display = "block";
+      $("#deleteConfirmView").style.display = "none";
+    });
+
+    const confirmDeleteBtn = $("#confirmDeleteBtn");
+    confirmDeleteBtn && confirmDeleteBtn.addEventListener("click", async () => {
+      if (!activeRoadmap) return;
+      confirmDeleteBtn.disabled = true;
+      try {
+        await window.TasklyAPI.deleteRoadmap(activeRoadmap.id);
+        closeModal("roadmapOptionsOverlay");
+        showToast("Roadmap deleted.", "success");
+        await fetchUserRoadmaps();
+      } catch (err) {
+        showToast(err.message || "Failed to delete roadmap", "error");
+      } finally {
+        confirmDeleteBtn.disabled = false;
+      }
     });
   }
 
-  /* ---------- Add New Roadmap (AI) & Create Checklist ---------- */
-
-  async function createRoadmapRequest(goalText, type = "sequential") {
-    const token = getToken();
-    const isPlaceholder = API_BASE.includes("your-service.onrender.com");
-
-    let created = null;
-
-    if (!isPlaceholder && token) {
-      try {
-        const res = await fetch(API_BASE + "/roadmaps", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ goal_text: goalText, title: goalText, type })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          created = data.roadmap || data.data || data;
-        }
-      } catch (e) {
-        console.warn("API request failed, fallback:", e);
-      }
-    }
-
-    if (!created || !created.id) {
-      created = {
-        id: "rm-" + Date.now(),
-        title: goalText,
-        goal_text: goalText,
-        type,
-        completed_tasks: 0,
-        total_tasks: type === "flat" ? 6 : 8,
-        progress: 0,
-        icon: getIconForTitle(goalText),
-        created_at: new Date().toISOString()
-      };
-    }
-
-    const normalized = normalizeRoadmapData(created);
-    userRoadmaps.unshift(normalized);
-    saveStoredRoadmaps(userRoadmaps);
-    return normalized;
-  }
+  /* ---------- Create New Roadmap Modal (POST /roadmaps) ---------- */
 
   function wireAddRoadmapModal() {
     const openBtn = $("#addRoadmapBtn");
@@ -572,18 +504,18 @@ window.TasklyManager = (function () {
     const generateBtn = $("#generateRoadmapBtn");
     const formView = $("#addRoadmapFormView");
     const genState = $("#generationState");
-    const genMessage = $("#generationMessage");
+
     if (!openBtn) return;
 
     openBtn.addEventListener("click", () => {
       openModal("addRoadmapOverlay");
-      formView.classList.remove("is-hidden");
-      genState.classList.remove("is-active");
+      if (formView) formView.classList.remove("is-hidden");
+      if (genState) genState.classList.remove("is-active");
       setTimeout(() => textarea && textarea.focus(), 250);
     });
 
     function updateCount() {
-      if (!textarea || typeof textarea.value !== "string") return;
+      if (!textarea) return;
       const len = textarea.value.length;
       if (charCount) charCount.textContent = len;
       if (generateBtn) generateBtn.disabled = len === 0;
@@ -600,61 +532,41 @@ window.TasklyManager = (function () {
       });
     });
 
-    const messages = ["Breaking this into phases…", "Figuring out what needs to come first…", "Filling in the details…"];
+    if (generateBtn) {
+      generateBtn.addEventListener("click", async () => {
+        const text = (textarea.value || "").trim();
+        if (!text) return;
 
-    generateBtn && generateBtn.addEventListener("click", async () => {
-      const goal = textarea ? textarea.value.trim() : "";
-      if (!goal) return;
+        generateBtn.disabled = true;
+        if (formView) formView.classList.add("is-hidden");
+        if (genState) genState.classList.add("is-active");
 
-      formView.classList.add("is-hidden");
-      genState.classList.add("is-active");
+        try {
+          const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text });
+          const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
 
-      let step = 0;
-      if (genMessage) genMessage.textContent = messages[0];
-      const msgInterval = setInterval(() => {
-        step++;
-        if (step < messages.length && genMessage) {
-          genMessage.style.opacity = 0;
-          setTimeout(() => { genMessage.textContent = messages[step]; genMessage.style.opacity = 1; }, 200);
+          if (!newId) throw new Error("Could not retrieve roadmap ID from server");
+
+          closeModal("addRoadmapOverlay");
+          window.location.href = `roadmap.html?id=${encodeURIComponent(newId)}`;
+
+        } catch (err) {
+          console.error("Roadmap creation failed:", err);
+          showToast(err.message || "Failed to create roadmap", "error");
+          if (formView) formView.classList.remove("is-hidden");
+          if (genState) genState.classList.remove("is-active");
+          generateBtn.disabled = false;
         }
-      }, 900);
-
-      let createdItem = null;
-      try {
-        createdItem = await createRoadmapRequest(goal, "sequential");
-      } catch (err) {
-        console.warn(err);
-      }
-
-      setTimeout(() => {
-        clearInterval(msgInterval);
-        closeModal("addRoadmapOverlay");
-        formView.classList.remove("is-hidden");
-        genState.classList.remove("is-active");
-        if (textarea) textarea.value = "";
-        updateCount();
-        goToRoadmap("sequential", goal, false, createdItem ? createdItem.id : null);
-      }, 2400);
-    });
-
-    // Create manual checklist button
-    const checklistBtn = $("#createChecklistBtn");
-    checklistBtn && checklistBtn.addEventListener("click", async () => {
-      const title = window.prompt("Checklist title:", "New checklist");
-      if (title && title.trim()) {
-        const trimmed = title.trim();
-        const createdChecklist = await createRoadmapRequest(trimmed, "flat");
-        goToRoadmap("flat", trimmed, true, createdChecklist ? createdChecklist.id : null);
-      }
-    });
+      });
+    }
   }
 
-  /* ---------- Ask Nodi modal ---------- */
+  /* ---------- Ask Nodi ---------- */
 
   const nodiReplies = [
-    "I can help organize your roadmaps or break down milestones. Let me know which roadmap you want to work on next!",
-    "To build momentum, start with your shortest checklist first. Small wins keep your daily streak alive!",
-    "Sequential roadmaps are great for step-by-step learning, while checklists work best for quick daily routines."
+    "I'm here to help you organize and build roadmap milestones.",
+    "Try creating a goal like 'Learn TypeScript' or 'Plan home renovation' to generate a full roadmap.",
+    "Tip: Consistent progress on milestones helps unlock complex skills faster."
   ];
 
   function wireNodiModal() {
@@ -675,7 +587,6 @@ window.TasklyManager = (function () {
       bubble.textContent = text;
       body.appendChild(bubble);
       body.scrollTop = body.scrollHeight;
-      return bubble;
     }
 
     function sendMessage(text) {
@@ -692,31 +603,33 @@ window.TasklyManager = (function () {
 
       setTimeout(() => {
         typing.remove();
-        const reply = nodiReplies[Math.floor(Math.random() * nodiReplies.length)];
-        appendBubble(reply, "nodi");
-      }, 1000);
+        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
+      }, 900);
     }
 
     sendBtn && sendBtn.addEventListener("click", () => sendMessage());
     input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => {
-      chip.addEventListener("click", () => sendMessage(chip.textContent));
-    });
+    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
-  /* ---------- init ---------- */
+  /* ---------- Initialization ---------- */
 
-  function init() {
-    const run = () => {
+  async function init() {
+    const run = async () => {
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();
-      wireNotifications();
-      wireFilterTabs();
-      wireAddRoadmapModal();
-      wireOptionsModalActions();
+      wireNotifDropdown();
       wireNodiModal();
-      fetchUserRoadmaps();
+      wireFilterChips();
+      wireAddRoadmapModal();
+      wireRoadmapOptionsMenu();
+
+      await Promise.all([
+        fetchUserRoadmaps(),
+        loadStreak(),
+        loadNotifications()
+      ]);
     };
 
     if (document.readyState === "loading") {
@@ -726,11 +639,7 @@ window.TasklyManager = (function () {
     }
   }
 
-  return {
-    init,
-    fetchUserRoadmaps,
-    createRoadmapRequest,
-  };
+  return { init, fetchUserRoadmaps };
 })();
 
 if (typeof window !== "undefined" && window.TasklyManager) {

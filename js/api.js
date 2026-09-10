@@ -1,895 +1,355 @@
 /* ==========================================================
    TASKLY — api.js
-   Centralized API Client, Feature Connectors & Endpoint Tester
+   Centralized API Client for Taskly FastAPI Backend
    ========================================================== */
 
-const DEFAULT_PLACEHOLDER = "https://your-service.onrender.com";
+const DEFAULT_API_BASE = "https://taskly-6yme.onrender.com";
+const TOKEN_KEYS = ["access_token", "taskly_access_token", "taskly_token"];
 
-/* Dynamic API_BASE — reads from localStorage first so setApiBase() persists */
-let API_BASE = window.API_BASE || window.TASKLY_API_BASE || localStorage.getItem("TASKLY_API_BASE") || DEFAULT_PLACEHOLDER;
-
-function isPlaceholder(base) {
-  return (base || API_BASE).includes("your-service.onrender.com");
+/**
+ * Retrieve the active auth token from localStorage
+ */
+function getToken() {
+  for (const key of TOKEN_KEYS) {
+    try {
+      const val = localStorage.getItem(key);
+      if (val) return val;
+    } catch (e) {}
+  }
+  return null;
 }
 
-/** Persist a new API base URL and reload the module-level variable */
+/**
+ * Persist the auth token to all standard localStorage keys
+ */
+function setToken(token) {
+  if (!token) return;
+  TOKEN_KEYS.forEach(key => {
+    try {
+      localStorage.setItem(key, token);
+    } catch (e) {}
+  });
+}
+
+/**
+ * Clear the auth token and stored credentials
+ */
+function clearToken() {
+  TOKEN_KEYS.forEach(key => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  });
+}
+
+/**
+ * Get current configured API Base URL
+ */
+function getApiBase() {
+  try {
+    return localStorage.getItem("TASKLY_API_BASE") || window.API_BASE || DEFAULT_API_BASE;
+  } catch (e) {
+    return DEFAULT_API_BASE;
+  }
+}
+
+/**
+ * Set custom API Base URL
+ */
 function setApiBase(url) {
   if (!url || !url.trim()) return;
-  let clean = url.trim().replace(/\/+$/, ""); // strip trailing slashes
-  API_BASE = clean;
-  window.API_BASE = clean;
+  const clean = url.trim().replace(/\/+$/, "");
   try {
     localStorage.setItem("TASKLY_API_BASE", clean);
   } catch (e) {}
+  window.API_BASE = clean;
 }
 
-function getApiBase() { return API_BASE; }
-
-function getToken() {
-  return localStorage.getItem("access_token") || localStorage.getItem("taskly_access_token");
-}
-
-function setToken(token) {
-  if (token) {
-    localStorage.setItem("access_token", token);
-    localStorage.setItem("taskly_access_token", token);
-  }
-}
-
-function removeToken() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("taskly_access_token");
-}
-
-async function apiFetch(path, options = {}) {
+/**
+ * Centralized Fetch wrapper with automatic Bearer token injection and 401 redirection
+ */
+async function apiRequest(path, options = {}) {
+  const base = getApiBase();
+  const url = `${base}${path}`;
   const token = getToken();
+
   const headers = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...options.headers
   };
-  if (token) {
+
+  const isPublicAuth = path.startsWith("/auth/login") || path.startsWith("/auth/register");
+  if (token && !isPublicAuth) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  let response;
   try {
-    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    response = await fetch(url, {
+      ...options,
+      headers
+    });
+  } catch (networkErr) {
+    console.error(`Network error requesting ${url}:`, networkErr);
+    throw new Error("Unable to reach the server. Please check your internet connection.");
+  }
 
-    if (response.status === 401) {
-      removeToken();
+  // Handle 401 Unauthorized globally: Token is missing or expired
+  if (response.status === 401 && !isPublicAuth) {
+    clearToken();
+    const currentPath = window.location.pathname.toLowerCase();
+    if (!currentPath.endsWith("login.html") && !currentPath.endsWith("signup.html")) {
       window.location.href = "login.html";
-      return response;
     }
-
-    return response;
-  } catch (err) {
-    console.error("API Fetch Error:", err);
-    throw err;
-  }
-}
-
-/* ==========================================================
-   AUTHENTICATION ENDPOINTS
-   ========================================================== */
-
-async function authLogin(email, password) {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  if (!isPlaceholder()) {
-    try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password }),
-      });
-
-      let data = {};
-      try { data = await response.json(); } catch (e) { data = {}; }
-
-      if (!response.ok) {
-        const message = (data && (data.detail || data.message)) || "Invalid email or password";
-        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
-      }
-
-      if (data.access_token) {
-        setToken(data.access_token);
-      }
-      return data;
-    } catch (err) {
-      console.warn("authLogin network error, using local session:", err);
-    }
+    throw new Error("Session expired. Please sign in again.");
   }
 
-  // Fallback local session
-  const localToken = "taskly_token_" + btoa(normalizedEmail + ":" + Date.now());
-  setToken(localToken);
-  try {
-    localStorage.setItem("taskly_user_email", normalizedEmail);
-  } catch (e) {}
-  return { access_token: localToken, token_type: "bearer" };
-}
-
-async function authRegister(email, password, fullName) {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  if (!isPlaceholder()) {
-    try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password }),
-      });
-
-      let data = {};
-      try { data = await response.json(); } catch (e) { data = {}; }
-
-      if (!response.ok) {
-        const message = (data && (data.detail || data.message)) || "Registration failed. Please try again.";
-        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
-      }
-
-      if (data.access_token) {
-        setToken(data.access_token);
-      }
-      return data;
-    } catch (err) {
-      console.warn("authRegister network error, using local session:", err);
-    }
-  }
-
-  // Fallback local registration
-  const localToken = "taskly_token_" + btoa(normalizedEmail + ":" + Date.now());
-  setToken(localToken);
-  try {
-    localStorage.setItem("taskly_user_email", normalizedEmail);
-    if (fullName) localStorage.setItem("taskly_user_name", fullName);
-  } catch (e) {}
-  return { access_token: localToken, token_type: "bearer" };
-}
-
-async function authGetMe() {
-  if (!isPlaceholder()) {
-    try {
-      const response = await apiFetch("/auth/me");
-      if (response.ok) {
-        const data = await response.json();
-        // Cache locally for offline use
-        if (data.email) localStorage.setItem("taskly_user_email", data.email);
-        if (data.full_name) localStorage.setItem("taskly_user_name", data.full_name);
-        if (data.username) localStorage.setItem("taskly_user_username", data.username);
-        return data;
-      }
-    } catch (e) {
-      console.warn("authGetMe network error, using local cached profile:", e);
-    }
-  }
-
-  return {
-    email: localStorage.getItem("taskly_user_email") || "user@taskly.app",
-    full_name: localStorage.getItem("taskly_user_name") || "Taskly User",
-    username: localStorage.getItem("taskly_user_username") || "",
-  };
-}
-
-function authLogout() {
-  removeToken();
-  try {
-    localStorage.removeItem("taskly_user_email");
-    localStorage.removeItem("taskly_user_name");
-    localStorage.removeItem("taskly_user_username");
-  } catch (e) {}
-  window.location.href = "login.html";
-}
-
-/* ==========================================================
-   PROFILE & PASSWORD ENDPOINTS
-   ========================================================== */
-
-async function updateProfile(data) {
-  if (!isPlaceholder()) {
-    // Try common profile update paths
-    const paths = ["/auth/profile", "/auth/me", "/users/me"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path, {
-          method: path === "/auth/me" ? "PATCH" : "PUT",
-          body: JSON.stringify(data),
-        });
-        if (response.ok) {
-          const result = await response.json();
-          // Update local cache
-          if (data.full_name) localStorage.setItem("taskly_user_name", data.full_name);
-          if (data.email) localStorage.setItem("taskly_user_email", data.email);
-          if (data.username) localStorage.setItem("taskly_user_username", data.username);
-          return { success: true, data: result, source: "api" };
-        }
-        if (response.status !== 404 && response.status !== 405) {
-          const err = await response.json().catch(() => ({}));
-          return { success: false, error: err.detail || err.message || "Update failed", source: "api" };
-        }
-      } catch (e) {
-        console.warn(`updateProfile ${path} error:`, e);
-      }
-    }
-  }
-
-  // Local fallback
-  if (data.full_name) localStorage.setItem("taskly_user_name", data.full_name);
-  if (data.email) localStorage.setItem("taskly_user_email", data.email);
-  if (data.username) localStorage.setItem("taskly_user_username", data.username);
-  return { success: true, data, source: "local" };
-}
-
-async function changePassword(currentPassword, newPassword) {
-  if (!isPlaceholder()) {
-    const paths = ["/auth/change-password", "/auth/password", "/users/me/password"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path, {
-          method: "POST",
-          body: JSON.stringify({
-            current_password: currentPassword,
-            new_password: newPassword,
-          }),
-        });
-        if (response.ok) {
-          const result = await response.json().catch(() => ({}));
-          return { success: true, data: result, source: "api" };
-        }
-        if (response.status !== 404 && response.status !== 405) {
-          const err = await response.json().catch(() => ({}));
-          return { success: false, error: err.detail || err.message || "Password change failed", source: "api" };
-        }
-      } catch (e) {
-        console.warn(`changePassword ${path} error:`, e);
-      }
-    }
-  }
-
-  // Local fallback — just accept
-  return { success: true, source: "local" };
-}
-
-/* ==========================================================
-   ROADMAP ENDPOINTS & DETAIL PERSISTENCE
-   ========================================================== */
-
-function getRoadmapStorageKey(email) {
-  const user = email || localStorage.getItem("taskly_user_email") || "default";
-  return "taskly_roadmaps_" + user.replace(/[^a-zA-Z0-9_]/g, "_");
-}
-
-function getStoredRoadmaps(email) {
-  try {
-    const raw = localStorage.getItem(getRoadmapStorageKey(email)) || localStorage.getItem("taskly_user_roadmaps");
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveStoredRoadmaps(roadmaps, email) {
-  try {
-    const serialized = JSON.stringify(roadmaps);
-    localStorage.setItem(getRoadmapStorageKey(email), serialized);
-    localStorage.setItem("taskly_user_roadmaps", serialized);
-  } catch (e) {
-    console.warn("Could not save roadmaps to storage", e);
-  }
-}
-
-function getStoredRoadmapDetail(id) {
-  if (!id) return null;
-  try {
-    const raw = localStorage.getItem(`taskly_roadmap_detail_${id}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) {
+  // Handle 204 No Content
+  if (response.status === 204) {
     return null;
   }
-}
 
-function saveStoredRoadmapDetail(id, detail) {
-  if (!id || !detail) return;
-  try {
-    localStorage.setItem(`taskly_roadmap_detail_${id}`, JSON.stringify(detail));
-  } catch (e) {
-    console.warn("Could not save roadmap detail", e);
-  }
-}
-
-async function getRoadmaps() {
-  if (!isPlaceholder()) {
+  let data = null;
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
     try {
-      const response = await apiFetch("/roadmaps");
-      if (response.ok) {
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : (data.roadmaps || data.data || [data]);
-        saveStoredRoadmaps(list);
-        return list;
-      }
+      data = await response.json();
     } catch (e) {
-      console.warn("getRoadmaps network error, fallback to local:", e);
+      data = null;
     }
-  }
-  return getStoredRoadmaps();
-}
-
-async function createRoadmap(goalText, title, type = "sequential") {
-  const id = "rm-" + Date.now();
-  const newRoadmap = {
-    id,
-    title: title || goalText,
-    goal_text: goalText,
-    type: type,
-    completed_tasks: 0,
-    total_tasks: type === "flat" ? 6 : 8,
-    progress: 0,
-    created_at: new Date().toISOString()
-  };
-
-  if (!isPlaceholder()) {
+  } else {
     try {
-      const response = await apiFetch("/roadmaps", {
-        method: "POST",
-        body: JSON.stringify({
-          goal_text: goalText,
-          title: title || goalText,
-          type: type
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const created = data.roadmap || data.data || data;
-        if (created && created.id) {
-          return created;
-        }
-      }
+      const text = await response.text();
+      data = text ? { message: text } : null;
     } catch (e) {
-      console.warn("createRoadmap network error, fallback to local:", e);
+      data = null;
     }
   }
 
-  const existing = getStoredRoadmaps();
-  existing.unshift(newRoadmap);
-  saveStoredRoadmaps(existing);
-  return newRoadmap;
-}
-
-async function getRoadmapById(id) {
-  if (!id) return null;
-  const response = await apiFetch(`/roadmaps/${id}`);
-  if (response.ok) {
-    const data = await response.json();
-    return data.roadmap || data.data || data;
-  }
-  return null;
-}
-
-async function getRoadmapGenerationStatus(id) {
-  if (!id) return null;
-  const response = await apiFetch(`/roadmaps/${id}/generation-status`);
-  if (response.ok) {
-    const data = await response.json();
-    return data;
-  }
-  return null;
-}
-
-async function completeRoadmapNode(roadmapId, nodeId) {
-  if (!roadmapId || !nodeId) return { success: false };
-  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
-    method: "POST"
-  });
-  if (response.ok) {
-    const data = await response.json().catch(() => ({}));
-    return { success: true, data };
-  }
-  const err = await response.json().catch(() => ({}));
-  return { success: false, error: err.detail || err.message || "Failed to mark node complete" };
-}
-
-async function uncompleteRoadmapNode(roadmapId, nodeId) {
-  if (!roadmapId || !nodeId) return { success: false };
-  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}/uncomplete`, {
-    method: "POST"
-  });
-  if (response.ok) {
-    const data = await response.json().catch(() => ({}));
-    return { success: true, data };
-  }
-  const err = await response.json().catch(() => ({}));
-  return { success: false, error: err.detail || err.message || "Failed to mark node uncomplete" };
-}
-
-async function createRoadmapNode(roadmapId, nodeData) {
-  if (!roadmapId) return { success: false };
-  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes`, {
-    method: "POST",
-    body: JSON.stringify(nodeData)
-  });
-  if (response.ok) {
-    const data = await response.json().catch(() => ({}));
-    return { success: true, data: data.node || data.data || data };
-  }
-  const err = await response.json().catch(() => ({}));
-  return { success: false, error: err.detail || err.message || "Failed to create node" };
-}
-
-async function updateRoadmapNode(roadmapId, nodeId, nodeData) {
-  if (!roadmapId || !nodeId) return { success: false };
-  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
-    method: "PATCH",
-    body: JSON.stringify(nodeData)
-  });
-  if (response.ok) {
-    const data = await response.json().catch(() => ({}));
-    return { success: true, data: data.node || data.data || data };
-  }
-  const err = await response.json().catch(() => ({}));
-  return { success: false, error: err.detail || err.message || "Failed to update node" };
-}
-
-async function deleteRoadmapNode(roadmapId, nodeId) {
-  if (!roadmapId || !nodeId) return { success: false };
-  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
-    method: "DELETE"
-  });
-  if (response.ok) {
-    return { success: true };
-  }
-  const err = await response.json().catch(() => ({}));
-  return { success: false, error: err.detail || err.message || "Failed to delete node" };
-}
-
-async function updateRoadmap(id, updateData) {
-  if (!id) return { success: false };
-
-  // Save to detail storage
-  const existingDetail = getStoredRoadmapDetail(id) || {};
-  const updatedDetail = { ...existingDetail, ...updateData };
-  saveStoredRoadmapDetail(id, updatedDetail);
-
-  if (!isPlaceholder()) {
-    try {
-      const response = await apiFetch(`/roadmaps/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(updateData)
-      });
-      if (response.ok) {
-        return { success: true, data: await response.json().catch(() => ({})) };
-      }
-    } catch (e) {
-      console.warn("updateRoadmap error:", e);
+  if (!response.ok) {
+    let errorMsg = (data && (data.detail || data.message || data.error)) || `Request failed with status ${response.status}`;
+    if (typeof errorMsg === "object") {
+      errorMsg = Array.isArray(errorMsg) ? errorMsg.map(e => e.msg || JSON.stringify(e)).join(", ") : JSON.stringify(errorMsg);
     }
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    err.data = data;
+    throw err;
   }
 
-  return { success: true, data: updatedDetail };
-}
-
-async function deleteRoadmap(id) {
-  if (!id) return true;
-
-  try {
-    localStorage.removeItem(`taskly_roadmap_detail_${id}`);
-    const roadmaps = getStoredRoadmaps().filter(r => r.id !== id);
-    saveStoredRoadmaps(roadmaps);
-  } catch (e) {}
-
-  if (!isPlaceholder()) {
-    try {
-      const response = await apiFetch(`/roadmaps/${id}`, { method: "DELETE" });
-      return response.ok;
-    } catch (e) {
-      console.warn("deleteRoadmap error:", e);
-    }
-  }
-  return true;
+  return data;
 }
 
 /* ==========================================================
-   NOTIFICATIONS ENDPOINTS
+   TASKLY API METHODS (EXACT FASTAPI ENDPOINTS)
    ========================================================== */
 
-async function getNotifications() {
-  if (!isPlaceholder()) {
-    const paths = ["/notifications", "/auth/notifications"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path);
-        if (response.ok) {
-          const data = await response.json();
-          return { data: Array.isArray(data) ? data : (data.notifications || data.data || []), source: "api" };
-        }
-        if (response.status !== 404 && response.status !== 405) break;
-      } catch (e) {
-        console.warn(`getNotifications ${path} error:`, e);
-      }
-    }
-  }
-  return { data: null, source: "local" };
-}
-
-async function markNotificationRead(id) {
-  if (!isPlaceholder() && id) {
-    try {
-      const response = await apiFetch(`/notifications/${id}`, { method: "PATCH", body: JSON.stringify({ read: true }) });
-      return response.ok;
-    } catch (e) {
-      console.warn("markNotificationRead error:", e);
-    }
-  }
-  return true;
-}
-
-async function markAllNotificationsRead() {
-  if (!isPlaceholder()) {
-    const paths = ["/notifications/mark-all-read", "/notifications/read-all"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path, { method: "POST" });
-        if (response.ok) return true;
-        if (response.status !== 404 && response.status !== 405) break;
-      } catch (e) {
-        console.warn(`markAllNotificationsRead ${path} error:`, e);
-      }
-    }
-  }
-  return true;
-}
-
-/* ==========================================================
-   STREAK ENDPOINT
-   ========================================================== */
-
-async function getStreak() {
-  if (!isPlaceholder()) {
-    const paths = ["/streak", "/auth/streak", "/users/me/streak"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path);
-        if (response.ok) {
-          return await response.json();
-        }
-        if (response.status !== 404 && response.status !== 405) break;
-      } catch (e) {
-        console.warn(`getStreak ${path} error:`, e);
-      }
-    }
-  }
-  // Fallback
-  const stored = localStorage.getItem("taskly_streak_count");
-  return { streak: stored ? parseInt(stored, 10) : 5, source: "local" };
-}
-
-/* ==========================================================
-   SETTINGS ENDPOINTS
-   ========================================================== */
-
-async function getUserSettings() {
-  if (!isPlaceholder()) {
-    const paths = ["/settings", "/auth/settings", "/users/me/settings"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path);
-        if (response.ok) {
-          return { data: await response.json(), source: "api" };
-        }
-        if (response.status !== 404 && response.status !== 405) break;
-      } catch (e) {
-        console.warn(`getUserSettings ${path} error:`, e);
-      }
-    }
-  }
-  // Local fallback
-  const raw = localStorage.getItem("taskly_settings");
-  return { data: raw ? JSON.parse(raw) : {}, source: "local" };
-}
-
-async function updateUserSettings(settings) {
-  // Always persist locally
-  try {
-    localStorage.setItem("taskly_settings", JSON.stringify(settings));
-  } catch (e) {}
-
-  if (!isPlaceholder()) {
-    const paths = ["/settings", "/auth/settings"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path, {
-          method: "PUT",
-          body: JSON.stringify(settings),
-        });
-        if (response.ok) {
-          return { success: true, source: "api" };
-        }
-        if (response.status !== 404 && response.status !== 405) break;
-      } catch (e) {
-        console.warn(`updateUserSettings ${path} error:`, e);
-      }
-    }
-  }
-  return { success: true, source: "local" };
-}
-
-/* ==========================================================
-   AI / NODI ASSISTANT ENDPOINTS
-   ========================================================== */
-
-async function askNodiAI(prompt, context = {}) {
-  if (!isPlaceholder()) {
-    const paths = ["/ai/chat", "/ai/ask-nodi", "/chat"];
-    for (const path of paths) {
-      try {
-        const response = await apiFetch(path, {
-          method: "POST",
-          body: JSON.stringify({ prompt, message: prompt, context })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return {
-            reply: data.reply || data.response || data.message || "Here is guidance on your goal.",
-            source: "api"
-          };
-        }
-      } catch (e) {
-        console.warn(`askNodiAI ${path} error:`, e);
-      }
-    }
-  }
-
-  // Smart conversational fallback
-  const p = (prompt || "").toLowerCase();
-  let reply = "I'm here to help you stay on track! Break large tasks into small 20-minute steps to build momentum.";
-  if (p.includes("streak")) {
-    reply = "Your study streak increases by 1 each day you complete at least one milestone. Check off a task before midnight to keep it alive!";
-  } else if (p.includes("reset") || p.includes("restart")) {
-    reply = "You can reset or regenerate any roadmap from its options menu in the Roadmap Manager.";
-  } else if (p.includes("recommend") || p.includes("next")) {
-    reply = "I recommend focusing on your sequential milestones first, then ticking off quick daily items on your checklists.";
-  }
-  return { reply, source: "local" };
-}
-
-async function checkInStreak() {
-  if (!isPlaceholder()) {
-    const paths = ["/streak/check-in", "/streak/increment"];
-    for (const path of paths) {
-      try {
-        const res = await apiFetch(path, { method: "POST" });
-        if (res.ok) return await res.json();
-      } catch (e) {}
-    }
-  }
-  const curr = parseInt(localStorage.getItem("taskly_streak_count") || "5", 10);
-  const next = curr + 1;
-  localStorage.setItem("taskly_streak_count", String(next));
-  return { streak: next, source: "local" };
-}
-
-/* ==========================================================
-   COMPREHENSIVE ENDPOINT TESTER & HEALTH CHECKER
-   ========================================================== */
-
-async function testEndpoints(customBase) {
-  const base = customBase || API_BASE;
-  const _isPlaceholder = base.includes("your-service.onrender.com");
-  const token = getToken();
-
-  console.group("%cTaskly API Endpoints Test Suite", "color: #f2a30d; font-size: 14px; font-weight: bold;");
-  console.log("Testing API_BASE:", base);
-  console.log("Current Token:", token ? "Available" : "None");
-
-  const results = {
-    apiBase: base,
-    isPlaceholder: _isPlaceholder,
-    timestamp: new Date().toISOString(),
-    endpoints: {},
-    discoveredRoutes: [],
-    featuresDetected: {
-      auth: false,
-      roadmaps: false,
-      notifications: false,
-      streak: false,
-      settings: false,
-      ai: false
-    }
-  };
-
-  if (_isPlaceholder) {
-    console.warn("API_BASE is pointing to placeholder:", base);
-    console.log("Application is in Offline / Local Demo Storage mode.");
-    console.groupEnd();
-    return {
-      status: "placeholder_mode",
-      message: "API_BASE is set to placeholder. Offline simulated store is active.",
-      results
-    };
-  }
-
-  // 1. Try to fetch OpenAPI Schema to auto-discover all real endpoints
-  try {
-    const openApiRes = await fetch(`${base}/openapi.json`, { method: "GET" });
-    if (openApiRes.ok) {
-      const spec = await openApiRes.json();
-      if (spec && spec.paths) {
-        results.discoveredRoutes = Object.keys(spec.paths);
-        console.log("%c✓ OpenAPI Schema Discovered routes:", "color: #4b9b5e;", results.discoveredRoutes);
-      }
-    }
-  } catch (e) {
-    console.log("OpenAPI auto-discovery skipped (no schema found).");
-  }
-
-  const endpointsToTest = [
-    { name: "Health / Docs",                path: "/docs",                    method: "GET",   auth: false, feature: "docs" },
-    { name: "OpenAPI Schema",               path: "/openapi.json",            method: "GET",   auth: false, feature: "docs" },
-    { name: "Auth: Get Profile",            path: "/auth/me",                 method: "GET",   auth: true,  feature: "auth" },
-    { name: "Auth: Login (Check)",          path: "/auth/login",              method: "OPTIONS", auth: false, feature: "auth" },
-    { name: "Roadmaps: List",               path: "/roadmaps",                method: "GET",   auth: true,  feature: "roadmaps" },
-    { name: "Roadmaps: Create",             path: "/roadmaps",                method: "POST",  auth: true,  feature: "roadmaps", body: { goal_text: "__api_test__", title: "__API Test__", type: "sequential" } },
-    { name: "Notifications: List",          path: "/notifications",           method: "GET",   auth: true,  feature: "notifications" },
-    { name: "Streak: Get",                  path: "/streak",                  method: "GET",   auth: true,  feature: "streak" },
-    { name: "Settings: Get",                path: "/settings",                method: "GET",   auth: true,  feature: "settings" },
-    { name: "AI: Chat / Nodi",              path: "/ai/chat",                 method: "POST",  auth: true,  feature: "ai", body: { prompt: "Hello Nodi" } },
-  ];
-
-  for (const ep of endpointsToTest) {
-    const start = performance.now();
-    try {
-      const headers = { "Content-Type": "application/json" };
-      if (ep.auth && token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const fetchOpts = { method: ep.method, headers };
-      if (ep.body && ep.method !== "GET" && ep.method !== "OPTIONS") {
-        fetchOpts.body = JSON.stringify(ep.body);
-      }
-
-      const res = await fetch(`${base}${ep.path}`, fetchOpts);
-      const elapsed = Math.round(performance.now() - start);
-
-      let data = null;
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("json")) {
-        try { data = await res.json(); } catch (e) {}
-      }
-
-      const isSuccess = res.ok || res.status === 200 || res.status === 201 || res.status === 204;
-      const isAuthNeeded = res.status === 401 || res.status === 403;
-      const isMethodSupported = res.status !== 404 && res.status !== 502 && res.status !== 503;
-
-      if (isSuccess && ep.feature) {
-        results.featuresDetected[ep.feature] = true;
-      }
-
-      results.endpoints[ep.name] = {
-        path: ep.path,
-        method: ep.method,
-        status: res.status,
-        ok: isSuccess,
-        authRequired: isAuthNeeded,
-        supported: isMethodSupported,
-        latencyMs: elapsed,
-        data: data
-      };
-
-      const icon = isSuccess ? "✓" : (isAuthNeeded ? "🔒" : (res.status === 404 ? "✕" : "⚠"));
-      const color = isSuccess ? "#4b9b5e" : (isAuthNeeded ? "#3b82f6" : (res.status === 404 ? "#c1503a" : "#f2a30d"));
-      console.log(`%c${icon} ${ep.name} — ${ep.method} ${ep.path} → ${res.status} (${elapsed}ms)`, `color: ${color};`, data);
-    } catch (err) {
-      const elapsed = Math.round(performance.now() - start);
-      results.endpoints[ep.name] = {
-        path: ep.path,
-        method: ep.method,
-        status: "NETWORK_ERROR",
-        ok: false,
-        authRequired: false,
-        supported: false,
-        latencyMs: elapsed,
-        error: err.message
-      };
-      console.error(`%c✕ ${ep.name} — ${ep.method} ${ep.path} → Failed (${elapsed}ms):`, "color: #c1503a;", err.message);
-    }
-  }
-
-  // Attempt to clean up test roadmap
-  const createResult = results.endpoints["Roadmaps: Create"];
-  if (createResult && createResult.ok && createResult.data) {
-    const testId = createResult.data.id || createResult.data._id;
-    if (testId) {
-      try {
-        await fetch(`${base}/roadmaps/${testId}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        console.log("%c🧹 Cleaned up test roadmap", "color: #888;");
-      } catch (e) {}
-    }
-  }
-
-  console.groupEnd();
-  return results;
-}
-
-/* ==========================================================
-   EXPOSE GLOBALLY
-   ========================================================== */
-
-window.API_BASE = API_BASE;
-window.getToken = getToken;
-window.setToken = setToken;
-window.removeToken = removeToken;
-window.apiFetch = apiFetch;
-window.authLogin = authLogin;
-window.authRegister = authRegister;
-window.authGetMe = authGetMe;
-window.authLogout = authLogout;
-window.updateProfile = updateProfile;
-window.changePassword = changePassword;
-window.getRoadmaps = getRoadmaps;
-window.createRoadmap = createRoadmap;
-window.getRoadmapById = getRoadmapById;
-window.getRoadmapGenerationStatus = getRoadmapGenerationStatus;
-window.completeRoadmapNode = completeRoadmapNode;
-window.uncompleteRoadmapNode = uncompleteRoadmapNode;
-window.createRoadmapNode = createRoadmapNode;
-window.updateRoadmapNode = updateRoadmapNode;
-window.deleteRoadmapNode = deleteRoadmapNode;
-window.updateRoadmap = updateRoadmap;
-window.deleteRoadmap = deleteRoadmap;
-window.getStoredRoadmaps = getStoredRoadmaps;
-window.saveStoredRoadmaps = saveStoredRoadmaps;
-window.getStoredRoadmapDetail = getStoredRoadmapDetail;
-window.saveStoredRoadmapDetail = saveStoredRoadmapDetail;
-window.getNotifications = getNotifications;
-window.markNotificationRead = markNotificationRead;
-window.markAllNotificationsRead = markAllNotificationsRead;
-window.getStreak = getStreak;
-window.checkInStreak = checkInStreak;
-window.getUserSettings = getUserSettings;
-window.updateUserSettings = updateUserSettings;
-window.askNodiAI = askNodiAI;
-window.setApiBase = setApiBase;
-window.getApiBase = getApiBase;
-window.testEndpoints = testEndpoints;
-window.TasklyAPI = {
-  get API_BASE() { return API_BASE; },
-  DEFAULT_PLACEHOLDER,
-  isPlaceholder,
+const TasklyAPI = {
   getApiBase,
   setApiBase,
   getToken,
   setToken,
-  removeToken,
-  apiFetch,
-  authLogin,
-  authRegister,
-  authGetMe,
-  authLogout,
-  updateProfile,
-  changePassword,
-  getRoadmaps,
-  createRoadmap,
-  getRoadmapById,
-  getRoadmapGenerationStatus,
-  completeRoadmapNode,
-  uncompleteRoadmapNode,
-  createRoadmapNode,
-  updateRoadmapNode,
-  deleteRoadmapNode,
-  updateRoadmap,
-  deleteRoadmap,
-  getStoredRoadmaps,
-  saveStoredRoadmaps,
-  getStoredRoadmapDetail,
-  saveStoredRoadmapDetail,
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-  getStreak,
-  checkInStreak,
-  getUserSettings,
-  updateUserSettings,
-  askNodiAI,
-  testEndpoints
+  clearToken,
+  request: apiRequest,
+
+  /* ---------------- Auth ---------------- */
+  // POST /auth/register — { email, password } → { user, access_token }
+  async register({ email, password }) {
+    const data = await apiRequest("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+    });
+    if (data && data.access_token) {
+      setToken(data.access_token);
+    }
+    return data;
+  },
+
+  // POST /auth/login — { email, password } → { access_token }
+  async login({ email, password }) {
+    const data = await apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+    });
+    if (data && data.access_token) {
+      setToken(data.access_token);
+    }
+    return data;
+  },
+
+  // GET /auth/me — current user profile
+  async getMe() {
+    return await apiRequest("/auth/me", { method: "GET" });
+  },
+
+  /* ---------------- Roadmaps ---------------- */
+  // POST /roadmaps — { title, goal_text } → roadmap object (status: "pending")
+  async createRoadmap({ title, goal_text }) {
+    const goal = goal_text || title || "";
+    const name = title || goal_text || "";
+    return await apiRequest("/roadmaps", {
+      method: "POST",
+      body: JSON.stringify({ title: name, goal_text: goal })
+    });
+  },
+
+  // GET /roadmaps — list of current user's roadmaps
+  async getRoadmaps() {
+    return await apiRequest("/roadmaps", { method: "GET" });
+  },
+
+  // GET /roadmaps/{id} — full roadmap detail including nodes
+  async getRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}`, { method: "GET" });
+  },
+
+  // PATCH /roadmaps/{id} — { title?, goal_text? }
+  async updateRoadmap(id, { title, goal_text }) {
+    const payload = {};
+    if (title !== undefined) payload.title = title;
+    if (goal_text !== undefined) payload.goal_text = goal_text;
+    return await apiRequest(`/roadmaps/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // DELETE /roadmaps/{id}
+  async deleteRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}`, { method: "DELETE" });
+  },
+
+  // POST /roadmaps/{id}/regenerate
+  async regenerateRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}/regenerate`, { method: "POST" });
+  },
+
+  // GET /roadmaps/{id}/generation-status — { roadmap_id, status, error_message }
+  async getGenerationStatus(id) {
+    return await apiRequest(`/roadmaps/${id}/generation-status`, { method: "GET" });
+  },
+
+  // GET /roadmaps/{id}/progress — { roadmap_id, total_nodes, completed_nodes, progress_percentage }
+  async getRoadmapProgress(id) {
+    return await apiRequest(`/roadmaps/${id}/progress`, { method: "GET" });
+  },
+
+  /* ---------------- Nodes ---------------- */
+  // POST /roadmaps/{roadmap_id}/nodes — { name, description, time_estimate, depends_on? }
+  async createNode(roadmapId, { name, description = "", time_estimate = "15m", depends_on = [] }) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes`, {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description: description || "",
+        time_estimate: time_estimate || "—",
+        depends_on: Array.isArray(depends_on) ? depends_on : []
+      })
+    });
+  },
+
+  // PATCH /roadmaps/{roadmap_id}/nodes/{node_id} — edit name, description, time_estimate, depends_on
+  async updateNode(roadmapId, nodeId, { name, description, time_estimate, depends_on }) {
+    const payload = {};
+    if (name !== undefined) payload.name = name;
+    if (description !== undefined) payload.description = description;
+    if (time_estimate !== undefined) payload.time_estimate = time_estimate;
+    if (depends_on !== undefined) payload.depends_on = Array.isArray(depends_on) ? depends_on : [];
+
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // DELETE /roadmaps/{roadmap_id}/nodes/{node_id} — fails with 409 if depends_on references it
+  async deleteNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+      method: "DELETE"
+    });
+  },
+
+  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/complete
+  async completeNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
+      method: "POST"
+    });
+  },
+
+  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/uncomplete
+  async uncompleteNode(roadmapId, nodeId) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/uncomplete`, {
+      method: "POST"
+    });
+  },
+
+  // PATCH /roadmaps/{roadmap_id}/nodes/reorder — [{ node_id, order }]
+  async reorderNodes(roadmapId, items) {
+    return await apiRequest(`/roadmaps/${roadmapId}/nodes/reorder`, {
+      method: "PATCH",
+      body: JSON.stringify(items)
+    });
+  },
+
+  /* ---------------- Dashboard ---------------- */
+  // GET /dashboard — equivalent to GET /roadmaps
+  async getDashboard() {
+    try {
+      return await apiRequest("/dashboard", { method: "GET" });
+    } catch (e) {
+      return await apiRequest("/roadmaps", { method: "GET" });
+    }
+  },
+
+  /* ---------------- Streak ---------------- */
+  // GET /streak → { current_streak, longest_streak, last_active_date } (read-only)
+  async getStreak() {
+    return await apiRequest("/streak", { method: "GET" });
+  },
+
+  /* ---------------- Notifications ---------------- */
+  // GET /notifications/preferences → { email_enabled, milestone_notifications }
+  async getNotificationPreferences() {
+    return await apiRequest("/notifications/preferences", { method: "GET" });
+  },
+
+  // PATCH /notifications/preferences → update either field
+  async updateNotificationPreferences(payload) {
+    return await apiRequest("/notifications/preferences", {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // GET /notifications → returns array of undelivered notifications (and marks delivered on server)
+  async getNotifications() {
+    return await apiRequest("/notifications", { method: "GET" });
+  },
+
+  /* ---------------- Client-side Helpers ---------------- */
+  /**
+   * Derive a node's state: "completed", "available", or "locked"
+   */
+  computeNodeState(node, nodeMap = {}) {
+    if (!node) return "available";
+    if (node.completed === true) return "completed";
+
+    const deps = Array.isArray(node.depends_on) ? node.depends_on : [];
+    if (deps.length === 0) return "available";
+
+    const allDepsDone = deps.every(depId => {
+      const parent = nodeMap[String(depId)];
+      return parent && parent.completed === true;
+    });
+
+    return allDepsDone ? "available" : "locked";
+  }
 };
+
+/* Backwards compatibility bindings */
+window.TasklyAPI = TasklyAPI;
+window.apiFetch = (path, opts) => apiRequest(path, opts);
+window.authLogin = (email, pass) => TasklyAPI.login({ email, password: pass });
+window.authRegister = (email, pass) => TasklyAPI.register({ email, password: pass });
+window.authGetMe = () => TasklyAPI.getMe();
+window.API_BASE = getApiBase();

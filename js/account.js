@@ -1,9 +1,9 @@
 /* ==========================================================
    TASKLY — account.js
+   User account management and authentication state
    ========================================================== */
-window.TasklyAccount = (function () {
 
-  const TOKEN_KEY = "taskly_access_token";
+window.TasklyAccount = (function () {
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
@@ -12,9 +12,15 @@ window.TasklyAccount = (function () {
     const toast = $("#toast");
     if (!toast) return;
     toast.textContent = message;
-    toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
+    toast.className = "toast is-visible" + (type === "success" ? " is-success" : (type === "error" ? " is-error" : ""));
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 3600);
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
   }
 
   /* ---------- generic modal plumbing ---------- */
@@ -24,13 +30,16 @@ window.TasklyAccount = (function () {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.add("is-open");
   }
+
   function closeModal(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.remove("is-open");
   }
+
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
   }
+
   function wireGenericModalClosers() {
     $all("[data-close-modal]").forEach((btn) => {
       btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
@@ -65,6 +74,23 @@ window.TasklyAccount = (function () {
   }
 
   let streakInterval = null;
+
+  async function loadStreak() {
+    try {
+      const data = await window.TasklyAPI.getStreak();
+      if (data && typeof data.current_streak === "number") {
+        const count = data.current_streak;
+        const streakBtn = $("#streakBtn");
+        if (streakBtn) {
+          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
+          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load streak:", err);
+    }
+  }
+
   function wireStreakPopup() {
     const btn = $("#streakBtn");
     if (!btn) return;
@@ -75,6 +101,7 @@ window.TasklyAccount = (function () {
       streakInterval = setInterval(tickCountdown, 1000);
     });
   }
+
   function tickCountdown() {
     const el = $("#streakCountdown");
     if (!el) return;
@@ -89,6 +116,102 @@ window.TasklyAccount = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
+  function getStoredNotifications() {
+    try {
+      const raw = localStorage.getItem("taskly_notifications");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveStoredNotifications(notifs) {
+    try {
+      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+    } catch (e) {}
+  }
+
+  async function loadNotifications() {
+    try {
+      const freshNotifs = await window.TasklyAPI.getNotifications();
+      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
+        const existing = getStoredNotifications();
+        const existingIds = new Set(existing.map(n => n.id));
+        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
+        saveStoredNotifications(merged);
+      }
+    } catch (err) {
+      console.warn("Could not fetch notifications:", err);
+    }
+    renderNotificationDropdown();
+  }
+
+  function renderNotificationDropdown() {
+    const panel = $("#notifPanel");
+    const dot = $("#notifDot");
+    if (!panel) return;
+
+    const notifs = getStoredNotifications();
+    if (dot) dot.style.display = notifs.length > 0 ? "block" : "none";
+
+    panel.innerHTML = `
+      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Notifications</span>
+        ${notifs.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-ink-soft); font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 6px;">Clear all</button>' : ''}
+      </div>
+      <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
+        ${notifs.length === 0 ? `
+          <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
+            No new notifications
+          </div>
+        ` : notifs.map(n => `
+          <div class="notif-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
+            <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}">
+              <svg viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <use href="${n.type === 'milestone' ? '#ic-flame' : '#ic-check'}"></use>
+              </svg>
+            </div>
+            <div>
+              <p class="notif-text">${escapeHtml(n.message || 'Milestone update')}</p>
+              <p class="notif-time">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="dropdown-footer">
+        <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
+      </div>
+    `;
+
+    const clearBtn = $("#clearNotifsBtn", panel);
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        localStorage.removeItem("taskly_notifications");
+        renderNotificationDropdown();
+        showToast("Notifications cleared.");
+      });
+    }
+
+    const viewAllBtn = $("#viewAllNotifsBtn", panel);
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener("click", () => {
+        panel.classList.remove("is-open");
+        window.location.href = "notifications.html";
+      });
+    }
+
+    $all(".notif-item[data-roadmap-id]", panel).forEach(item => {
+      const rmId = item.dataset.roadmapId;
+      if (rmId) {
+        item.addEventListener("click", () => {
+          panel.classList.remove("is-open");
+          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
+        });
+      }
+    });
+  }
+
   function wireNotifications() {
     const btn = $("#notifBtn");
     const panel = $("#notifPanel");
@@ -98,21 +221,24 @@ window.TasklyAccount = (function () {
       e.stopPropagation();
       const willOpen = !panel.classList.contains("is-open");
       closeAllDropdowns();
-      if (willOpen) { panel.classList.add("is-open"); if (dot) dot.style.display = "none"; }
+      if (willOpen) {
+        panel.classList.add("is-open");
+        if (dot) dot.style.display = "none";
+      }
     });
     document.addEventListener("click", (e) => {
       if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
         panel.classList.remove("is-open");
       }
     });
-    const viewAll = $("#viewAllNotifsBtn");
-    viewAll && viewAll.addEventListener("click", () => { window.location.href = "notifications.html"; });
   }
 
+  /* ---------- Ask Nodi ---------- */
+
   const nodiReplies = [
-    "Good question — you can manage your personal information, update your profile picture, and adjust your password right here.",
-    "Looking to customize your learning roadmaps? Head over to the Roadmap Manager to adjust your milestones and pace.",
-    "Here's a tip: keeping your daily streak active boosts your learning retention by over 40%!"
+    "Good question — you can manage your personal information, update your profile picture, and view your account email right here.",
+    "Looking to customize your learning roadmaps? Head over to the Roadmap Manager to adjust your milestones.",
+    "Tip: Keeping your daily streak active boosts your learning retention!"
   ];
 
   function wireNodiModal() {
@@ -124,7 +250,7 @@ window.TasklyAccount = (function () {
 
     openBtn.addEventListener("click", () => {
       openModal("nodiOverlay");
-      setTimeout(() => input.focus(), 250);
+      setTimeout(() => input && input.focus(), 250);
     });
 
     function appendBubble(text, from) {
@@ -136,29 +262,31 @@ window.TasklyAccount = (function () {
     }
 
     function sendMessage(text) {
-      const msg = (text || input.value).trim();
+      const msg = (text || (input ? input.value : "")).trim();
       if (!msg) return;
       appendBubble(msg, "user");
-      input.value = "";
+      if (input) input.value = "";
+
       const typing = document.createElement("div");
       typing.className = "chat-bubble from-nodi";
       typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
+
       setTimeout(() => {
         typing.remove();
         appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 1000);
+      }, 900);
     }
 
-    sendBtn.addEventListener("click", () => sendMessage());
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
+    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
     $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
-  /* ---------- password visibility toggles ---------- */
+  /* ---------- Password Visibility Toggle ---------- */
 
-  const EYE_OPEN_SVG = `<svg class="icon-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const EYE_OPEN_SVG = `<svg class="icon-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="3" r="3"/></svg>`;
   const EYE_OFF_SVG = `<svg class="icon-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
 
   function wirePasswordToggle() {
@@ -178,7 +306,7 @@ window.TasklyAccount = (function () {
     });
   }
 
-  /* ---------- avatar upload ---------- */
+  /* ---------- Avatar Upload ---------- */
 
   function wireAvatarUpload() {
     const fileInput = $("#avatarFileInput");
@@ -201,15 +329,15 @@ window.TasklyAccount = (function () {
       }
       const reader = new FileReader();
       reader.onload = () => {
-        profileImg.src = reader.result;
-        topbarImg.src = reader.result;
+        if (profileImg) profileImg.src = reader.result;
+        if (topbarImg) topbarImg.src = reader.result;
         showToast("Profile picture updated.", "success");
       };
       reader.readAsDataURL(file);
     });
   }
 
-  /* ---------- personal details edit/save/cancel ---------- */
+  /* ---------- Profile Details Form ---------- */
 
   function wireProfileDetailsForm() {
     const inputs = [$("#fullNameInput"), $("#emailInput"), $("#usernameInput"), $("#timezoneInput")].filter(Boolean);
@@ -255,13 +383,17 @@ window.TasklyAccount = (function () {
       snapshot = inputs.map((i) => i.value);
       if (nameDisplay) nameDisplay.textContent = name;
       if (emailDisplay) emailDisplay.textContent = email;
+      try {
+        localStorage.setItem("taskly_user_name", name);
+        localStorage.setItem("taskly_user_email", email);
+      } catch (e) {}
       exitEditMode();
       if (successMsg) successMsg.classList.add("is-visible");
       showToast("Profile updated successfully.", "success");
     });
   }
 
-  /* ---------- password changing ---------- */
+  /* ---------- Password Form ---------- */
 
   function wirePasswordForm() {
     const editBtn = $("#editPasswordBtn");
@@ -278,8 +410,8 @@ window.TasklyAccount = (function () {
 
     editBtn.addEventListener("click", () => {
       if (successMsg) successMsg.classList.remove("is-visible");
-      staticGrid.style.display = "none";
-      editFields.style.display = "block";
+      if (staticGrid) staticGrid.style.display = "none";
+      if (editFields) editFields.style.display = "block";
       editBtn.style.display = "none";
       currentPass && currentPass.focus();
     });
@@ -287,8 +419,8 @@ window.TasklyAccount = (function () {
     function closePasswordEdit() {
       if (currentPass) currentPass.value = "";
       if (newPass) newPass.value = "";
-      staticGrid.style.display = "block";
-      editFields.style.display = "none";
+      if (staticGrid) staticGrid.style.display = "block";
+      if (editFields) editFields.style.display = "none";
       editBtn.style.display = "";
     }
 
@@ -308,13 +440,11 @@ window.TasklyAccount = (function () {
       if (mainPass) mainPass.value = nxt;
       closePasswordEdit();
       if (successMsg) successMsg.classList.add("is-visible");
-      showToast("Password updated successfully.", "success");
+      showToast("Password updated.", "success");
     });
   }
 
-  /* ---------- logout ---------- */
-
-  /* ---------- logout ---------- */
+  /* ---------- Logout ---------- */
 
   function wireLogout() {
     const openBtn = $("#openLogoutBtn");
@@ -324,38 +454,53 @@ window.TasklyAccount = (function () {
     openBtn.addEventListener("click", () => openModal("logoutOverlay"));
 
     confirmBtn && confirmBtn.addEventListener("click", () => {
-      try {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("taskly_access_token");
-      } catch (e) { /* storage unavailable */ }
+      window.TasklyAPI.clearToken();
       closeModal("logoutOverlay");
-      showToast("You've been logged out.");
-      setTimeout(() => { window.location.href = "login.html"; }, 500);
+      showToast("Signed out.");
+      setTimeout(() => { window.location.href = "login.html"; }, 300);
     });
   }
 
-  /* ---------- load profile ---------- */
+  /* ---------- Load Profile (GET /auth/me) ---------- */
 
   async function loadUserProfile() {
     try {
-      if (typeof authGetMe === "function") {
-        const user = await authGetMe();
-        if (user && user.email) {
-          const emailDisplay = $("#userEmailDisplay");
-          const emailInput = $("#emailInput");
-          if (emailDisplay) emailDisplay.textContent = user.email;
-          if (emailInput) emailInput.value = user.email;
-        }
+      const user = await window.TasklyAPI.getMe();
+      if (user && user.email) {
+        const emailDisplay = $("#userEmailDisplay") || $("#profileEmailDisplay");
+        const emailInput = $("#emailInput");
+        if (emailDisplay) emailDisplay.textContent = user.email;
+        if (emailInput) emailInput.value = user.email;
+
+        const name = user.full_name || localStorage.getItem("taskly_user_name") || user.email.split("@")[0];
+        const nameDisplay = $("#profileNameDisplay");
+        const nameInput = $("#fullNameInput");
+        if (nameDisplay) nameDisplay.textContent = name;
+        if (nameInput) nameInput.value = name;
       }
     } catch (e) {
       console.warn("Could not load user profile:", e);
+      const email = localStorage.getItem("taskly_user_email") || "";
+      const name = localStorage.getItem("taskly_user_name") || "";
+      if (email) {
+        const emailDisplay = $("#userEmailDisplay") || $("#profileEmailDisplay");
+        const emailInput = $("#emailInput");
+        if (emailDisplay) emailDisplay.textContent = email;
+        if (emailInput) emailInput.value = email;
+      }
+      if (name) {
+        const nameDisplay = $("#profileNameDisplay");
+        const nameInput = $("#fullNameInput");
+        if (nameDisplay) nameDisplay.textContent = name;
+        if (nameInput) nameInput.value = name;
+      }
     }
   }
 
-  /* ---------- init ---------- */
+  /* ---------- Initialization ---------- */
 
   function init() {
-    document.addEventListener("DOMContentLoaded", () => {
+    const run = async () => {
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();
@@ -366,8 +511,19 @@ window.TasklyAccount = (function () {
       wireProfileDetailsForm();
       wirePasswordForm();
       wireLogout();
-      loadUserProfile();
-    });
+
+      await Promise.all([
+        loadUserProfile(),
+        loadStreak(),
+        loadNotifications()
+      ]);
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", run);
+    } else {
+      run();
+    }
   }
 
   return { init };

@@ -1,6 +1,8 @@
 /* ==========================================================
    TASKLY — notifications.js
+   Notifications view with live FastAPI backend synchronization
    ========================================================== */
+
 window.TasklyNotifications = (function () {
 
   function $(sel, root) { return (root || document).querySelector(sel); }
@@ -10,31 +12,34 @@ window.TasklyNotifications = (function () {
     const toast = $("#toast");
     if (!toast) return;
     toast.textContent = message;
-    toast.className = "toast is-visible" + (type === "success" ? " is-success" : "");
+    toast.className = "toast is-visible" + (type === "success" ? " is-success" : (type === "error" ? " is-error" : ""));
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove("is-visible"), 3600);
   }
 
   function escapeHtml(str) {
     const d = document.createElement("div");
-    d.textContent = str;
+    d.textContent = str || "";
     return d.innerHTML;
   }
 
-  /* ---------- generic modal + dropdown plumbing ---------- */
+  /* ---------- Modal & Drawer Plumbing ---------- */
 
   function openModal(overlayId) {
     closeAllDropdowns();
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.add("is-open");
   }
+
   function closeModal(overlayId) {
     const overlay = document.getElementById(overlayId);
     if (overlay) overlay.classList.remove("is-open");
   }
+
   function closeAllDropdowns() {
     $all(".dropdown-panel.is-open").forEach((d) => d.classList.remove("is-open"));
   }
+
   function wireGenericModalClosers() {
     $all("[data-close-modal]").forEach((btn) => {
       btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
@@ -52,14 +57,13 @@ window.TasklyNotifications = (function () {
     });
   }
 
-  /* ---------- shared shell ---------- */
-
   function wireDrawer() {
     const sidebar = $("#sidebar");
     const overlay = $("#drawerOverlay");
     const openBtn = $("#hamburgerBtn");
     const closeBtn = $("#sidebarCloseBtn");
     if (!sidebar || !overlay) return;
+
     function open() { sidebar.classList.add("is-open"); overlay.classList.add("is-visible"); }
     function close() { sidebar.classList.remove("is-open"); overlay.classList.remove("is-visible"); }
     openBtn && openBtn.addEventListener("click", open);
@@ -68,7 +72,26 @@ window.TasklyNotifications = (function () {
     $all(".nav-link").forEach((link) => link.addEventListener("click", close));
   }
 
+  /* ---------- Streak Handling ---------- */
+
   let streakInterval = null;
+
+  async function loadStreak() {
+    try {
+      const data = await window.TasklyAPI.getStreak();
+      if (data && typeof data.current_streak === "number") {
+        const count = data.current_streak;
+        const streakBtn = $("#streakBtn");
+        if (streakBtn) {
+          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
+          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load streak:", err);
+    }
+  }
+
   function wireStreakPopup() {
     const btn = $("#streakBtn");
     if (!btn) return;
@@ -79,6 +102,7 @@ window.TasklyNotifications = (function () {
       streakInterval = setInterval(tickCountdown, 1000);
     });
   }
+
   function tickCountdown() {
     const el = $("#streakCountdown");
     if (!el) return;
@@ -93,30 +117,107 @@ window.TasklyNotifications = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
-  function wireNotifDropdown() {
-    const btn = $("#notifBtn");
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!btn || !panel) return;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = !panel.classList.contains("is-open");
-      closeAllDropdowns();
-      if (willOpen) { panel.classList.add("is-open"); if (dot) dot.style.display = "none"; }
-    });
-    document.addEventListener("click", (e) => {
-      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
-        panel.classList.remove("is-open");
-      }
-    });
-    const viewAll = $("#viewAllNotifsBtn");
-    viewAll && viewAll.addEventListener("click", () => panel.classList.remove("is-open"));
+  /* ---------- Notifications Data & Synchronization ---------- */
+
+  function getStoredNotifications() {
+    try {
+      const raw = localStorage.getItem("taskly_notifications");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
   }
 
+  function saveStoredNotifications(notifs) {
+    try {
+      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+    } catch (e) {}
+  }
+
+  async function fetchNotificationsFromServer() {
+    try {
+      const freshNotifs = await window.TasklyAPI.getNotifications();
+      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
+        const existing = getStoredNotifications();
+        const existingIds = new Set(existing.map(n => n.id));
+        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
+        saveStoredNotifications(merged);
+      }
+    } catch (err) {
+      console.warn("Could not fetch notifications from server:", err);
+    }
+    renderNotificationsPage();
+  }
+
+  function renderNotificationsPage() {
+    const container = $("#notifGroups");
+    const emptyState = $("#notifEmptyState");
+    const notifs = getStoredNotifications();
+
+    if (!container) return;
+
+    if (notifs.length === 0) {
+      container.innerHTML = "";
+      if (emptyState) emptyState.classList.add("is-visible");
+      return;
+    }
+
+    if (emptyState) emptyState.classList.remove("is-visible");
+
+    let html = '<div class="notif-group">';
+    html += '<p class="notif-group-label">Recent Notifications</p>';
+    html += '<div class="notif-page-list">';
+
+    notifs.forEach((n, i) => {
+      const isMilestone = n.type === "milestone";
+      const icon = isMilestone ? "ic-flame" : "ic-check";
+      const variant = isMilestone ? "is-teal" : "";
+      const timeStr = n.created_at ? new Date(n.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Recently";
+
+      html += `<div class="notif-page-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="animation-delay:${i * 0.04}s; cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
+        <div class="notif-page-icon ${variant}">
+          <svg viewBox="0 0 24 24" fill="${isMilestone ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <use href="#${icon}"></use>
+          </svg>
+        </div>
+        <div class="notif-page-body">
+          <p class="notif-page-text">${escapeHtml(n.message || 'Notification update')}</p>
+          <p class="notif-page-time">${timeStr}</p>
+        </div>
+      </div>`;
+    });
+
+    html += '</div></div>';
+    container.innerHTML = html;
+
+    // Wire clicks on items with roadmap_id
+    $all(".notif-page-item[data-roadmap-id]").forEach(item => {
+      const rmId = item.dataset.roadmapId;
+      if (rmId) {
+        item.addEventListener("click", () => {
+          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
+        });
+      }
+    });
+  }
+
+  function wireClearAllBtn() {
+    const btn = $("#markAllReadBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      localStorage.removeItem("taskly_notifications");
+      renderNotificationsPage();
+      showToast("All notifications cleared.", "success");
+    });
+  }
+
+  /* ---------- Ask Nodi ---------- */
+
   const nodiReplies = [
-    "Good question — once I'm connected to your roadmap data I'll be able to answer that in detail. For now, try breaking the task into two smaller steps and starting with whichever feels easiest.",
-    "I don't have live answers wired up in this preview yet, but that's exactly the kind of thing I'll help with once I'm connected to the backend.",
-    "Here's a general tip: if a task feels stuck, it's often too big. Splitting it into a 20-minute first step usually gets things moving again."
+    "Notifications keep you updated whenever a roadmap finishes generation or reaches a milestone threshold.",
+    "You can clear notifications anytime using the button in the top right.",
+    "Complete tasks to build your streak and unlock new milestones!"
   ];
 
   function wireNodiModal() {
@@ -125,10 +226,12 @@ window.TasklyNotifications = (function () {
     const sendBtn = $("#nodiSendBtn");
     const body = $("#nodiBody");
     if (!openBtn) return;
+
     openBtn.addEventListener("click", () => {
       openModal("nodiOverlay");
-      setTimeout(() => input.focus(), 250);
+      setTimeout(() => input && input.focus(), 250);
     });
+
     function appendBubble(text, from) {
       const bubble = document.createElement("div");
       bubble.className = "chat-bubble from-" + from;
@@ -136,140 +239,51 @@ window.TasklyNotifications = (function () {
       body.appendChild(bubble);
       body.scrollTop = body.scrollHeight;
     }
+
     function sendMessage(text) {
-      const msg = (text || input.value).trim();
+      const msg = (text || (input ? input.value : "")).trim();
       if (!msg) return;
       appendBubble(msg, "user");
-      input.value = "";
+      if (input) input.value = "";
+
       const typing = document.createElement("div");
       typing.className = "chat-bubble from-nodi";
       typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
+
       setTimeout(() => {
         typing.remove();
         appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 1100);
+      }, 900);
     }
-    sendBtn.addEventListener("click", () => sendMessage());
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
+    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
     $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
-  /* ---------- notifications data ---------- */
+  /* ---------- Initialization ---------- */
 
-  const notifData = [
-    {
-      group: "Today", unread: true, icon: "ic-check", variant: "",
-      text: '<strong>My Figma course</strong> — you finished "Auto layout basics".',
-      time: "12 minutes ago", link: { type: "sequential", title: "My Figma course" }
-    },
-    {
-      group: "Today", unread: true, icon: "ic-flame", variant: "is-teal",
-      text: "You're on a <strong>5 day streak</strong>. Keep it going today!",
-      time: "3 hours ago", link: null, isStreak: true
-    },
-    {
-      group: "Yesterday", unread: true, icon: "ic-route", variant: "",
-      text: 'Your <strong>Jollof Rice recipe</strong> roadmap is almost done — 2 tasks left.',
-      time: "Yesterday, 6:40 PM", link: { type: "flat", title: "Jollof Rice recipe" }
-    },
-    {
-      group: "Yesterday", unread: false, icon: "ic-plus", variant: "is-teal",
-      text: '"Plumbing" roadmap was created and is ready to start.',
-      time: "Yesterday, 9:12 AM", link: { type: "flat", title: "Plumbing" }
-    },
-    {
-      group: "Earlier this week", unread: false, icon: "ic-route", variant: "",
-      text: '<strong>Learn to drive</strong>: "Parallel parking practice" just unlocked.',
-      time: "3 days ago", link: { type: "sequential", title: "Learn to drive" }
-    },
-    {
-      group: "Earlier this week", unread: false, icon: "ic-clock-small", variant: "is-teal",
-      text: "You haven't touched <strong>My Figma course</strong> in a few days — pick up where you left off?",
-      time: "4 days ago", link: { type: "sequential", title: "My Figma course" }
-    }
-  ];
-
-  function renderNotifications() {
-    const container = $("#notifGroups");
-    const groups = ["Today", "Yesterday", "Earlier this week"];
-    let html = "";
-
-    groups.forEach((groupName) => {
-      const items = notifData.filter((n) => n.group === groupName);
-      if (!items.length) return;
-      html += '<div class="notif-group">';
-      html += '<p class="notif-group-label">' + groupName + '</p>';
-      html += '<div class="notif-page-list">';
-      items.forEach((n, i) => {
-        const idx = notifData.indexOf(n);
-        html += '<div class="notif-page-item ' + (n.unread ? "" : "is-read") + '" data-idx="' + idx + '" style="animation-delay:' + (i * 0.05) + 's">';
-        html += '  <div class="notif-page-icon ' + n.variant + '"><svg viewBox="0 0 24 24" fill="' + (n.icon === "ic-flame" ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#' + n.icon + '"></use></svg></div>';
-        html += '  <div class="notif-page-body">';
-        html += '    <p class="notif-page-text">' + n.text + '</p>';
-        html += '    <p class="notif-page-time">' + n.time + '</p>';
-        html += '  </div>';
-        if (n.unread) html += '  <span class="notif-unread-dot"></span>';
-        html += '</div>';
-      });
-      html += '</div></div>';
-    });
-
-    container.innerHTML = html;
-    wireNotificationClicks();
-    updateEmptyState();
-  }
-
-  function wireNotificationClicks() {
-    $all(".notif-page-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const idx = Number(item.dataset.idx);
-        const n = notifData[idx];
-        n.unread = false;
-        item.classList.add("is-read");
-        const dot = item.querySelector(".notif-unread-dot");
-        if (dot) dot.remove();
-
-        if (n.isStreak) {
-          openModal("streakOverlay");
-          tickCountdown();
-          clearInterval(streakInterval);
-          streakInterval = setInterval(tickCountdown, 1000);
-        } else if (n.link) {
-          window.location.href = "roadmap.html?type=" + encodeURIComponent(n.link.type) + "&title=" + encodeURIComponent(n.link.title);
-        }
-      });
-    });
-  }
-
-  function updateEmptyState() {
-    $("#notifEmptyState").classList.toggle("is-visible", notifData.length === 0);
-  }
-
-  function wireMarkAllRead() {
-    $("#markAllReadBtn").addEventListener("click", () => {
-      notifData.forEach((n) => { n.unread = false; });
-      $all(".notif-page-item").forEach((item) => item.classList.add("is-read"));
-      $all(".notif-unread-dot").forEach((dot) => dot.remove());
-      const bellDot = $("#notifDot");
-      if (bellDot) bellDot.style.display = "none";
-      showToast("All caught up.", "success");
-    });
-  }
-
-  /* ---------- init ---------- */
-
-  function init() {
-    document.addEventListener("DOMContentLoaded", () => {
+  async function init() {
+    const run = async () => {
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();
-      wireNotifDropdown();
       wireNodiModal();
-      renderNotifications();
-      wireMarkAllRead();
-    });
+      wireClearAllBtn();
+
+      await Promise.all([
+        fetchNotificationsFromServer(),
+        loadStreak()
+      ]);
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", run);
+    } else {
+      run();
+    }
   }
 
   return { init };
