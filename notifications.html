@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taskly — Notifications</title>
+<link rel="shortcut icon" href="assets/tasklylogo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,6 +29,7 @@
     <symbol id="ic-clock-small" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
     <symbol id="ic-send" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></symbol>
     <symbol id="ic-inbox" viewBox="0 0 24 24"><path d="M4 12h4l2 3h4l2-3h4"/><path d="M5.5 5h13l1.5 7v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z"/></symbol>
+    <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
   </defs>
 </svg>
 
@@ -39,7 +41,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <img class="brand-mark-icon" src="images/logo.svg" alt="Taskly logo">
+        <img class="brand-mark-icon" src="assets/tasklylogo.png" alt="Taskly logo">
         <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
       </div>
       <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
@@ -68,6 +70,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
         Settings
       </a></li>
+      <li><button class="nav-link nav-link-logout" id="sidebarLogoutBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-logout"/></svg>
+        Log Out
+      </button></li>
     </ul>
 
     <p class="sidebar-footer">Taskly v1.0</p>
@@ -92,7 +98,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
           <span class="notif-dot" id="notifDot"></span>
         </button>
-        <img class="topbar-avatar" src="images/avatar-placeholder.svg" alt="Your profile">
+        <img class="topbar-avatar" id="topbarAvatar" src="assets/profile.png" alt="Your profile">
       </div>
     </header>
 
@@ -181,7 +187,7 @@
 </div>
 
 <button class="help-bubble" id="nodiBtn" type="button">
-  <img src="images/mascot.svg" alt="">
+  <img src="assets/Nodi.png" alt="">
   Need help? Ask Nodi
 </button>
 
@@ -229,7 +235,7 @@
 <div class="modal-overlay" id="nodiOverlay">
   <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi">
     <div class="nodi-header">
-      <img src="images/mascot.svg" alt="">
+      <img src="assets/Nodi.png" alt="">
       <div class="nodi-header-text">
         <p class="name">Nodi</p>
         <p class="status">Online</p>

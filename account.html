@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taskly — Account</title>
+<link rel="shortcut icon" href="assets/tasklylogo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -42,7 +43,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <img class="brand-mark-icon" src="images/logo.svg" alt="Taskly logo">
+        <img class="brand-mark-icon" src="assets/tasklylogo.png" alt="Taskly logo">
         <span class="brand-wordmark">Taskly<span class="dot-accent">.</span></span>
       </div>
       <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
@@ -71,6 +72,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
         Settings
       </a></li>
+      <li><button class="nav-link nav-link-logout" id="sidebarLogoutBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-logout"/></svg>
+        Log Out
+      </button></li>
     </ul>
 
     <p class="sidebar-footer">Taskly v1.0</p>
@@ -95,7 +100,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
           <span class="notif-dot" id="notifDot"></span>
         </button>
-        <img class="topbar-avatar" id="topbarAvatar" src="images/avatar-placeholder.svg" alt="Your profile">
+        <img class="topbar-avatar" id="topbarAvatar" src="assets/profile.png" alt="Your profile">
       </div>
     </header>
 
@@ -170,7 +175,7 @@
 
           <div class="profile-hero-top">
             <div class="avatar-edit-wrap">
-              <img id="profileAvatarImg" src="images/avatar-placeholder.svg" alt="Your profile picture">
+              <img id="profileAvatarImg" src="assets/profile.png" alt="Your profile picture">
               <button class="avatar-edit-badge" id="avatarEditBadge" aria-label="Change profile picture" type="button" title="Upload new photo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-camera"/></svg>
               </button>
@@ -251,21 +256,14 @@
             <div class="profile-field">
               <label for="fullNameInput">Full Name</label>
               <div class="profile-field-input-wrap">
-                <input class="profile-input" id="fullNameInput" type="text" value="Sarah Lee" disabled placeholder="e.g. Sarah Lee">
+                <input class="profile-input" id="fullNameInput" type="text" value="" disabled placeholder="Enter your name">
               </div>
             </div>
 
             <div class="profile-field">
               <label for="emailInput">Email Address</label>
               <div class="profile-field-input-wrap">
-                <input class="profile-input" id="emailInput" type="email" value="sarahlee01@gmail.com" disabled placeholder="e.g. sarahlee01@gmail.com">
-              </div>
-            </div>
-
-            <div class="profile-field">
-              <label for="usernameInput">Username</label>
-              <div class="profile-field-input-wrap">
-                <input class="profile-input" id="usernameInput" type="text" value="@sarahlee" disabled placeholder="@username">
+                <input class="profile-input" id="emailInput" type="email" value="" disabled placeholder="Enter your email">
               </div>
             </div>
 
@@ -394,14 +392,14 @@
 
 <!-- ============ Ask Nodi ============ -->
 <button class="help-bubble" id="nodiBtn" type="button">
-  <img src="images/mascot.svg" alt="">
+  <img src="assets/Nodi.png" alt="">
   Need help? Ask Nodi
 </button>
 
 <div class="modal-overlay" id="nodiOverlay">
   <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi">
     <div class="nodi-header">
-      <img src="images/mascot.svg" alt="">
+      <img src="assets/Nodi.png" alt="">
       <div class="nodi-header-text">
         <p class="name">Nodi</p>
         <p class="status">Online</p>

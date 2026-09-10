@@ -159,6 +159,20 @@ svg { display: block; }
   opacity: 1;
   box-shadow: 0 6px 16px -8px rgba(0,0,0,.35);
 }
+.nav-link-logout {
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: #ff6b6b;
+}
+.nav-link-logout:hover {
+  background: rgba(255, 107, 107, 0.18) !important;
+  color: #ff4d4d !important;
+  opacity: 1;
+}
 
 .sidebar-footer {
   margin-top: auto;
