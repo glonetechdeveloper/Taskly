@@ -71,35 +71,66 @@ function setApiBase(url) {
 function handleOfflineFallback(path, options = {}) {
   const method = (options.method || "GET").toUpperCase();
 
-  if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
+  if (path.startsWith("/auth/login")) {
     let bodyObj = {};
     try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
     const userEmail = (bodyObj.email || localStorage.getItem("taskly_user_email") || "user@example.com").toLowerCase();
-    const userName = bodyObj.fullName || localStorage.getItem("taskly_user_name") || userEmail.split("@")[0];
-    const userPassword = bodyObj.password || localStorage.getItem("taskly_user_password") || "password123";
     const mockToken = "mock_token_" + Date.now();
     
     setToken(mockToken);
     try {
       localStorage.setItem("taskly_user_email", userEmail);
-      localStorage.setItem("taskly_user_name", userName);
-      localStorage.setItem("taskly_user_password", userPassword);
     } catch (e) {}
 
+    // POST /auth/login returns ONLY the token shape, NOT a user object
     return {
       access_token: mockToken,
-      user: { email: userEmail, full_name: userName }
+      token_type: "bearer",
+      expires_in: 86400
+    };
+  }
+
+  if (path.startsWith("/auth/register")) {
+    let bodyObj = {};
+    try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+    const userEmail = (bodyObj.email || localStorage.getItem("taskly_user_email") || "user@example.com").toLowerCase();
+    const mockToken = "mock_token_" + Date.now();
+    const mockUserId = "mock_user_" + Date.now();
+    
+    setToken(mockToken);
+    try {
+      localStorage.setItem("taskly_user_email", userEmail);
+    } catch (e) {}
+
+    // POST /auth/register returns token AND user object
+    return {
+      access_token: mockToken,
+      token_type: "bearer",
+      expires_in: 86400,
+      user: {
+        id: mockUserId,
+        email: userEmail,
+        created_at: new Date().toISOString()
+      }
     };
   }
 
   if (path.startsWith("/auth/me")) {
     const userEmail = localStorage.getItem("taskly_user_email") || "user@example.com";
-    const userName = localStorage.getItem("taskly_user_name") || userEmail.split("@")[0];
-    return { email: userEmail, full_name: userName };
+    return {
+      id: "mock_user_1",
+      email: userEmail,
+      created_at: new Date().toISOString()
+    };
   }
 
   if (path.startsWith("/streak")) {
-    return { current_streak: 5, longest_streak: 12, last_active_date: new Date().toISOString() };
+    return {
+      user_id: "mock_user_1",
+      current_streak: 5,
+      longest_streak: 12,
+      last_active_date: new Date().toISOString().split("T")[0]
+    };
   }
 
   if (path.startsWith("/notifications")) {
@@ -107,15 +138,24 @@ function handleOfflineFallback(path, options = {}) {
       if (method === "PATCH") {
         let bodyObj = {};
         try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
-        return { email_enabled: bodyObj.email_enabled !== undefined ? bodyObj.email_enabled : true, milestone_notifications: bodyObj.milestone_notifications !== undefined ? bodyObj.milestone_notifications : true };
+        return {
+          user_id: "mock_user_1",
+          email_enabled: bodyObj.email_enabled !== undefined ? bodyObj.email_enabled : true,
+          milestone_notifications: bodyObj.milestone_notifications !== undefined ? bodyObj.milestone_notifications : true
+        };
       }
-      return { email_enabled: true, milestone_notifications: true };
+      return {
+        user_id: "mock_user_1",
+        email_enabled: true,
+        milestone_notifications: true
+      };
     }
-    try {
-      const stored = localStorage.getItem("taskly_notifications");
-      if (stored) return JSON.parse(stored);
-    } catch (e) {}
+    // GET /notifications is pull-and-consume: returns undelivered items once
     return [];
+  }
+
+  if (path.startsWith("/health")) {
+    return { status: "ok" };
   }
 
   if (path.startsWith("/roadmaps") || path.startsWith("/dashboard")) {
@@ -510,78 +550,106 @@ const TasklyAPI = {
   },
 
   /* ---------------- Roadmaps ---------------- */
-  // POST /roadmaps — { title, goal_text, type } → roadmap object
-  async createRoadmap({ title, goal_text, type = "sequential" }) {
-    const goal = goal_text || title || "";
-    const name = title || goal_text || "";
+  // POST /roadmaps — Request body (RoadmapCreate): { goal_text, title?, type? }
+  async createRoadmap(input = {}) {
+    const payload = {};
+    if (typeof input === "string") {
+      payload.goal_text = input.trim();
+    } else if (input && typeof input === "object") {
+      const goal = input.goal_text || input.title || "";
+      payload.goal_text = String(goal).trim();
+      if (input.title) payload.title = String(input.title).trim();
+      if (input.type) payload.type = input.type;
+    }
     return await apiRequest("/roadmaps", {
       method: "POST",
-      body: JSON.stringify({ title: name, goal_text: goal, type })
+      body: JSON.stringify(payload)
     });
   },
 
-  // GET /roadmaps — list of current user's roadmaps
+  // GET /roadmaps — list of current user's roadmaps (array of RoadmapSummary)
   async getRoadmaps() {
     return await apiRequest("/roadmaps", { method: "GET" });
   },
 
-  // GET /roadmaps/{id} — full roadmap detail including nodes
+  // GET /roadmaps/{id} — full roadmap detail including nodes (RoadmapDetail)
   async getRoadmap(id) {
     return await apiRequest(`/roadmaps/${id}`, { method: "GET" });
   },
 
-  // PATCH /roadmaps/{id} — { title?, goal_text? }
-  async updateRoadmap(id, { title, goal_text }) {
+  // PATCH /roadmaps/{id} — Request body (RoadmapUpdate): { title?, goal_text? }
+  async updateRoadmap(id, { title, goal_text } = {}) {
     const payload = {};
-    if (title !== undefined) payload.title = title;
-    if (goal_text !== undefined) payload.goal_text = goal_text;
+    if (title !== undefined && title !== null) payload.title = String(title).trim();
+    if (goal_text !== undefined && goal_text !== null) payload.goal_text = String(goal_text).trim();
     return await apiRequest(`/roadmaps/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload)
     });
   },
 
-  // DELETE /roadmaps/{id}
+  // DELETE /roadmaps/{id} — Response 204
   async deleteRoadmap(id) {
     return await apiRequest(`/roadmaps/${id}`, { method: "DELETE" });
   },
 
-  // POST /roadmaps/{id}/regenerate
+  // POST /roadmaps/{id}/regenerate — Response 200 (RoadmapDetail)
   async regenerateRoadmap(id) {
     return await apiRequest(`/roadmaps/${id}/regenerate`, { method: "POST" });
   },
 
-  // GET /roadmaps/{id}/generation-status — { roadmap_id, status, error_message }
+  // GET /roadmaps/{id}/generation-status — Response 200 (GenerationStatus)
   async getGenerationStatus(id) {
     return await apiRequest(`/roadmaps/${id}/generation-status`, { method: "GET" });
   },
 
-  // GET /roadmaps/{id}/progress — { roadmap_id, total_nodes, completed_nodes, progress_percentage }
+  // GET /roadmaps/{id}/progress — Response 200 (Progress)
   async getRoadmapProgress(id) {
     return await apiRequest(`/roadmaps/${id}/progress`, { method: "GET" });
   },
 
+  // POST /roadmaps/{id}/validate — Response 200 (ValidationReport)
+  async validateRoadmap(id) {
+    return await apiRequest(`/roadmaps/${id}/validate`, { method: "POST" });
+  },
+
   /* ---------------- Nodes ---------------- */
-  // POST /roadmaps/{roadmap_id}/nodes — { name, description, time_estimate, depends_on? }
-  async createNode(roadmapId, { name, description = "", time_estimate = "15m", depends_on = [] }) {
+  // POST /roadmaps/{roadmap_id}/nodes — Request body (NodeCreate): { name (required), phase?, description?, time_estimate?, depends_on?, order? }
+  async createNode(roadmapId, { name, phase, description, time_estimate, depends_on, order } = {}) {
+    const payload = {
+      name: String(name || "").trim()
+    };
+    if (phase !== undefined && phase !== null && String(phase).trim()) {
+      payload.phase = String(phase).trim();
+    }
+    if (description !== undefined && description !== null && String(description).trim()) {
+      payload.description = String(description).trim();
+    }
+    if (time_estimate !== undefined && time_estimate !== null && String(time_estimate).trim()) {
+      payload.time_estimate = String(time_estimate).trim();
+    }
+    if (depends_on !== undefined && Array.isArray(depends_on) && depends_on.length > 0) {
+      payload.depends_on = depends_on;
+    }
+    if (typeof order === "number") {
+      payload.order = order;
+    }
+
     return await apiRequest(`/roadmaps/${roadmapId}/nodes`, {
       method: "POST",
-      body: JSON.stringify({
-        name,
-        description: description || "",
-        time_estimate: time_estimate || "—",
-        depends_on: Array.isArray(depends_on) ? depends_on : []
-      })
+      body: JSON.stringify(payload)
     });
   },
 
-  // PATCH /roadmaps/{roadmap_id}/nodes/{node_id} — edit name, description, time_estimate, depends_on
-  async updateNode(roadmapId, nodeId, { name, description, time_estimate, depends_on }) {
+  // PATCH /roadmaps/{roadmap_id}/nodes/{node_id} — Request body (NodeUpdate): all fields optional
+  async updateNode(roadmapId, nodeId, data = {}) {
     const payload = {};
-    if (name !== undefined) payload.name = name;
-    if (description !== undefined) payload.description = description;
-    if (time_estimate !== undefined) payload.time_estimate = time_estimate;
-    if (depends_on !== undefined) payload.depends_on = Array.isArray(depends_on) ? depends_on : [];
+    if (data.name !== undefined && data.name !== null) payload.name = String(data.name).trim();
+    if (data.phase !== undefined) payload.phase = data.phase ? String(data.phase).trim() : null;
+    if (data.description !== undefined) payload.description = data.description ? String(data.description).trim() : null;
+    if (data.time_estimate !== undefined) payload.time_estimate = data.time_estimate ? String(data.time_estimate).trim() : null;
+    if (data.depends_on !== undefined) payload.depends_on = Array.isArray(data.depends_on) ? data.depends_on : [];
+    if (typeof data.order === "number") payload.order = data.order;
 
     return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
       method: "PATCH",
@@ -589,37 +657,38 @@ const TasklyAPI = {
     });
   },
 
-  // DELETE /roadmaps/{roadmap_id}/nodes/{node_id} — fails with 409 if depends_on references it
+  // DELETE /roadmaps/{roadmap_id}/nodes/{node_id} — Response 204 (409 if depends_on references it)
   async deleteNode(roadmapId, nodeId) {
     return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
       method: "DELETE"
     });
   },
 
-  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/complete
+  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/complete — Response 200 (NodeOut with completed: true)
   async completeNode(roadmapId, nodeId) {
     return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
       method: "POST"
     });
   },
 
-  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/uncomplete
+  // POST /roadmaps/{roadmap_id}/nodes/{node_id}/uncomplete — Response 200 (NodeOut with completed: false)
   async uncompleteNode(roadmapId, nodeId) {
     return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/uncomplete`, {
       method: "POST"
     });
   },
 
-  // PATCH /roadmaps/{roadmap_id}/nodes/reorder — [{ node_id, order }]
+  // PATCH /roadmaps/{roadmap_id}/nodes/reorder — Request body (ReorderRequest): { items: [{ node_id, order }] }
   async reorderNodes(roadmapId, items) {
+    const payload = Array.isArray(items) ? { items } : (items && items.items ? items : { items: [] });
     return await apiRequest(`/roadmaps/${roadmapId}/nodes/reorder`, {
       method: "PATCH",
-      body: JSON.stringify(items)
+      body: JSON.stringify(payload)
     });
   },
 
   /* ---------------- Dashboard ---------------- */
-  // GET /dashboard — equivalent to GET /roadmaps
+  // GET /dashboard — array of RoadmapSummary (equivalent to GET /roadmaps)
   async getDashboard() {
     try {
       return await apiRequest("/dashboard", { method: "GET" });
@@ -629,28 +698,34 @@ const TasklyAPI = {
   },
 
   /* ---------------- Streak ---------------- */
-  // GET /streak → { current_streak, longest_streak, last_active_date } (read-only)
+  // GET /streak → UserStreakOut: { user_id, current_streak, longest_streak, last_active_date } (read-only)
   async getStreak() {
     return await apiRequest("/streak", { method: "GET" });
   },
 
   /* ---------------- Notifications ---------------- */
-  // GET /notifications/preferences → { email_enabled, milestone_notifications }
+  // GET /notifications/preferences → NotificationPreferenceOut: { user_id, email_enabled, milestone_notifications }
   async getNotificationPreferences() {
     return await apiRequest("/notifications/preferences", { method: "GET" });
   },
 
-  // PATCH /notifications/preferences → update either field
-  async updateNotificationPreferences(payload) {
+  // PATCH /notifications/preferences → NotificationPreferenceUpdate: { email_enabled?, milestone_notifications? }
+  async updateNotificationPreferences(payload = {}) {
     return await apiRequest("/notifications/preferences", {
       method: "PATCH",
       body: JSON.stringify(payload)
     });
   },
 
-  // GET /notifications → returns array of undelivered notifications (and marks delivered on server)
+  // GET /notifications → pull-and-consume: array of NotificationOut (marks delivered on read)
   async getNotifications() {
     return await apiRequest("/notifications", { method: "GET" });
+  },
+
+  /* ---------------- Meta ---------------- */
+  // GET /health → health check (no auth required)
+  async checkHealth() {
+    return await apiRequest("/health", { method: "GET" });
   },
 
   /* ---------------- Client-side Helpers ---------------- */

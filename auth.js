@@ -156,13 +156,25 @@ window.Taskly = (function () {
     try {
       const data = await window.TasklyAPI.login({ email, password });
       
+      // POST /auth/login returns only { access_token, token_type, expires_in } without user object.
+      // Call GET /auth/me separately with the new token to retrieve user details.
+      let user = null;
       try {
-        localStorage.setItem("taskly_user_email", email);
+        user = await window.TasklyAPI.getMe();
+      } catch (meErr) {
+        console.warn("Could not fetch user profile after login:", meErr);
+      }
+
+      try {
+        const userEmail = (user && user.email) ? user.email : email;
+        const userId = (user && user.id) ? user.id : "";
+        localStorage.setItem("taskly_user_email", userEmail);
+        if (userId) localStorage.setItem("taskly_user_id", userId);
         localStorage.setItem("taskly_user_password", password);
-        if (data && data.user && data.user.full_name) {
-          localStorage.setItem("taskly_user_name", data.user.full_name);
-        } else {
-          localStorage.setItem("taskly_user_name", email.split("@")[0]);
+
+        const existingName = localStorage.getItem("taskly_user_name");
+        if (!existingName) {
+          localStorage.setItem("taskly_user_name", userEmail.split("@")[0]);
         }
       } catch (e) {}
 
@@ -228,12 +240,16 @@ window.Taskly = (function () {
     setButtonLoading(btn, true);
 
     try {
+      // POST /auth/register returns { access_token, token_type, expires_in, user: { id, email, created_at } }
       const data = await window.TasklyAPI.register({ email, password });
 
       try {
+        const userEmail = (data && data.user && data.user.email) ? data.user.email : email;
+        const userId = (data && data.user && data.user.id) ? data.user.id : "";
         if (fullName) localStorage.setItem("taskly_user_name", fullName);
-        else localStorage.setItem("taskly_user_name", email.split("@")[0]);
-        localStorage.setItem("taskly_user_email", email);
+        else localStorage.setItem("taskly_user_name", userEmail.split("@")[0]);
+        localStorage.setItem("taskly_user_email", userEmail);
+        if (userId) localStorage.setItem("taskly_user_id", userId);
         localStorage.setItem("taskly_user_password", password);
       } catch (e) {}
 

@@ -855,7 +855,7 @@ window.TasklyRoadmap = (function () {
       if (!name) { $("#taskNameInput").focus(); return; }
 
       const description = ($("#taskDescInput").value || "").trim();
-      const estimate = ($("#taskEstimateInput").value || "").trim() || "15m";
+      const estimate = ($("#taskEstimateInput").value || "").trim();
       const phaseInput = $("#taskPhaseInput");
       const phase = phaseInput ? phaseInput.value.trim() : "";
       const dependsOnVal = $("#taskPositionSelect") ? $("#taskPositionSelect").value : "";
@@ -868,8 +868,9 @@ window.TasklyRoadmap = (function () {
           // PATCH /roadmaps/{roadmap_id}/nodes/{node_id}
           await window.TasklyAPI.updateNode(roadmapId, editingNodeId, {
             name,
-            description,
-            time_estimate: estimate,
+            phase: phase || null,
+            description: description || null,
+            time_estimate: estimate || null,
             depends_on: dependsOn
           });
           showToast("Task updated.", "success");
@@ -877,8 +878,9 @@ window.TasklyRoadmap = (function () {
           // POST /roadmaps/{roadmap_id}/nodes
           await window.TasklyAPI.createNode(roadmapId, {
             name,
-            description,
-            time_estimate: estimate,
+            phase: phase || undefined,
+            description: description || undefined,
+            time_estimate: estimate || undefined,
             depends_on: dependsOn
           });
           showToast("Task added.", "success");
