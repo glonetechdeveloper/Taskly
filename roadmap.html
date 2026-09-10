@@ -266,9 +266,12 @@
     <input class="modal-input" id="taskEstimateInput" type="text" maxlength="40" placeholder="e.g. 45 minutes">
 
     <div id="taskPositionField">
-      <label class="modal-field-label" for="taskPositionSelect">Comes after</label>
+      <label class="modal-field-label" for="taskPositionSelect">Depends on (Comes after)</label>
       <select class="modal-select" id="taskPositionSelect"></select>
     </div>
+
+    <label class="modal-field-label" for="taskPhaseInput">Phase (optional)</label>
+    <input class="modal-input" id="taskPhaseInput" type="text" maxlength="60" placeholder="e.g. Phase 1: Core Fundamentals">
 
     <div class="modal-footer">
       <button class="btn-ghost" type="button" data-close-modal="taskFormOverlay">Cancel</button>

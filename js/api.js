@@ -356,24 +356,88 @@ async function createRoadmap(goalText, title, type = "sequential") {
 
 async function getRoadmapById(id) {
   if (!id) return null;
-
-  if (!isPlaceholder()) {
-    try {
-      const response = await apiFetch(`/roadmaps/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        const detail = data.roadmap || data.data || data;
-        if (detail) {
-          saveStoredRoadmapDetail(id, detail);
-          return detail;
-        }
-      }
-    } catch (e) {
-      console.warn("getRoadmapById network error:", e);
-    }
+  const response = await apiFetch(`/roadmaps/${id}`);
+  if (response.ok) {
+    const data = await response.json();
+    return data.roadmap || data.data || data;
   }
+  return null;
+}
 
-  return getStoredRoadmapDetail(id);
+async function getRoadmapGenerationStatus(id) {
+  if (!id) return null;
+  const response = await apiFetch(`/roadmaps/${id}/generation-status`);
+  if (response.ok) {
+    const data = await response.json();
+    return data;
+  }
+  return null;
+}
+
+async function completeRoadmapNode(roadmapId, nodeId) {
+  if (!roadmapId || !nodeId) return { success: false };
+  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
+    method: "POST"
+  });
+  if (response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  }
+  const err = await response.json().catch(() => ({}));
+  return { success: false, error: err.detail || err.message || "Failed to mark node complete" };
+}
+
+async function uncompleteRoadmapNode(roadmapId, nodeId) {
+  if (!roadmapId || !nodeId) return { success: false };
+  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}/uncomplete`, {
+    method: "POST"
+  });
+  if (response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data };
+  }
+  const err = await response.json().catch(() => ({}));
+  return { success: false, error: err.detail || err.message || "Failed to mark node uncomplete" };
+}
+
+async function createRoadmapNode(roadmapId, nodeData) {
+  if (!roadmapId) return { success: false };
+  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes`, {
+    method: "POST",
+    body: JSON.stringify(nodeData)
+  });
+  if (response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data: data.node || data.data || data };
+  }
+  const err = await response.json().catch(() => ({}));
+  return { success: false, error: err.detail || err.message || "Failed to create node" };
+}
+
+async function updateRoadmapNode(roadmapId, nodeId, nodeData) {
+  if (!roadmapId || !nodeId) return { success: false };
+  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(nodeData)
+  });
+  if (response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { success: true, data: data.node || data.data || data };
+  }
+  const err = await response.json().catch(() => ({}));
+  return { success: false, error: err.detail || err.message || "Failed to update node" };
+}
+
+async function deleteRoadmapNode(roadmapId, nodeId) {
+  if (!roadmapId || !nodeId) return { success: false };
+  const response = await apiFetch(`/roadmaps/${roadmapId}/nodes/${nodeId}`, {
+    method: "DELETE"
+  });
+  if (response.ok) {
+    return { success: true };
+  }
+  const err = await response.json().catch(() => ({}));
+  return { success: false, error: err.detail || err.message || "Failed to delete node" };
 }
 
 async function updateRoadmap(id, updateData) {
@@ -383,21 +447,6 @@ async function updateRoadmap(id, updateData) {
   const existingDetail = getStoredRoadmapDetail(id) || {};
   const updatedDetail = { ...existingDetail, ...updateData };
   saveStoredRoadmapDetail(id, updatedDetail);
-
-  // Update summary in roadmaps list
-  const roadmaps = getStoredRoadmaps();
-  const idx = roadmaps.findIndex(r => r.id === id);
-  if (idx !== -1) {
-    roadmaps[idx] = {
-      ...roadmaps[idx],
-      title: updateData.title || roadmaps[idx].title,
-      type: updateData.type || roadmaps[idx].type,
-      progress: typeof updateData.progress === "number" ? updateData.progress : roadmaps[idx].progress,
-      completed_tasks: typeof updateData.completed_tasks === "number" ? updateData.completed_tasks : roadmaps[idx].completed_tasks,
-      total_tasks: typeof updateData.total_tasks === "number" ? updateData.total_tasks : roadmaps[idx].total_tasks,
-    };
-    saveStoredRoadmaps(roadmaps);
-  }
 
   if (!isPlaceholder()) {
     try {
@@ -780,6 +829,12 @@ window.changePassword = changePassword;
 window.getRoadmaps = getRoadmaps;
 window.createRoadmap = createRoadmap;
 window.getRoadmapById = getRoadmapById;
+window.getRoadmapGenerationStatus = getRoadmapGenerationStatus;
+window.completeRoadmapNode = completeRoadmapNode;
+window.uncompleteRoadmapNode = uncompleteRoadmapNode;
+window.createRoadmapNode = createRoadmapNode;
+window.updateRoadmapNode = updateRoadmapNode;
+window.deleteRoadmapNode = deleteRoadmapNode;
 window.updateRoadmap = updateRoadmap;
 window.deleteRoadmap = deleteRoadmap;
 window.getStoredRoadmaps = getStoredRoadmaps;
@@ -816,6 +871,12 @@ window.TasklyAPI = {
   getRoadmaps,
   createRoadmap,
   getRoadmapById,
+  getRoadmapGenerationStatus,
+  completeRoadmapNode,
+  uncompleteRoadmapNode,
+  createRoadmapNode,
+  updateRoadmapNode,
+  deleteRoadmapNode,
   updateRoadmap,
   deleteRoadmap,
   getStoredRoadmaps,
