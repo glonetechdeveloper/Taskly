@@ -127,8 +127,8 @@ window.TasklyDashboard = (function () {
         const count = data.current_streak;
         const streakBtn = $("#streakBtn");
         if (streakBtn) {
-          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
-          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+          const badge = streakBtn.querySelector(".badge-count") || streakBtn.querySelector(".streak-count") || $("#streakBadge");
+          if (badge) badge.textContent = count;
         }
         const modalCount = $("#streakCountBig");
         if (modalCount) {
@@ -494,7 +494,7 @@ window.TasklyDashboard = (function () {
   /* ---------- Create Roadmap Handlers (POST /roadmaps) ---------- */
 
   function wireCreateRoadmapModal() {
-    const openBtn = $("#openAddRoadmapBtn") || $("#topbarCreateBtn");
+    const openBtn = $("#addRoadmapBtn") || $("#openAddRoadmapBtn") || $("#topbarCreateBtn");
     const textarea = $("#modalGoalInput");
     const charCount = $("#modalCharCount");
     const generateBtn = $("#generateRoadmapBtn");
@@ -558,9 +558,19 @@ window.TasklyDashboard = (function () {
   }
 
   function wireInlineInput() {
-    const input = $("#inlineGoalInput");
-    const btn = $("#inlineGenerateBtn");
+    const input = $("#goalInput") || $("#inlineGoalInput");
+    const btn = $("#sendBtn") || $("#inlineGenerateBtn");
+    const charCountEl = $("#charCount");
     if (!input || !btn) return;
+
+    /* Character count & send button enable/disable */
+    function updateCharCount() {
+      const len = (input.value || "").length;
+      if (charCountEl) charCountEl.textContent = len + "/500";
+      btn.disabled = len === 0;
+    }
+    input.addEventListener("input", updateCharCount);
+    updateCharCount();
 
     async function handleInlineSubmit() {
       const text = (input.value || "").trim();
@@ -581,7 +591,10 @@ window.TasklyDashboard = (function () {
 
     btn.addEventListener("click", handleInlineSubmit);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleInlineSubmit();
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleInlineSubmit();
+      }
     });
   }
 

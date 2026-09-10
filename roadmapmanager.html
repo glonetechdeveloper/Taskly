@@ -353,6 +353,43 @@
   </div>
 </div>
 
+<!-- ============ Add New Roadmap modal ============ -->
+<div class="modal-overlay" id="addRoadmapOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Add a new roadmap">
+
+    <div class="form-view" id="addRoadmapFormView">
+      <div class="modal-header">
+        <h3 id="addRoadmapModalTitle">Start a new roadmap</h3>
+        <button class="modal-close" data-close-modal="addRoadmapOverlay" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+        </button>
+      </div>
+      <p class="modal-sub" id="addRoadmapModalSub">Type any goal, from a skill to an errand. Taskly will figure out whether it needs a step-by-step path or a simple checklist.</p>
+
+      <textarea class="modal-textarea" id="modalGoalInput" maxlength="500" placeholder="e.g. Learn Rust, plan a wedding, buy groceries for the week…"></textarea>
+      <p class="modal-char-count"><span id="modalCharCount">0</span>/500</p>
+
+      <div class="example-chips">
+        <button class="example-chip" type="button" data-example="Learn the basics of Rust">Learn Rust</button>
+        <button class="example-chip" type="button" data-example="Plan a wedding in 6 months">Plan a wedding</button>
+        <button class="example-chip" type="button" data-example="Buy groceries for the week">Weekly groceries</button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" type="button" data-close-modal="addRoadmapOverlay">Cancel</button>
+        <button class="btn-solid" id="generateRoadmapBtn" type="button" disabled>Generate Roadmap</button>
+      </div>
+    </div>
+
+    <div class="generation-state" id="generationState">
+      <div class="gen-ring"></div>
+      <p class="generation-message" id="generationMessage">Breaking this into phases…</p>
+      <p class="generation-submessage">This usually takes a few seconds.</p>
+    </div>
+
+  </div>
+</div>
+
 <button class="help-bubble" id="nodiBtn" type="button">
   <img src="assets/Nodi.png" alt="">
   Need help? Ask Nodi

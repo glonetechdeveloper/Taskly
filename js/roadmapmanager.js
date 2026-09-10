@@ -108,8 +108,8 @@ window.TasklyManager = (function () {
         const count = data.current_streak;
         const streakBtn = $("#streakBtn");
         if (streakBtn) {
-          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
-          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+          const badge = streakBtn.querySelector(".badge-count") || streakBtn.querySelector(".streak-count") || $("#streakBadge");
+          if (badge) badge.textContent = count;
         }
         const modalCount = $("#streakCountBig");
         if (modalCount) {
@@ -292,7 +292,7 @@ window.TasklyManager = (function () {
   }
 
   function renderRoadmapList() {
-    const grid = $("#roadmapGrid");
+    const grid = $("#managerList") || $("#roadmapGrid");
     if (!grid) return;
     grid.innerHTML = "";
 
@@ -386,17 +386,16 @@ window.TasklyManager = (function () {
   }
 
   function updateEmptyFilterState(count) {
-    const empty = $("#emptyFilterState");
-    const grid = $("#roadmapGrid");
-    if (!empty || !grid) return;
+    const empty = $("#managerEmptyFilter") || $("#emptyFilterState");
+    if (!empty) return;
     const hasItems = count > 0;
     empty.classList.toggle("is-visible", !hasItems);
   }
 
   function wireFilterChips() {
-    $all(".filter-chip").forEach((chip) => {
+    $all(".filter-tab, .filter-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
-        $all(".filter-chip").forEach(c => c.classList.remove("is-active"));
+        $all(".filter-tab, .filter-chip").forEach(c => c.classList.remove("is-active"));
         chip.classList.add("is-active");
         currentFilter = chip.dataset.filter || "all";
         renderRoadmapList();
@@ -499,20 +498,37 @@ window.TasklyManager = (function () {
 
   function wireAddRoadmapModal() {
     const openBtn = $("#addRoadmapBtn");
+    const checklistBtn = $("#createChecklistBtn");
     const textarea = $("#modalGoalInput");
     const charCount = $("#modalCharCount");
     const generateBtn = $("#generateRoadmapBtn");
     const formView = $("#addRoadmapFormView");
     const genState = $("#generationState");
+    const modalTitle = $("#addRoadmapModalTitle");
+    const modalSub = $("#addRoadmapModalSub");
 
-    if (!openBtn) return;
-
-    openBtn.addEventListener("click", () => {
+    function openForRoadmap() {
+      if (modalTitle) modalTitle.textContent = "Start a new roadmap";
+      if (modalSub) modalSub.textContent = "Type any goal, from a skill to an errand. Taskly will figure out whether it needs a step-by-step path or a simple checklist.";
+      if (textarea) textarea.placeholder = "e.g. Learn Rust, plan a wedding, buy groceries for the week…";
       openModal("addRoadmapOverlay");
       if (formView) formView.classList.remove("is-hidden");
       if (genState) genState.classList.remove("is-active");
       setTimeout(() => textarea && textarea.focus(), 250);
-    });
+    }
+
+    function openForChecklist() {
+      if (modalTitle) modalTitle.textContent = "Create a new Checklist";
+      if (modalSub) modalSub.textContent = "Enter your goal or routine. Taskly will generate an organized checklist for you.";
+      if (textarea) textarea.placeholder = "e.g. Weekly grocery checklist, morning routine, packing list…";
+      openModal("addRoadmapOverlay");
+      if (formView) formView.classList.remove("is-hidden");
+      if (genState) genState.classList.remove("is-active");
+      setTimeout(() => textarea && textarea.focus(), 250);
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openForRoadmap);
+    if (checklistBtn) checklistBtn.addEventListener("click", openForChecklist);
 
     function updateCount() {
       if (!textarea) return;

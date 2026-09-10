@@ -83,8 +83,12 @@ window.TasklyNotifications = (function () {
         const count = data.current_streak;
         const streakBtn = $("#streakBtn");
         if (streakBtn) {
-          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
-          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+          const badge = streakBtn.querySelector(".badge-count") || streakBtn.querySelector(".streak-count") || $("#streakBadge");
+          if (badge) badge.textContent = count;
+        }
+        const modalCount = $("#streakCountBig");
+        if (modalCount) {
+          modalCount.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
         }
       }
     } catch (err) {
@@ -100,6 +104,30 @@ window.TasklyNotifications = (function () {
       tickCountdown();
       clearInterval(streakInterval);
       streakInterval = setInterval(tickCountdown, 1000);
+    });
+  }
+
+  function wireNotifDropdown() {
+    const btn = $("#notifBtn");
+    const panel = $("#notifPanel");
+    const dot = $("#notifDot");
+    if (!btn || !panel) return;
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willOpen = !panel.classList.contains("is-open");
+      if (willOpen) {
+        panel.classList.add("is-open");
+        if (dot) dot.style.display = "none";
+      } else {
+        panel.classList.remove("is-open");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
+        panel.classList.remove("is-open");
+      }
     });
   }
 
@@ -288,6 +316,7 @@ window.TasklyNotifications = (function () {
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();
+      wireNotifDropdown();
       wireNodiModal();
       wireSidebarLogout();
       wireClearAllBtn();

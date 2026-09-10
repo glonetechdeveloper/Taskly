@@ -131,6 +131,153 @@ async function apiRequest(path, options = {}) {
     }
 
     if (path.startsWith("/roadmaps") || path.startsWith("/dashboard")) {
+      const method = (options.method || "GET").toUpperCase();
+
+      /* --- POST /roadmaps → create a mock roadmap offline --- */
+      if (method === "POST" && path === "/roadmaps") {
+        let bodyObj = {};
+        try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+        const goalText = bodyObj.goal_text || bodyObj.title || "New Roadmap";
+        const title = bodyObj.title || goalText;
+        const newId = "mock_rm_" + Date.now();
+
+        /* Generate demo nodes based on the goal */
+        const demoNodes = [
+          { id: newId + "_n1", name: "Research & understand the basics", description: "Gather resources and understand foundational concepts for: " + title, time_estimate: "1-2 hours", completed: false, depends_on: [], order: 0 },
+          { id: newId + "_n2", name: "Set up your environment", description: "Prepare everything you need to get started.", time_estimate: "30 min", completed: false, depends_on: [newId + "_n1"], order: 1 },
+          { id: newId + "_n3", name: "Practice the core skills", description: "Hands-on practice with the most important elements.", time_estimate: "2-3 hours", completed: false, depends_on: [newId + "_n2"], order: 2 },
+          { id: newId + "_n4", name: "Build a small project", description: "Apply what you've learned in a real mini-project.", time_estimate: "3-4 hours", completed: false, depends_on: [newId + "_n3"], order: 3 },
+          { id: newId + "_n5", name: "Review & refine", description: "Look back at your progress, fill gaps, and polish.", time_estimate: "1 hour", completed: false, depends_on: [newId + "_n4"], order: 4 }
+        ];
+
+        const newRoadmap = {
+          id: newId,
+          title: title,
+          goal_text: goalText,
+          status: "done",
+          progress_percentage: 0,
+          nodes: demoNodes,
+          created_at: new Date().toISOString()
+        };
+
+        /* Save into localStorage cache */
+        try {
+          const cached = localStorage.getItem("taskly_cached_roadmaps");
+          const existing = cached ? JSON.parse(cached) : [];
+          existing.unshift(newRoadmap);
+          localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(existing));
+        } catch (e) {}
+
+        return newRoadmap;
+      }
+
+      /* --- POST /roadmaps/{id}/regenerate --- */
+      if (method === "POST" && path.includes("/regenerate")) {
+        return { message: "Roadmap regeneration started (offline mode)" };
+      }
+
+      /* --- GET /roadmaps/{id}/generation-status --- */
+      if (method === "GET" && path.includes("/generation-status")) {
+        const idMatch = path.match(/\/roadmaps\/([^/]+)\/generation-status/);
+        return { roadmap_id: idMatch ? idMatch[1] : "", status: "done", error_message: null };
+      }
+
+      /* --- GET /roadmaps/{id}/progress --- */
+      if (method === "GET" && path.includes("/progress")) {
+        const idMatch = path.match(/\/roadmaps\/([^/]+)\/progress/);
+        const targetId = idMatch ? idMatch[1] : "";
+        let pct = 0;
+        try {
+          const cached = localStorage.getItem("taskly_cached_roadmaps");
+          if (cached) {
+            const list = JSON.parse(cached);
+            const found = list.find(r => r.id === targetId);
+            if (found) pct = found.progress_percentage || 0;
+          }
+        } catch (e) {}
+        return { roadmap_id: targetId, progress_percentage: pct, total_nodes: 5, completed_nodes: Math.round(5 * pct / 100) };
+      }
+
+      /* --- PATCH /roadmaps/{id} → rename or update roadmap --- */
+      if (method === "PATCH" && path.match(/^\/roadmaps\/([^/]+)$/)) {
+        const targetId = path.match(/^\/roadmaps\/([^/]+)$/)[1];
+        let bodyObj = {};
+        try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+        try {
+          const cached = localStorage.getItem("taskly_cached_roadmaps");
+          if (cached) {
+            const list = JSON.parse(cached);
+            const idx = list.findIndex(r => r.id === targetId);
+            if (idx !== -1) {
+              if (bodyObj.title) list[idx].title = bodyObj.title;
+              if (bodyObj.goal_text) list[idx].goal_text = bodyObj.goal_text;
+              localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(list));
+              return list[idx];
+            }
+          }
+        } catch (e) {}
+        return { id: targetId, ...bodyObj };
+      }
+
+      /* --- DELETE /roadmaps/{id} → delete roadmap --- */
+      if (method === "DELETE" && path.match(/^\/roadmaps\/([^/]+)$/)) {
+        const targetId = path.match(/^\/roadmaps\/([^/]+)$/)[1];
+        try {
+          const cached = localStorage.getItem("taskly_cached_roadmaps");
+          if (cached) {
+            const list = JSON.parse(cached);
+            const filtered = list.filter(r => r.id !== targetId);
+            localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(filtered));
+          }
+        } catch (e) {}
+        return { success: true };
+      }
+
+      /* --- PATCH /roadmaps/{id}/nodes/{node_id}/complete --- */
+      if (method === "PATCH" && path.includes("/complete")) {
+        const parts = path.match(/\/roadmaps\/([^/]+)\/nodes\/([^/]+)\/complete/);
+        if (parts) {
+          const [, rmId, nodeId] = parts;
+          let bodyObj = {};
+          try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+          try {
+            const cached = localStorage.getItem("taskly_cached_roadmaps");
+            if (cached) {
+              const list = JSON.parse(cached);
+              const rm = list.find(r => r.id === rmId);
+              if (rm && Array.isArray(rm.nodes)) {
+                const node = rm.nodes.find(n => n.id === nodeId);
+                if (node) {
+                  node.completed = bodyObj.completed !== undefined ? bodyObj.completed : !node.completed;
+                  const total = rm.nodes.length;
+                  const done = rm.nodes.filter(n => n.completed).length;
+                  rm.progress_percentage = total > 0 ? Math.round((done / total) * 100) : 0;
+                  localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(list));
+                  return node;
+                }
+              }
+            }
+          } catch (e) {}
+        }
+        return { success: true };
+      }
+
+      /* --- GET /roadmaps/{id} → return single cached roadmap --- */
+      const singleMatch = path.match(/^\/roadmaps\/([^/]+)$/);
+      if (method === "GET" && singleMatch) {
+        const targetId = singleMatch[1];
+        try {
+          const cached = localStorage.getItem("taskly_cached_roadmaps");
+          if (cached) {
+            const list = JSON.parse(cached);
+            const found = list.find(r => r.id === targetId);
+            if (found) return found;
+          }
+        } catch (e) {}
+        return { id: targetId, title: "Roadmap", status: "done", progress_percentage: 0, nodes: [] };
+      }
+
+      /* --- GET /roadmaps or /dashboard → return cached list --- */
       try {
         const cached = localStorage.getItem("taskly_cached_roadmaps");
         if (cached) return JSON.parse(cached);

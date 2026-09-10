@@ -82,8 +82,16 @@ window.TasklyAccount = (function () {
         const count = data.current_streak;
         const streakBtn = $("#streakBtn");
         if (streakBtn) {
-          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
-          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+          const badge = streakBtn.querySelector(".badge-count") || streakBtn.querySelector(".streak-count") || $("#streakBadge");
+          if (badge) badge.textContent = count;
+        }
+        const modalCount = $("#streakCountBig");
+        if (modalCount) {
+          modalCount.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
+        }
+        const profileStreak = $("#profileStreakDisplay");
+        if (profileStreak) {
+          profileStreak.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
         }
       }
     } catch (err) {
@@ -516,10 +524,33 @@ window.TasklyAccount = (function () {
     }
   }
 
+  /* ---------- Instant Profile Hydration from localStorage ---------- */
+
+  function hydrateFromLocalStorage() {
+    const email = localStorage.getItem("taskly_user_email") || "";
+    const name = localStorage.getItem("taskly_user_name") || "";
+
+    if (name) {
+      const nameDisplay = $("#profileNameDisplay");
+      const nameInput = $("#fullNameInput");
+      if (nameDisplay) nameDisplay.textContent = name;
+      if (nameInput && !nameInput.value) nameInput.value = name;
+    }
+    if (email) {
+      const emailDisplay = $("#userEmailDisplay") || $("#profileEmailDisplay");
+      const emailInput = $("#emailInput");
+      if (emailDisplay) emailDisplay.textContent = email;
+      if (emailInput && !emailInput.value) emailInput.value = email;
+    }
+  }
+
   /* ---------- Initialization ---------- */
 
   function init() {
     const run = async () => {
+      /* Instantly show cached user info (no waiting for API) */
+      hydrateFromLocalStorage();
+
       wireGenericModalClosers();
       wireDrawer();
       wireStreakPopup();

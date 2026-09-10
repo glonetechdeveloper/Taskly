@@ -95,8 +95,8 @@ window.TasklyRoadmap = (function () {
         const count = data.current_streak;
         const streakBtn = $("#streakBtn");
         if (streakBtn) {
-          const countSpan = streakBtn.querySelector(".streak-count") || streakBtn;
-          countSpan.textContent = `${count} ${count === 1 ? "day" : "days"}`;
+          const badge = streakBtn.querySelector(".badge-count") || streakBtn.querySelector(".streak-count") || $("#streakBadge");
+          if (badge) badge.textContent = count;
         }
         const modalCount = $("#streakCountBig");
         if (modalCount) {
