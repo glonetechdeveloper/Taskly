@@ -304,6 +304,7 @@ window.TasklyNotifications = (function () {
         localStorage.removeItem("taskly_user_email");
         localStorage.removeItem("taskly_user_name");
         localStorage.removeItem("taskly_user_avatar");
+        localStorage.removeItem("taskly_user_password");
       } catch (e) {}
       window.location.href = "login.html";
     });

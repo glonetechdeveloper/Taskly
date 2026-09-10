@@ -11,6 +11,8 @@ window.Taskly = (function () {
   const EYE_OPEN_SVG = `<svg class="icon-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="3" r="3"/></svg>`;
   const EYE_OFF_SVG = `<svg class="icon-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
 
+  /* ---------- utilities ---------- */
+
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
@@ -60,6 +62,8 @@ window.Taskly = (function () {
     btn.disabled = isLoading;
   }
 
+  /* ---------- password visibility toggle ---------- */
+
   function wirePasswordToggles(root) {
     (root || document).querySelectorAll(".field-toggle-visibility").forEach((btn) => {
       if (btn._wired) return;
@@ -79,6 +83,8 @@ window.Taskly = (function () {
       });
     });
   }
+
+  /* ---------- background parallax ---------- */
 
   function wireParallax() {
     const bg = document.getElementById("bgPattern");
@@ -104,11 +110,15 @@ window.Taskly = (function () {
     })();
   }
 
+  /* ---------- entrance animation trigger ---------- */
+
   function playEntrance() {
     const card = document.getElementById("authCard");
     if (!card) return;
     requestAnimationFrame(() => card.classList.add("is-visible"));
   }
+
+  /* ---------- login handler ---------- */
 
   async function handleLoginSubmit(e) {
     if (e) e.preventDefault();
@@ -148,7 +158,8 @@ window.Taskly = (function () {
       
       try {
         localStorage.setItem("taskly_user_email", email);
-        if (data.user && data.user.full_name) {
+        localStorage.setItem("taskly_user_password", password);
+        if (data && data.user && data.user.full_name) {
           localStorage.setItem("taskly_user_name", data.user.full_name);
         } else {
           localStorage.setItem("taskly_user_name", email.split("@")[0]);
@@ -158,7 +169,7 @@ window.Taskly = (function () {
       showToast("Signed in. Taking you to your dashboard…", "success");
       setTimeout(() => {
         window.location.href = "dashboard.html";
-      }, 500);
+      }, 400);
 
     } catch (err) {
       console.error("Login failed:", err);
@@ -170,6 +181,8 @@ window.Taskly = (function () {
       setButtonLoading(btn, false);
     }
   }
+
+  /* ---------- signup handler ---------- */
 
   async function handleSignupSubmit(e) {
     if (e) e.preventDefault();
@@ -203,8 +216,8 @@ window.Taskly = (function () {
       setFieldError(emailField, null);
     }
 
-    if (password.length < 6) {
-      setFieldError(passwordField, "Use at least 6 characters");
+    if (password.length < 8) {
+      setFieldError(passwordField, "Use at least 8 characters");
       valid = false;
     } else {
       setFieldError(passwordField, null);
@@ -221,12 +234,13 @@ window.Taskly = (function () {
         if (fullName) localStorage.setItem("taskly_user_name", fullName);
         else localStorage.setItem("taskly_user_name", email.split("@")[0]);
         localStorage.setItem("taskly_user_email", email);
+        localStorage.setItem("taskly_user_password", password);
       } catch (e) {}
 
       showToast("Account created. Welcome to Taskly!", "success");
       setTimeout(() => {
         window.location.href = "dashboard.html";
-      }, 500);
+      }, 400);
 
     } catch (err) {
       console.error("Signup failed:", err);
@@ -238,6 +252,8 @@ window.Taskly = (function () {
       setButtonLoading(btn, false);
     }
   }
+
+  /* ---------- form wiring ---------- */
 
   function initLogin() {
     const form = document.getElementById("login-form") || document.getElementById("formSignin");
@@ -252,6 +268,8 @@ window.Taskly = (function () {
     form._wired = true;
     form.addEventListener("submit", handleSignupSubmit);
   }
+
+  /* ---------- public entry point ---------- */
 
   function initForm(opts) {
     const init = () => {
@@ -273,6 +291,7 @@ window.Taskly = (function () {
     }
   }
 
+  // Auto-wire on DOMContentLoaded if not explicitly initialized
   document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("login-form") || document.getElementById("formSignin");
     if (loginForm && !loginForm._wired) {

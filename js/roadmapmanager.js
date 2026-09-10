@@ -498,7 +498,6 @@ window.TasklyManager = (function () {
 
   function wireAddRoadmapModal() {
     const openBtn = $("#addRoadmapBtn");
-    const checklistBtn = $("#createChecklistBtn");
     const textarea = $("#modalGoalInput");
     const charCount = $("#modalCharCount");
     const generateBtn = $("#generateRoadmapBtn");
@@ -517,18 +516,7 @@ window.TasklyManager = (function () {
       setTimeout(() => textarea && textarea.focus(), 250);
     }
 
-    function openForChecklist() {
-      if (modalTitle) modalTitle.textContent = "Create a new Checklist";
-      if (modalSub) modalSub.textContent = "Enter your goal or routine. Taskly will generate an organized checklist for you.";
-      if (textarea) textarea.placeholder = "e.g. Weekly grocery checklist, morning routine, packing list…";
-      openModal("addRoadmapOverlay");
-      if (formView) formView.classList.remove("is-hidden");
-      if (genState) genState.classList.remove("is-active");
-      setTimeout(() => textarea && textarea.focus(), 250);
-    }
-
     if (openBtn) openBtn.addEventListener("click", openForRoadmap);
-    if (checklistBtn) checklistBtn.addEventListener("click", openForChecklist);
 
     function updateCount() {
       if (!textarea) return;
@@ -558,7 +546,7 @@ window.TasklyManager = (function () {
         if (genState) genState.classList.add("is-active");
 
         try {
-          const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text });
+          const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text, type: "sequential" });
           const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
 
           if (!newId) throw new Error("Could not retrieve roadmap ID from server");
@@ -572,6 +560,59 @@ window.TasklyManager = (function () {
           if (formView) formView.classList.remove("is-hidden");
           if (genState) genState.classList.remove("is-active");
           generateBtn.disabled = false;
+        }
+      });
+    }
+  }
+
+  /* ---------- Create Manual Checklist Modal (type: "flat") ---------- */
+
+  function wireCreateChecklistModal() {
+    const checklistBtn = $("#createChecklistBtn");
+    const checklistInput = $("#checklistNameInput");
+    const checklistSaveBtn = $("#createChecklistSaveBtn");
+
+    if (checklistBtn) {
+      checklistBtn.addEventListener("click", () => {
+        if (checklistInput) checklistInput.value = "";
+        if (checklistSaveBtn) checklistSaveBtn.disabled = true;
+        openModal("createChecklistOverlay");
+        setTimeout(() => checklistInput && checklistInput.focus(), 250);
+      });
+    }
+
+    if (checklistInput && checklistSaveBtn) {
+      checklistInput.addEventListener("input", () => {
+        checklistSaveBtn.disabled = !checklistInput.value.trim();
+      });
+
+      checklistInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !checklistSaveBtn.disabled) {
+          e.preventDefault();
+          checklistSaveBtn.click();
+        }
+      });
+    }
+
+    if (checklistSaveBtn) {
+      checklistSaveBtn.addEventListener("click", async () => {
+        const name = (checklistInput ? checklistInput.value : "").trim();
+        if (!name) return;
+
+        checklistSaveBtn.disabled = true;
+        try {
+          const res = await window.TasklyAPI.createRoadmap({ title: name, goal_text: name, type: "flat" });
+          const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
+
+          if (!newId) throw new Error("Could not create checklist");
+
+          closeModal("createChecklistOverlay");
+          showToast("Checklist created.", "success");
+          window.location.href = `roadmap.html?id=${encodeURIComponent(newId)}`;
+        } catch (err) {
+          console.error("Checklist creation failed:", err);
+          showToast(err.message || "Failed to create checklist", "error");
+          checklistSaveBtn.disabled = false;
         }
       });
     }
@@ -641,6 +682,7 @@ window.TasklyManager = (function () {
         localStorage.removeItem("taskly_user_email");
         localStorage.removeItem("taskly_user_name");
         localStorage.removeItem("taskly_user_avatar");
+        localStorage.removeItem("taskly_user_password");
       } catch (e) {}
       window.location.href = "login.html";
     });
@@ -658,6 +700,7 @@ window.TasklyManager = (function () {
       wireSidebarLogout();
       wireFilterChips();
       wireAddRoadmapModal();
+      wireCreateChecklistModal();
       wireRoadmapOptionsMenu();
 
       await Promise.all([

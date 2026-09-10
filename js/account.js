@@ -441,10 +441,13 @@ window.TasklyAccount = (function () {
         showToast("Please fill in both current and new password fields.", "error");
         return;
       }
-      if (nxt.length < 6) {
-        showToast("New password must be at least 6 characters.", "error");
+      if (nxt.length < 8) {
+        showToast("New password must be at least 8 characters.", "error");
         return;
       }
+      try {
+        localStorage.setItem("taskly_user_password", nxt);
+      } catch (e) {}
       if (mainPass) mainPass.value = nxt;
       closePasswordEdit();
       if (successMsg) successMsg.classList.add("is-visible");
@@ -469,6 +472,7 @@ window.TasklyAccount = (function () {
         localStorage.removeItem("taskly_user_email");
         localStorage.removeItem("taskly_user_name");
         localStorage.removeItem("taskly_user_avatar");
+        localStorage.removeItem("taskly_user_password");
       } catch (e) {}
       closeModal("logoutOverlay");
       showToast("Signed out.");
@@ -482,6 +486,7 @@ window.TasklyAccount = (function () {
           localStorage.removeItem("taskly_user_email");
           localStorage.removeItem("taskly_user_name");
           localStorage.removeItem("taskly_user_avatar");
+          localStorage.removeItem("taskly_user_password");
         } catch (e) {}
         window.location.href = "login.html";
       });
@@ -522,6 +527,12 @@ window.TasklyAccount = (function () {
         if (nameInput) nameInput.value = name;
       }
     }
+
+    const savedPass = localStorage.getItem("taskly_user_password") || "";
+    const mainPass = $("#passwordInput");
+    if (mainPass && savedPass) {
+      mainPass.value = savedPass;
+    }
   }
 
   /* ---------- Instant Profile Hydration from localStorage ---------- */
@@ -529,6 +540,7 @@ window.TasklyAccount = (function () {
   function hydrateFromLocalStorage() {
     const email = localStorage.getItem("taskly_user_email") || "";
     const name = localStorage.getItem("taskly_user_name") || "";
+    const password = localStorage.getItem("taskly_user_password") || "";
 
     if (name) {
       const nameDisplay = $("#profileNameDisplay");
@@ -541,6 +553,10 @@ window.TasklyAccount = (function () {
       const emailInput = $("#emailInput");
       if (emailDisplay) emailDisplay.textContent = email;
       if (emailInput && !emailInput.value) emailInput.value = email;
+    }
+    if (password) {
+      const mainPass = $("#passwordInput");
+      if (mainPass) mainPass.value = password;
     }
   }
 

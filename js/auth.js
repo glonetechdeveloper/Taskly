@@ -158,7 +158,8 @@ window.Taskly = (function () {
       
       try {
         localStorage.setItem("taskly_user_email", email);
-        if (data.user && data.user.full_name) {
+        localStorage.setItem("taskly_user_password", password);
+        if (data && data.user && data.user.full_name) {
           localStorage.setItem("taskly_user_name", data.user.full_name);
         } else {
           localStorage.setItem("taskly_user_name", email.split("@")[0]);
@@ -168,7 +169,7 @@ window.Taskly = (function () {
       showToast("Signed in. Taking you to your dashboard…", "success");
       setTimeout(() => {
         window.location.href = "dashboard.html";
-      }, 500);
+      }, 400);
 
     } catch (err) {
       console.error("Login failed:", err);
@@ -215,8 +216,8 @@ window.Taskly = (function () {
       setFieldError(emailField, null);
     }
 
-    if (password.length < 6) {
-      setFieldError(passwordField, "Use at least 6 characters");
+    if (password.length < 8) {
+      setFieldError(passwordField, "Use at least 8 characters");
       valid = false;
     } else {
       setFieldError(passwordField, null);
@@ -233,12 +234,13 @@ window.Taskly = (function () {
         if (fullName) localStorage.setItem("taskly_user_name", fullName);
         else localStorage.setItem("taskly_user_name", email.split("@")[0]);
         localStorage.setItem("taskly_user_email", email);
+        localStorage.setItem("taskly_user_password", password);
       } catch (e) {}
 
       showToast("Account created. Welcome to Taskly!", "success");
       setTimeout(() => {
         window.location.href = "dashboard.html";
-      }, 500);
+      }, 400);
 
     } catch (err) {
       console.error("Signup failed:", err);
