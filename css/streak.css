@@ -1,0 +1,194 @@
+/* ==========================================================
+   TASKLY — streak.css
+   Shared styles for Streak Modal, Badges, and Countdown
+   ========================================================== */
+
+#streakOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 99999;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+#streakOverlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#streakOverlay .modal-streak {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  text-align: center;
+  position: relative;
+  transform: scale(0.92) translateY(12px);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+#streakOverlay.is-open .modal-streak {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.modal-close {
+  background: #F3F4F6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6B7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.modal-close:hover {
+  background: #E5E7EB;
+  color: #111827;
+  transform: scale(1.06);
+}
+
+.streak-flame-big {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 12px 28px -6px rgba(255, 107, 0, 0.45);
+  animation: flamePulse 2.4s ease-in-out infinite alternate;
+}
+
+.streak-flame-big svg {
+  width: 42px;
+  height: 42px;
+}
+
+@keyframes flamePulse {
+  0% { transform: scale(0.96); box-shadow: 0 8px 20px -6px rgba(255, 107, 0, 0.35); }
+  100% { transform: scale(1.05); box-shadow: 0 16px 36px -4px rgba(255, 107, 0, 0.6); }
+}
+
+.streak-count-big {
+  font-size: 32px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.streak-sub {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+/* Week dots */
+.streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 14px;
+  background: #F9FAFB;
+  border-radius: 16px;
+  border: 1px solid #F3F4F6;
+}
+
+.streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9CA3AF;
+  text-transform: uppercase;
+}
+
+.streak-day-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.streak-day-dot.is-active {
+  background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
+  box-shadow: 0 4px 10px -2px rgba(255, 107, 0, 0.4);
+}
+
+.streak-day-dot.is-active svg {
+  width: 14px;
+  height: 14px;
+}
+
+.streak-day-dot.is-today {
+  outline: 2px solid #FF6B00;
+  outline-offset: 2px;
+}
+
+/* Countdown box */
+.streak-countdown-box {
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.streak-countdown-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9A3412;
+  margin: 0;
+}
+
+.streak-countdown {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #C2410C;
+  margin: 0;
+}

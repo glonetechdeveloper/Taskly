@@ -133,6 +133,88 @@ function handleOfflineFallback(path, options = {}) {
     };
   }
 
+  if (path.startsWith("/chat")) {
+    let bodyObj = {};
+    try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+    const rawMsg = String(bodyObj.message || "").trim();
+    const msg = rawMsg.toLowerCase();
+    
+    let reply = "Hey! I'm Nodi, your AI roadmap assistant. I can help list your roadmaps, check progress, generate new learning paths, or complete tasks for you!";
+    let actions_taken = [];
+
+    let cachedRoadmaps = [];
+    try {
+      const cached = localStorage.getItem("taskly_cached_roadmaps");
+      if (cached) cachedRoadmaps = JSON.parse(cached);
+    } catch (e) {}
+
+    if (msg.includes("roadmap") && (msg.includes("what") || msg.includes("list") || msg.includes("have") || msg.includes("show") || msg.includes("get") || msg.includes("all"))) {
+      if (cachedRoadmaps.length > 0) {
+        const summaries = cachedRoadmaps.map(r => `'${r.title || r.goal_text}' (${r.progress_percentage || 0}% complete)`).join(", ");
+        reply = `You currently have ${cachedRoadmaps.length} roadmap${cachedRoadmaps.length === 1 ? '' : 's'}: ${summaries}.`;
+      } else {
+        reply = "You don't have any roadmaps created yet. Would you like me to generate one for you?";
+      }
+      actions_taken = [{ tool: "list_roadmaps", result: `Found ${cachedRoadmaps.length} roadmap${cachedRoadmaps.length === 1 ? '' : 's'}` }];
+    } else if (msg.includes("create") || msg.includes("generate") || msg.includes("make roadmap") || msg.includes("new roadmap") || msg.includes("learn ")) {
+      const titleCandidate = rawMsg.replace(/^(please\s+)?(can\s+you\s+)?(create|generate|make|build)\s+(a\s+|an\s+)?(new\s+)?(roadmap\s+(for|about|on)?|study\s+plan\s+(for)?|path\s+(for)?)/i, "").trim() || "New Study Roadmap";
+      const cleanTitle = titleCandidate.replace(/[.!?]+$/, "");
+      const newId = "rm_" + Date.now();
+      const newRm = {
+        id: newId,
+        title: cleanTitle,
+        goal_text: cleanTitle,
+        type: "sequential",
+        status: "done",
+        progress_percentage: 0,
+        nodes: [
+          { id: newId + "_n1", name: `Foundations of ${cleanTitle}`, description: "Core concepts and basics", time_estimate: "1-2 hours", completed: false, depends_on: [], order: 0 },
+          { id: newId + "_n2", name: "Practical Hands-on Setup", description: "Configuring the environment and tools", time_estimate: "45 min", completed: false, depends_on: [newId + "_n1"], order: 1 },
+          { id: newId + "_n3", name: "Build Real-World Project", description: "Applying learned skills", time_estimate: "3 hours", completed: false, depends_on: [newId + "_n2"], order: 2 }
+        ],
+        created_at: new Date().toISOString()
+      };
+      cachedRoadmaps.unshift(newRm);
+      try {
+        localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(cachedRoadmaps));
+      } catch (e) {}
+      reply = `I've created a new roadmap for "${cleanTitle}" with step-by-step milestones! You can view and manage it right away.`;
+      actions_taken = [{ tool: "create_roadmap", result: `Created roadmap '${cleanTitle}'` }];
+    } else if (msg.includes("progress") || msg.includes("status") || msg.includes("how am i doing")) {
+      if (cachedRoadmaps.length > 0) {
+        const top = cachedRoadmaps[0];
+        const totalNodes = (top.nodes && top.nodes.length) || 0;
+        const doneNodes = (top.nodes && top.nodes.filter(n => n.completed).length) || 0;
+        reply = `For your active roadmap '${top.title || top.goal_text}', you have completed ${doneNodes} of ${totalNodes} milestones (${top.progress_percentage || 0}%). Keep up the great work!`;
+        actions_taken = [{ tool: "get_roadmap_progress", result: `Progress for '${top.title || top.goal_text}': ${top.progress_percentage || 0}%` }];
+      } else {
+        reply = "You don't have any active roadmaps yet to check progress on.";
+      }
+    } else if (msg.includes("complete") || msg.includes("finish") || msg.includes("mark done") || msg.includes("done with")) {
+      let completedNodeName = "Milestone";
+      if (cachedRoadmaps.length > 0 && Array.isArray(cachedRoadmaps[0].nodes)) {
+        const uncompleted = cachedRoadmaps[0].nodes.find(n => !n.completed);
+        if (uncompleted) {
+          uncompleted.completed = true;
+          completedNodeName = uncompleted.name;
+          const total = cachedRoadmaps[0].nodes.length;
+          const done = cachedRoadmaps[0].nodes.filter(n => n.completed).length;
+          cachedRoadmaps[0].progress_percentage = Math.round((done / total) * 100);
+          try {
+            localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(cachedRoadmaps));
+          } catch (e) {}
+        }
+      }
+      reply = `Awesome! I've marked '${completedNodeName}' as completed and updated your study streak! 🔥`;
+      actions_taken = [{ tool: "complete_node", result: `Completed node '${completedNodeName}'` }];
+    }
+
+    return {
+      reply,
+      actions_taken
+    };
+  }
+
   if (path.startsWith("/notifications")) {
     if (path.includes("preferences")) {
       if (method === "PATCH") {
@@ -720,6 +802,29 @@ const TasklyAPI = {
   // GET /notifications → pull-and-consume: array of NotificationOut (marks delivered on read)
   async getNotifications() {
     return await apiRequest("/notifications", { method: "GET" });
+  },
+
+  /* ---------------- Chat (Nodi AI) ---------------- */
+  // POST /chat — Request body: { message: string } → Response: { reply: string, actions_taken: [{ tool, result }] }
+  async chat(message) {
+    const text = typeof message === "object" ? message.message : message;
+    return await apiRequest("/chat", {
+      method: "POST",
+      body: JSON.stringify({ message: String(text || "").trim() })
+    });
+  },
+
+  /* ---------------- Event Bus & App Sync ---------------- */
+  emit(eventName, detail = {}) {
+    window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    try {
+      // Sync across tabs/windows
+      localStorage.setItem("taskly_sync_event", JSON.stringify({ event: eventName, detail, time: Date.now() }));
+    } catch (e) {}
+  },
+
+  on(eventName, handler) {
+    window.addEventListener(eventName, handler);
   },
 
   /* ---------------- Meta ---------------- */

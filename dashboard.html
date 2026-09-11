@@ -9,6 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/sidebar.css">
+<link rel="stylesheet" href="css/streak.css">
+<link rel="stylesheet" href="css/nodi.css">
 <script src="js/session-guard.js"></script>
 </head>
 <body>
@@ -42,46 +45,215 @@
 
   <div class="drawer-overlay" id="drawerOverlay"></div>
 
-  <!-- Sidebar -->
+  <!-- Sidebar (Untitled UI Style) -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-brand">
-        <img class="brand-mark-icon" src="assets/tasklylogo.png" alt="Taskly logo">
-        
-      </div>
-      <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
+    <!-- Window dots -->
+    <div class="sidebar-window-dots">
+      <span class="window-dot is-red"></span>
+      <span class="window-dot is-yellow"></span>
+      <span class="window-dot is-green"></span>
     </div>
 
-    <ul class="nav-list">
-      <li><a class="nav-link is-active" href="dashboard.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-grid"/></svg>
-        Dashboard
-      </a></li>
-      <li><a class="nav-link" href="./roadmapmanager.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
-        Roadmap Manager
-      </a></li>
-      <li><a class="nav-link" href="./notifications.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
-        Notifications
-      </a></li>
-      <li><a class="nav-link" href="account.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-user"/></svg>
-        Account
-      </a></li>
-      <li><a class="nav-link" href="settings.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
-        Settings
-      </a></li>
-      <li><button class="nav-link nav-link-logout" id="sidebarLogoutBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-logout"/></svg>
-        Log Out
-      </button></li>
-    </ul>
+    <!-- Header / Brand Selector -->
+    <div class="sidebar-header">
+      <a href="dashboard.html" class="sidebar-app-selector">
+        <img class="brand-logo" src="assets/tasklylogo.png" alt="Taskly">
+        <span>Taskly</span>
+        <svg class="selector-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m7 15 5 5 5-5"/>
+          <path d="m7 9 5-5 5 5"/>
+        </svg>
+      </a>
+      <div class="sidebar-header-actions">
+        <button class="sidebar-header-btn" title="Search" aria-label="Search" onclick="document.getElementById('searchInput')?.focus() || document.querySelector('input[type=search], input[type=text]')?.focus()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+        </button>
+        <button class="sidebar-header-btn" id="sidebarMoreBtn" title="More options" aria-label="More options">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="12" cy="5" r="1"/>
+            <circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+        <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+        </button>
+      </div>
+    </div>
 
-    <p class="sidebar-footer">Taskly v1.0</p>
+    <!-- Scrollable Nav Body -->
+    <div class="sidebar-scrollable-body">
+      <!-- Section 1: Main Links -->
+      <ul class="sidebar-nav-group">
+        <li>
+          <a class="sidebar-nav-item is-active" href="dashboard.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Home</span>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-nav-item" href="dashboard.html#roadmaps">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+              <span>My roadmaps</span>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-nav-item" href="roadmapmanager.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              <span>Roadmap Manager</span>
+            </div>
+          </a>
+        </li>
+        <li>
+          <button class="sidebar-nav-item open-streak-btn" type="button">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Scheduled & Streak</span>
+            </div>
+            <span class="sidebar-count-badge" data-streak-badge>5</span>
+          </button>
+        </li>
+      </ul>
+
+      <!-- Section 2: Folders Group -->
+      <div>
+        <div class="sidebar-section-header" id="sidebarFoldersToggle">
+          <div class="sidebar-section-header-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span>Folders</span>
+          </div>
+          <span class="sidebar-section-toggle-icon" id="sidebarFoldersToggleIcon">—</span>
+        </div>
+        <ul class="sidebar-sub-list" id="sidebarFoldersSubList">
+          <li>
+            <a class="sidebar-sub-item" href="dashboard.html">
+              <span>View all</span>
+              <span class="sidebar-count-badge" id="sidebarCountTotal">48</span>
+            </a>
+          </li>
+          <li>
+            <a class="sidebar-sub-item" href="dashboard.html">
+              <span>Recent</span>
+              <span class="sidebar-count-badge" id="sidebarCountRecent">6</span>
+            </a>
+          </li>
+          <li>
+            <a class="sidebar-sub-item" href="dashboard.html">
+              <span>Favorites</span>
+              <span class="sidebar-count-badge" id="sidebarCountFav">4</span>
+            </a>
+          </li>
+          <li>
+            <a class="sidebar-sub-item" href="roadmapmanager.html">
+              <span>Shared</span>
+              <span class="sidebar-count-badge" id="sidebarCountSeq">22</span>
+            </a>
+          </li>
+          <li>
+            <a class="sidebar-sub-item" href="roadmapmanager.html">
+              <span>Archived</span>
+              <span class="sidebar-count-badge" id="sidebarCountArch">14</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Section 3: Exploration & Utilities -->
+      <ul class="sidebar-nav-group">
+        <li>
+          <a class="sidebar-nav-item" href="roadmapmanager.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              <span>All files</span>
+            </div>
+          </a>
+        </li>
+        <li>
+          <button class="sidebar-nav-item open-nodi-chat" type="button" id="askNodiSidebar">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 3.3 2 6.2 5 7.4V20a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2.6c3-1.2 5-4.1 5-7.4a8 8 0 0 0-8-8Z"/><path d="M10 10h4"/></svg>
+              <span>Ask Nodi AI</span>
+            </div>
+            <span class="sidebar-badge-ai">AI</span>
+          </button>
+        </li>
+        <li>
+          <a class="sidebar-nav-item" href="notifications.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+              <span>Notifications</span>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Section 4: Footer -->
+    <div class="sidebar-footer-container">
+      <ul class="sidebar-nav-group">
+        <li>
+          <a class="sidebar-nav-item" href="settings.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Support</span>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-nav-item" href="settings.html">
+            <div class="sidebar-nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Settings</span>
+            </div>
+          </a>
+        </li>
+      </ul>
+
+      <!-- User Profile Card -->
+      <div class="sidebar-user-card" id="sidebarUserCard">
+        <div class="sidebar-user-left">
+          <div class="sidebar-avatar-wrap">
+            <img class="sidebar-user-avatar" src="assets/profile.png" alt="Profile">
+            <span class="sidebar-user-online-dot"></span>
+          </div>
+          <div class="sidebar-user-meta">
+            <span class="sidebar-user-name">Ana Cheng</span>
+            <span class="sidebar-user-email">ana@untitledui.com</span>
+          </div>
+        </div>
+        <button class="sidebar-user-menu-btn" id="sidebarUserMenuBtn" type="button" aria-label="User menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="12" cy="5" r="1"/>
+            <circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- User Popup Dropdown -->
+      <div class="sidebar-user-popup" id="sidebarUserPopup">
+        <a class="sidebar-popup-item" href="account.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+          Account Profile
+        </a>
+        <a class="sidebar-popup-item" href="settings.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+        <button class="sidebar-popup-item is-danger btn-sidebar-logout" type="button" id="sidebarLogoutBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          Log Out
+        </button>
+      </div>
+    </div>
   </aside>
 
   <!-- Main column -->
@@ -421,6 +593,9 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/api.js"></script>
+<script src="js/streak.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/nodi.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
 </html>
