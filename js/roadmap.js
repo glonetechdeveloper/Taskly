@@ -379,24 +379,14 @@ window.TasklyRoadmap = (function () {
 
     const type = (roadmap && roadmap.type === "flat") ? "flat" : "sequential";
     const badge = $("#roadmapTypeBadge");
-    const label = $("#roadmapTypeLabel");
-    const icon = $("#roadmapTypeIcon");
     const legend = $("#stateLegend");
 
-    if (type === "flat") {
-      if (badge) badge.classList.add("is-flat");
-      if (label) label.textContent = "Checklist";
-      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-list");
-      if (legend) legend.style.display = "none";
-    } else {
-      if (badge) badge.classList.remove("is-flat");
-      if (label) label.textContent = "Milestone Graph";
-      if (icon && typeof icon.setAttribute === "function") icon.setAttribute("href", "#ic-layers");
-      if (legend) legend.style.display = "";
-    }
+    // Remove write up that says Milestone Graph / Checklist
+    if (badge) badge.style.display = "none";
+    if (legend) legend.style.display = type === "flat" ? "none" : "";
 
     const addBtn = $("#addTaskBtn");
-    if (addBtn) addBtn.style.display = "";
+    if (addBtn) addBtn.style.display = type === "flat" ? "none" : "";
 
     renderProgressRing();
   }
@@ -542,40 +532,55 @@ window.TasklyRoadmap = (function () {
     const type = (roadmap.type === "flat") ? "flat" : "sequential";
 
     if (type === "flat") {
-      // Flat / Checklist Mode: Sorted by order, no phase grouping, no lock states
+      // Manual Simple Checklist Mode: Tick boxes at the beginning
       const sorted = [...nodes].sort((a, b) => (a.order || 0) - (b.order || 0));
-      let html = '<div class="phase-block"><div class="node-chain">';
+      let html = '<div class="checklist-container">';
 
-      sorted.forEach((node) => {
-        const state = node.completed ? "completed" : "available";
-        const lineDone = node.completed ? "is-done" : "";
-        const title = node.name || "Untitled task";
-        const estimate = node.time_estimate || "—";
-
-        html += `<div class="node-item is-${state}" data-node-id="${escapeHtml(String(node.id))}">
-          <div class="node-chain-line ${lineDone}"></div>
-          <div class="node-icon-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <use href="#ic-check"></use>
-            </svg>
+      if (sorted.length === 0) {
+        html += `
+          <div class="empty-roadmaps is-visible" style="margin-bottom:12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-list"/></svg>
+            <strong>Empty checklist</strong>
+            <p style="margin-top:4px;">Add your first task below.</p>
           </div>
-          <div class="node-card" data-node-id="${escapeHtml(String(node.id))}">
-            <p class="node-title">${escapeHtml(title)}</p>
-            ${node.description ? `<p class="node-meta-item" style="margin-bottom:6px; color:var(--color-ink-soft); font-size:12.5px; line-height:1.4;">${escapeHtml(node.description)}</p>` : ''}
-            <div class="node-meta-row">
-              <span class="node-meta-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"></use></svg>
-                ${escapeHtml(estimate)}
-              </span>
-              ${node.completed ? '<span style="color:var(--color-success); font-weight:600; font-size:11px;">Completed</span>' : '<span style="color:var(--color-ink-soft); font-weight:600; font-size:11px;">To Do</span>'}
+        `;
+      } else {
+        sorted.forEach((node) => {
+          const isDone = Boolean(node.completed);
+          const title = node.name || "Untitled task";
+          const estimate = node.time_estimate || "";
+
+          html += `
+            <div class="checklist-row ${isDone ? 'is-completed' : ''}" data-node-id="${escapeHtml(String(node.id))}">
+              <div class="checklist-tickbox" data-action="toggle-check" title="${isDone ? 'Mark uncompleted' : 'Mark completed'}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <div class="checklist-content" data-action="edit-node">
+                <span class="checklist-item-title">${escapeHtml(title)}</span>
+                ${node.description ? `<span class="checklist-item-desc">${escapeHtml(node.description)}</span>` : ''}
+                ${estimate ? `<span class="checklist-item-meta"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-clock-small"/></svg>${escapeHtml(estimate)}</span>` : ''}
+              </div>
+              <button class="checklist-del-btn" data-action="delete-node" title="Delete task" aria-label="Delete task">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
             </div>
-          </div>
-        </div>`;
-      });
+          `;
+        });
+      }
 
-      html += '</div></div>';
+      // Add task row for easy manual checklist item creation
+      html += `
+        <div class="checklist-add-box">
+          <input type="text" class="checklist-add-input" id="checklistQuickInput" placeholder="Add a new checklist item and press Enter…" maxlength="200">
+          <button type="button" class="checklist-add-btn" id="checklistQuickBtn">Add</button>
+        </div>
+      `;
+
+      html += '</div>';
       body.innerHTML = html;
-      wireNodeCards();
+      wireChecklistEvents();
       return;
     }
 
@@ -650,6 +655,103 @@ window.TasklyRoadmap = (function () {
     renderHeader();
     renderNodes();
     renderProgressRing();
+  }
+
+  /* ==========================================================
+     CHECKLIST INTERACTIONS
+     ========================================================== */
+
+  function wireChecklistEvents() {
+    // Checkbox and row clicks
+    $all(".checklist-row").forEach((row) => {
+      const nodeId = row.dataset.nodeId;
+      const node = findNodeById(nodeId);
+      if (!node) return;
+
+      const tickbox = row.querySelector('[data-action="toggle-check"]');
+      const content = row.querySelector('[data-action="edit-node"]');
+      const delBtn = row.querySelector('[data-action="delete-node"]');
+
+      const toggleDone = async () => {
+        const isDone = Boolean(node.completed);
+        try {
+          if (isDone) {
+            await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
+            node.completed = false;
+          } else {
+            await window.TasklyAPI.completeNode(roadmapId, node.id);
+            node.completed = true;
+          }
+          // Refresh
+          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
+          if (freshData) roadmap = (freshData.roadmap || freshData.data) || freshData;
+          if (window.StreakManager && typeof window.StreakManager.loadStreak === "function") {
+            window.StreakManager.loadStreak();
+          }
+          render();
+        } catch (err) {
+          showToast(err.message || "Failed to update status", "error");
+        }
+      };
+
+      if (tickbox) tickbox.addEventListener("click", toggleDone);
+      if (content) content.addEventListener("click", () => openNodeDetail(nodeId));
+
+      if (delBtn) {
+        delBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          try {
+            await window.TasklyAPI.deleteNode(roadmapId, node.id);
+            showToast("Item deleted.");
+            const fresh = await window.TasklyAPI.getRoadmap(roadmapId);
+            if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
+            render();
+          } catch (err) {
+            showToast(err.message || "Failed to delete item", "error");
+          }
+        });
+      }
+    });
+
+    // Quick add input
+    const addInput = document.getElementById("checklistQuickInput");
+    const addBtn = document.getElementById("checklistQuickBtn");
+
+    const submitQuickAdd = async () => {
+      if (!addInput || !roadmapId) return;
+      const name = addInput.value.trim();
+      if (!name) return;
+
+      try {
+        const nodes = Array.isArray(roadmap.nodes) ? roadmap.nodes : [];
+        const nextOrder = nodes.length > 0 ? Math.max(...nodes.map(n => n.order || 0)) + 1 : 1;
+        
+        await window.TasklyAPI.createNode(roadmapId, {
+          name: name,
+          order: nextOrder,
+          time_estimate: "15 min"
+        });
+
+        addInput.value = "";
+        showToast("Item added!", "success");
+
+        const fresh = await window.TasklyAPI.getRoadmap(roadmapId);
+        if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
+        render();
+      } catch (err) {
+        showToast(err.message || "Failed to add item", "error");
+      }
+    };
+
+    if (addBtn) addBtn.addEventListener("click", submitQuickAdd);
+    if (addInput) {
+      addInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitQuickAdd();
+        }
+      });
+    }
   }
 
   /* ==========================================================

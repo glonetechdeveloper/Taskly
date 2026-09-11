@@ -1,443 +1,364 @@
 /* ==========================================================
    TASKLY — nodi.js
    Frontend Integration for Nodi AI Chatbot (POST /chat)
+   - Classic Centered Modal Interface
+   - Built-in Robust Markdown Parser for formatted AI replies
+   - Action Badges for Tool Executions
+   - Session & LocalStorage Sync
    ========================================================== */
 
 (function () {
-  const STORAGE_KEY = "taskly_nodi_chat_history";
+  const STORAGE_KEY = "taskly_nodi_history_v2";
 
-  const DEFAULT_MESSAGES = [
-    {
-      role: "assistant",
-      text: "Hey! I'm Nodi 👋 I can organize your roadmaps, check your study progress, generate new learning paths, or complete tasks for you. What would you like to do today?",
-      actions: [],
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ];
+  /* ---------------- Robust Markdown Parser ---------------- */
+  function parseMarkdown(md) {
+    if (!md) return "";
+    let html = String(md);
 
-  const NodiChat = {
+    // Escape raw HTML tags (excluding ones we generate)
+    html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Code blocks with backticks ```lang\ncode\n```
+    html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      return `<pre><code class="lang-${lang}">${code.trim()}</code></pre>`;
+    });
+
+    // Inline code `code`
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+    // Headers
+    html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
+    html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
+    html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
+
+    // Bold & Italic
+    html = html.replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>");
+    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+    html = html.replace(/___(.*?)___/g, "<strong><em>$1</em></strong>");
+    html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+    html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+
+    // Unordered lists (- or *)
+    html = html.replace(/^\s*[-*]\s+(.*)$/gim, "<li>$1</li>");
+    html = html.replace(/(<li>.*<\/li>(\n?<li>.*<\/li>)*)/gim, "<ul>$1</ul>");
+
+    // Numbered lists (1. 2. etc)
+    html = html.replace(/^\s*(\d+)\.\s+(.*)$/gim, "<li>$2</li>");
+
+    // Blockquotes
+    html = html.replace(/^\s*&gt;\s+(.*)$/gim, "<blockquote>$1</blockquote>");
+
+    // Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#0D9488; text-decoration:underline;">$1</a>');
+
+    // Paragraph line breaks
+    const lines = html.split("\n");
+    const formatted = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return "";
+      if (/^<(h\d|ul|ol|li|pre|blockquote)/.test(trimmed)) return trimmed;
+      return `<p>${trimmed}</p>`;
+    }).filter(Boolean).join("");
+
+    return formatted || html;
+  }
+
+  /* ---------------- Nodi AI Controller ---------------- */
+  const NodiAI = {
     history: [],
     isOpen: false,
-    isLoading: false,
 
     init() {
+      this.ensureModalDOM();
       this.loadHistory();
-      this.renderWidgetMarkup();
-      this.bindTriggers();
-      this.renderMessages();
+      this.bindEvents();
+      this.renderHistory();
+    },
+
+    ensureModalDOM() {
+      if (document.getElementById("nodiOverlay")) return;
+
+      const overlay = document.createElement("div");
+      overlay.id = "nodiOverlay";
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi AI">
+          <div class="nodi-header">
+            <img src="assets/Nodi.png" alt="Nodi AI" onerror="this.src='assets/tasklylogo.png'">
+            <div class="nodi-header-text">
+              <p class="name">Nodi <span class="nodi-ai-tag">AI</span></p>
+              <p class="status">Online</p>
+            </div>
+            <div class="nodi-header-actions">
+              <button class="nodi-action-btn" id="nodiClearBtn" title="Clear conversation" aria-label="Clear chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+              <button class="nodi-action-btn" id="nodiCloseBtn" title="Close" aria-label="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="nodi-body" id="nodiBody"></div>
+          <div class="nodi-suggestions" id="nodiSuggestions">
+            <button class="suggestion-chip" type="button">What roadmaps do I have?</button>
+            <button class="suggestion-chip" type="button">How does my study streak work?</button>
+            <button class="suggestion-chip" type="button">Help me stay on track today</button>
+          </div>
+          <div class="nodi-input-row">
+            <input class="nodi-input" id="nodiInput" type="text" placeholder="Message Nodi…" maxlength="500">
+            <button class="send-btn" id="nodiSendBtn" type="button" aria-label="Send message">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
     },
 
     loadHistory() {
       try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          this.history = JSON.parse(stored);
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          this.history = JSON.parse(raw);
         } else {
-          this.history = [...DEFAULT_MESSAGES];
+          this.history = [
+            {
+              sender: "nodi",
+              text: "Hey, I'm **Nodi** 👋 I can answer your questions, create custom roadmaps, checklist tasks, and track your learning progress. How can I help you today?",
+              timestamp: new Date().toISOString()
+            }
+          ];
         }
       } catch (e) {
-        this.history = [...DEFAULT_MESSAGES];
+        this.history = [];
       }
     },
 
     saveHistory() {
       try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(this.history));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.history));
       } catch (e) {}
     },
 
-    renderWidgetMarkup() {
-      // 1. Floating Action Button (FAB)
-      if (!document.getElementById("nodiFabTrigger")) {
-        const fab = document.createElement("button");
-        fab.id = "nodiFabTrigger";
-        fab.className = "nodi-fab-trigger";
-        fab.setAttribute("aria-label", "Ask Nodi AI");
-        fab.innerHTML = `
-          <div class="nodi-fab-avatar-wrap">
-            <img src="assets/Nodi.png" alt="Nodi AI">
-            <span class="nodi-fab-online-dot"></span>
-          </div>
-          <div class="nodi-fab-text">
-            <span class="nodi-fab-title">Ask Nodi AI</span>
-            <span class="nodi-fab-subtitle">Online & ready</span>
-          </div>
-        `;
-        document.body.appendChild(fab);
-      }
-
-      // 2. Chat Overlay Window
-      if (!document.getElementById("nodiChatOverlay")) {
-        const overlay = document.createElement("div");
-        overlay.id = "nodiChatOverlay";
-        overlay.setAttribute("aria-hidden", "true");
-        overlay.innerHTML = `
-          <div class="nodi-chat-window" role="dialog" aria-modal="true" aria-label="Nodi AI Assistant">
-            <!-- Header -->
-            <div class="nodi-window-header">
-              <div class="nodi-window-profile">
-                <div class="nodi-window-avatar-wrap">
-                  <img src="assets/Nodi.png" alt="Nodi AI">
-                  <span class="nodi-window-online-dot"></span>
-                </div>
-                <div class="nodi-window-info">
-                  <p class="name">Nodi AI</p>
-                  <p class="status">
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="#10B981"><circle cx="4" cy="4" r="4"/></svg>
-                    Active Assistant
-                  </p>
-                </div>
-              </div>
-              <div class="nodi-window-actions">
-                <button class="nodi-btn-icon" id="nodiResetChatBtn" title="Reset conversation" aria-label="Reset chat">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                    <path d="M3 3v5h5"/>
-                  </svg>
-                </button>
-                <button class="nodi-btn-icon" id="nodiCloseChatBtn" title="Close chat" aria-label="Close chat">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Message Area -->
-            <div class="nodi-messages-body" id="nodiMessagesBody"></div>
-
-            <!-- Suggestion Chips -->
-            <div class="nodi-suggestions-row" id="nodiSuggestionsRow">
-              <button class="nodi-suggestion-chip" type="button" data-prompt="What roadmaps do I have right now?">What roadmaps do I have?</button>
-              <button class="nodi-suggestion-chip" type="button" data-prompt="How is my progress?">Check progress</button>
-              <button class="nodi-suggestion-chip" type="button" data-prompt="Create a roadmap for Python Basics">Create Python roadmap</button>
-              <button class="nodi-suggestion-chip" type="button" data-prompt="Complete my next task">Complete task</button>
-            </div>
-
-            <!-- Input bar -->
-            <form class="nodi-input-bar" id="nodiChatForm">
-              <input class="nodi-input-field" id="nodiChatInput" type="text" placeholder="Ask Nodi anything or give an action…" maxlength="400" autocomplete="off">
-              <button class="nodi-input-send-btn" id="nodiChatSendBtn" type="submit" aria-label="Send message">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-              </button>
-            </form>
-          </div>
-        `;
-        document.body.appendChild(overlay);
-      }
-    },
-
-    bindTriggers() {
-      // FAB Trigger
-      const fab = document.getElementById("nodiFabTrigger");
-      if (fab) fab.addEventListener("click", () => this.toggleChat());
-
-      // Open buttons across pages (e.g. in sidebar, topbar, dashboard cards)
-      document.querySelectorAll(".open-nodi-chat, [data-open-nodi], #askNodiFab, #askNodiSidebar").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          this.openChat();
-        });
-      });
-
-      // Close button
-      const closeBtn = document.getElementById("nodiCloseChatBtn");
-      if (closeBtn) closeBtn.addEventListener("click", () => this.closeChat());
-
-      // Reset button
-      const resetBtn = document.getElementById("nodiResetChatBtn");
-      if (resetBtn) resetBtn.addEventListener("click", () => this.resetConversation());
-
-      // Overlay backdrop click
-      const overlay = document.getElementById("nodiChatOverlay");
-      if (overlay) {
-        overlay.addEventListener("click", (e) => {
-          if (e.target === overlay) this.closeChat();
-        });
-      }
-
-      // Escape key to close
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && this.isOpen) this.closeChat();
-      });
-
-      // Chat form submit
-      const form = document.getElementById("nodiChatForm");
-      if (form) {
-        form.addEventListener("submit", (e) => {
-          e.preventDefault();
-          this.handleSendMessage();
-        });
-      }
-
-      // Suggestion chips
-      document.addEventListener("click", (e) => {
-        const chip = e.target.closest(".nodi-suggestion-chip");
-        if (chip && chip.dataset.prompt) {
-          const input = document.getElementById("nodiChatInput");
-          if (input) {
-            input.value = chip.dataset.prompt;
-            this.handleSendMessage();
-          }
+    clearHistory() {
+      this.history = [
+        {
+          sender: "nodi",
+          text: "Chat cleared! How can I help you today?",
+          timestamp: new Date().toISOString()
         }
-      });
+      ];
+      this.saveHistory();
+      this.renderHistory();
     },
 
-    openChat() {
-      const overlay = document.getElementById("nodiChatOverlay");
-      if (!overlay) return;
+    open() {
       this.isOpen = true;
-      overlay.classList.add("is-open");
-      overlay.setAttribute("aria-hidden", "false");
-      this.scrollToBottom();
-      setTimeout(() => {
-        const input = document.getElementById("nodiChatInput");
-        if (input) input.focus();
-      }, 100);
-    },
-
-    closeChat() {
-      const overlay = document.getElementById("nodiChatOverlay");
-      if (!overlay) return;
-      this.isOpen = false;
-      overlay.classList.remove("is-open");
-      overlay.setAttribute("aria-hidden", "true");
-    },
-
-    toggleChat() {
-      if (this.isOpen) {
-        this.closeChat();
-      } else {
-        this.openChat();
+      const overlay = document.getElementById("nodiOverlay");
+      if (overlay) {
+        overlay.classList.add("is-open");
+        setTimeout(() => {
+          const input = document.getElementById("nodiInput");
+          if (input) input.focus();
+        }, 100);
       }
     },
 
-    resetConversation() {
-      this.history = [...DEFAULT_MESSAGES];
-      this.saveHistory();
-      this.renderMessages();
+    close() {
+      this.isOpen = false;
+      const overlay = document.getElementById("nodiOverlay");
+      if (overlay) overlay.classList.remove("is-open");
     },
 
-    renderMessages() {
-      const body = document.getElementById("nodiMessagesBody");
+    renderHistory() {
+      const body = document.getElementById("nodiBody");
+      if (!body) return;
+      body.innerHTML = "";
+
+      this.history.forEach((msg) => {
+        this.appendMessageDOM(msg);
+      });
+
+      body.scrollTop = body.scrollHeight;
+    },
+
+    appendMessageDOM(msg) {
+      const body = document.getElementById("nodiBody");
       if (!body) return;
 
-      body.innerHTML = this.history.map(msg => {
-        const isUser = msg.role === "user";
-        
-        let actionsHtml = "";
+      const bubble = document.createElement("div");
+      bubble.className = `chat-bubble from-${msg.sender}`;
+
+      if (msg.sender === "user") {
+        bubble.textContent = msg.text;
+      } else {
+        bubble.innerHTML = parseMarkdown(msg.text);
+
+        // Render Action Pills if actions were executed
         if (Array.isArray(msg.actions) && msg.actions.length > 0) {
-          actionsHtml = `
-            <div class="nodi-actions-list">
-              ${msg.actions.map(act => {
-                let pillClass = "";
-                let iconSvg = '<svg class="nodi-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
-                
-                if (act.tool === "create_roadmap") {
-                  pillClass = "is-create";
-                  iconSvg = '<svg class="nodi-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>';
-                } else if (act.tool === "get_roadmap_progress" || act.tool === "list_roadmaps") {
-                  pillClass = "is-progress";
-                  iconSvg = '<svg class="nodi-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-                }
-
-                return `
-                  <div class="nodi-action-pill ${pillClass}">
-                    ${iconSvg}
-                    <span>${this.escapeHtml(act.result || act.tool)}</span>
-                  </div>
-                `;
-              }).join("")}
-            </div>
-          `;
+          msg.actions.forEach(act => {
+            const pill = document.createElement("div");
+            pill.className = "nodi-action-pill";
+            pill.innerHTML = `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>${typeof act.result === "string" ? act.result : (act.tool ? `Executed ${act.tool}` : "Action executed")}</span>
+            `;
+            bubble.appendChild(pill);
+          });
         }
-
-        return `
-          <div class="nodi-message-row ${isUser ? 'is-user' : 'is-assistant'}">
-            ${!isUser ? '<img class="nodi-msg-avatar" src="assets/Nodi.png" alt="Nodi">' : ''}
-            <div class="nodi-msg-content">
-              <div class="nodi-msg-bubble">${this.formatMessageText(msg.text)}</div>
-              ${actionsHtml}
-              <span class="nodi-msg-time">${msg.time || ''}</span>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      if (this.isLoading) {
-        body.innerHTML += `
-          <div class="nodi-typing-row">
-            <img class="nodi-msg-avatar" src="assets/Nodi.png" alt="Nodi">
-            <div class="nodi-typing-bubble">
-              <span class="nodi-typing-dot"></span>
-              <span class="nodi-typing-dot"></span>
-              <span class="nodi-typing-dot"></span>
-            </div>
-          </div>
-        `;
       }
 
-      this.scrollToBottom();
+      body.appendChild(bubble);
+      body.scrollTop = body.scrollHeight;
     },
 
-    scrollToBottom() {
-      const body = document.getElementById("nodiMessagesBody");
-      if (body) {
-        setTimeout(() => {
-          body.scrollTop = body.scrollHeight;
-        }, 30);
-      }
+    showTyping() {
+      const body = document.getElementById("nodiBody");
+      if (!body) return;
+
+      const typing = document.createElement("div");
+      typing.id = "nodiTypingIndicator";
+      typing.className = "chat-bubble from-nodi";
+      typing.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
     },
 
-    formatMessageText(text) {
-      if (!text) return "";
-      let formatted = this.escapeHtml(text);
-      // Bold **text**
-      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Inline quotes 'text'
-      formatted = formatted.replace(/'(.*?)'/g, '<code>$1</code>');
-      // Line breaks
-      formatted = formatted.replace(/\n/g, '<br>');
-      return formatted;
+    hideTyping() {
+      const typing = document.getElementById("nodiTypingIndicator");
+      if (typing) typing.remove();
     },
 
-    escapeHtml(str) {
-      if (!str) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    },
+    async sendMessage(customText) {
+      const input = document.getElementById("nodiInput");
+      const text = (typeof customText === "string" ? customText : (input ? input.value : "")).trim();
+      if (!text) return;
 
-    async handleSendMessage() {
-      const input = document.getElementById("nodiChatInput");
-      const sendBtn = document.getElementById("nodiChatSendBtn");
-      if (!input) return;
+      if (input && !customText) input.value = "";
 
-      const userText = input.value.trim();
-      if (!userText || this.isLoading) return;
-
-      input.value = "";
-      this.isLoading = true;
-      if (sendBtn) sendBtn.disabled = true;
-
-      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      // Add user message to history
-      this.history.push({
-        role: "user",
-        text: userText,
-        actions: [],
-        time: nowTime
-      });
+      const userMsg = {
+        sender: "user",
+        text: text,
+        timestamp: new Date().toISOString()
+      };
+      this.history.push(userMsg);
+      this.appendMessageDOM(userMsg);
       this.saveHistory();
-      this.renderMessages();
+
+      this.showTyping();
 
       try {
-        let response = null;
-        if (window.TasklyAPI && window.TasklyAPI.chat) {
-          response = await window.TasklyAPI.chat(userText);
-        } else {
-          // Fallback if API not available
-          response = {
-            reply: "I received your message! However, the connection client is initializing. Please try again in a moment.",
-            actions_taken: []
-          };
+        let replyText = "I'm having trouble connecting to the server right now.";
+        let actions = [];
+
+        if (window.TasklyAPI && typeof window.TasklyAPI.chat === "function") {
+          const res = await window.TasklyAPI.chat(text);
+          if (res) {
+            replyText = res.reply || replyText;
+            actions = res.actions_taken || [];
+          }
         }
 
-        const replyText = (response && (response.reply || response.message)) || "I've processed your request.";
-        const actionsTaken = (response && Array.isArray(response.actions_taken)) ? response.actions_taken : [];
+        this.hideTyping();
 
-        // Add assistant message
-        this.history.push({
-          role: "assistant",
+        const nodiMsg = {
+          sender: "nodi",
           text: replyText,
-          actions: actionsTaken,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+          actions: actions,
+          timestamp: new Date().toISOString()
+        };
+
+        this.history.push(nodiMsg);
+        this.appendMessageDOM(nodiMsg);
         this.saveHistory();
 
-        // Process Action Invalidation / State Synchronization
-        this.handleActionsSynchronization(actionsTaken);
-
-      } catch (err) {
-        console.error("[Nodi AI Chat Error]", err);
-        let errorReply = "Sorry, I had trouble reaching the server. Please verify your connection or try again shortly.";
-        if (err && err.message && err.message.includes("not fully set up")) {
-          errorReply = err.message;
+        // If actions involved creating a roadmap or updating a node, dispatch custom events
+        if (actions.length > 0) {
+          actions.forEach(a => {
+            const tool = String(a.tool || "").toLowerCase();
+            if (tool.includes("roadmap")) {
+              window.dispatchEvent(new CustomEvent("taskly:roadmap-created", { detail: a.result }));
+            }
+            if (tool.includes("node") || tool.includes("task")) {
+              window.dispatchEvent(new CustomEvent("taskly:node-completed", { detail: a.result }));
+            }
+            if (tool.includes("streak")) {
+              window.dispatchEvent(new CustomEvent("taskly:streak-updated", { detail: a.result }));
+            }
+          });
         }
-
-        this.history.push({
-          role: "assistant",
-          text: errorReply,
-          actions: [],
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+      } catch (err) {
+        this.hideTyping();
+        const errorMsg = {
+          sender: "nodi",
+          text: `⚠️ *Error:* ${err.message || "Failed to reach Nodi AI. Please try again."}`,
+          timestamp: new Date().toISOString()
+        };
+        this.history.push(errorMsg);
+        this.appendMessageDOM(errorMsg);
         this.saveHistory();
-      } finally {
-        this.isLoading = false;
-        if (sendBtn) sendBtn.disabled = false;
-        this.renderMessages();
-        if (input) input.focus();
       }
     },
 
-    handleActionsSynchronization(actions) {
-      if (!Array.isArray(actions) || actions.length === 0) return;
+    bindEvents() {
+      const overlay = document.getElementById("nodiOverlay");
+      const closeBtn = document.getElementById("nodiCloseBtn");
+      const clearBtn = document.getElementById("nodiClearBtn");
+      const sendBtn = document.getElementById("nodiSendBtn");
+      const input = document.getElementById("nodiInput");
+      const suggestions = document.getElementById("nodiSuggestions");
 
-      let hasRoadmapCreation = false;
-      let hasNodeCompletion = false;
+      if (overlay) {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) this.close();
+        });
+      }
 
-      actions.forEach(action => {
-        const tool = action.tool || "";
-        if (tool === "create_roadmap") {
-          hasRoadmapCreation = true;
-        }
-        if (tool === "complete_node") {
-          hasNodeCompletion = true;
+      if (closeBtn) closeBtn.addEventListener("click", () => this.close());
+      if (clearBtn) clearBtn.addEventListener("click", () => this.clearHistory());
+
+      if (sendBtn) sendBtn.addEventListener("click", () => this.sendMessage());
+      if (input) {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        });
+      }
+
+      if (suggestions) {
+        suggestions.addEventListener("click", (e) => {
+          const chip = e.target.closest(".suggestion-chip");
+          if (chip) {
+            this.sendMessage(chip.textContent.trim());
+          }
+        });
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.isOpen) {
+          this.close();
         }
       });
-
-      // 1. Invalidate roadmaps if a new roadmap was created
-      if (hasRoadmapCreation) {
-        if (window.TasklyAPI && window.TasklyAPI.emit) {
-          window.TasklyAPI.emit("taskly:roadmaps-updated", { source: "nodi" });
-        }
-        // If current page is dashboard or roadmap manager, refresh data
-        if (typeof window.loadRoadmaps === "function") {
-          window.loadRoadmaps();
-        }
-      }
-
-      // 2. Invalidate streak & nodes if a node was completed
-      if (hasNodeCompletion) {
-        if (window.StreakManager && window.StreakManager.refresh) {
-          window.StreakManager.refresh();
-        }
-        if (window.TasklyAPI && window.TasklyAPI.emit) {
-          window.TasklyAPI.emit("taskly:nodes-updated", { source: "nodi" });
-          window.TasklyAPI.emit("taskly:streak-updated", { source: "nodi" });
-        }
-        // If on roadmap page, refresh current roadmap detail
-        if (typeof window.loadRoadmapDetail === "function") {
-          window.loadRoadmapDetail();
-        }
-      }
     }
   };
 
-  window.NodiChat = NodiChat;
+  window.NodiAI = NodiAI;
 
-  // Auto initialize on DOM ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => NodiChat.init());
+    document.addEventListener("DOMContentLoaded", () => NodiAI.init());
   } else {
-    NodiChat.init();
+    NodiAI.init();
   }
 })();

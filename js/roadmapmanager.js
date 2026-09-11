@@ -353,7 +353,6 @@ window.TasklyManager = (function () {
             <use href="#${iconId}"></use>
           </svg>
         </div>
-        <span class="roadmap-type-pill ${type === 'flat' ? 'is-flat' : ''}">${typeLabel}</span>
       </div>
       <div class="roadmap-body">
         <p class="roadmap-title">${escapeHtml(title)}</p>
