@@ -1,10 +1,11 @@
 /* ==========================================================
    TASKLY — sidebar.js
    Dynamic controller for Modern Study Case Sidebar
+   - Ultra-responsive mobile drawer with gestures & scroll lock
    - Collapse / Expand toggle with local storage persistence
-   - Hover tooltips in collapsed mode
+   - Hover tooltips in collapsed desktop mode
    - Light / Dark theme toggle
-   - Active page highlights & notification badges
+   - Active page highlights & dynamic notification badges
    ========================================================== */
 
 (function () {
@@ -16,6 +17,7 @@
       this.initActiveItem();
       this.initBadges();
       this.bindEvents();
+      this.initTouchGestures();
     },
 
     initTheme() {
@@ -67,7 +69,6 @@
     },
 
     async initBadges() {
-      // Sync notifications count badge
       const badge = document.getElementById("sidebarNotifBadge");
       if (!badge) return;
 
@@ -115,6 +116,53 @@
       });
     },
 
+    openDrawer() {
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("drawerOverlay");
+      if (sidebar) sidebar.classList.add("is-open");
+      if (overlay) overlay.classList.add("is-visible");
+      document.body.classList.add("drawer-open");
+    },
+
+    closeDrawer() {
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("drawerOverlay");
+      if (sidebar) sidebar.classList.remove("is-open");
+      if (overlay) overlay.classList.remove("is-visible");
+      document.body.classList.remove("drawer-open");
+    },
+
+    initTouchGestures() {
+      const sidebar = document.getElementById("sidebar");
+      if (!sidebar) return;
+
+      let startX = 0;
+      let currentX = 0;
+      let isTouching = false;
+
+      sidebar.addEventListener("touchstart", (e) => {
+        if (window.innerWidth > 900) return;
+        startX = e.touches[0].clientX;
+        isTouching = true;
+      }, { passive: true });
+
+      sidebar.addEventListener("touchmove", (e) => {
+        if (!isTouching || window.innerWidth > 900) return;
+        currentX = e.touches[0].clientX;
+      }, { passive: true });
+
+      sidebar.addEventListener("touchend", () => {
+        if (!isTouching || window.innerWidth > 900) return;
+        // If swiped left by 45px or more, close the drawer
+        if (startX - currentX > 45 && currentX !== 0) {
+          this.closeDrawer();
+        }
+        isTouching = false;
+        startX = 0;
+        currentX = 0;
+      });
+    },
+
     bindEvents() {
       // Collapse toggle button
       const toggleBtn = document.getElementById("sidebarToggleBtn");
@@ -129,10 +177,19 @@
       const brandIcon = document.getElementById("sidebarBrandIcon");
       if (brandIcon) {
         brandIcon.addEventListener("click", (e) => {
-          if (document.body.classList.contains("sidebar-is-collapsed")) {
+          if (document.body.classList.contains("sidebar-is-collapsed") && window.innerWidth > 900) {
             e.preventDefault();
             this.toggleCollapse();
           }
+        });
+      }
+
+      // Mobile close button
+      const closeBtn = document.getElementById("sidebarCloseBtn");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          this.closeDrawer();
         });
       }
 
@@ -146,33 +203,55 @@
 
       // Drawer Open/Close on mobile
       const hamburger = document.getElementById("hamburgerBtn");
-      const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("drawerOverlay");
 
-      function openDrawer() {
-        if (sidebar) sidebar.classList.add("is-open");
-        if (overlay) overlay.classList.add("is-visible");
+      if (hamburger) {
+        hamburger.addEventListener("click", (e) => {
+          e.preventDefault();
+          this.openDrawer();
+        });
       }
 
-      function closeDrawer() {
-        if (sidebar) sidebar.classList.remove("is-open");
-        if (overlay) overlay.classList.remove("is-visible");
+      if (overlay) {
+        overlay.addEventListener("click", () => this.closeDrawer());
       }
 
-      if (hamburger) hamburger.addEventListener("click", openDrawer);
-      if (overlay) overlay.addEventListener("click", closeDrawer);
+      // Close drawer on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && document.body.classList.contains("drawer-open")) {
+          this.closeDrawer();
+        }
+      });
+
+      // Auto close drawer when navigating on mobile
+      document.querySelectorAll(".sidebar-link").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.innerWidth <= 900) {
+            this.closeDrawer();
+          }
+        });
+      });
+
+      // Auto-cleanup on window resize
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 900) {
+          this.closeDrawer();
+        }
+      });
 
       // Chat with Nodi triggers
       document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #askNodiSidebar").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
+          if (window.innerWidth <= 900) {
+            this.closeDrawer();
+          }
           if (window.NodiAI && typeof window.NodiAI.open === "function") {
             window.NodiAI.open();
           } else {
             const overlay = document.getElementById("nodiOverlay");
             if (overlay) overlay.classList.add("is-open");
           }
-          if (window.innerWidth <= 900) closeDrawer();
         });
       });
 
