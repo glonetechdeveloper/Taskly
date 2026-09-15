@@ -369,7 +369,21 @@ function handleOfflineFallback(path, options = {}) {
       let bodyObj = {};
       try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
       const goalText = bodyObj.goal_text || bodyObj.title || "New Roadmap";
-      const title = bodyObj.title || goalText;
+      
+      let title = bodyObj.title;
+      if (!title || title === goalText) {
+        let cleaned = String(goalText).trim();
+        cleaned = cleaned.replace(/^(i\s+want\s+to\s+|please\s+|can\s+you\s+|how\s+to\s+|i\s+need\s+to\s+|help\s+me\s+|create\s+(a\s+|an\s+)?(new\s+)?(roadmap\s+(for\s+|about\s+|on\s+)?|study\s+plan\s+(for\s+)?|path\s+(for\s+)?)?)/i, "").trim();
+        const firstSentence = cleaned.split(/[.\n!?]/)[0].trim();
+        if (firstSentence.length > 3 && firstSentence.length <= 55) {
+          title = firstSentence.charAt(0).toUpperCase() + firstSentence.slice(1);
+        } else if (firstSentence.length > 55) {
+          title = (firstSentence.substring(0, 48).trim() + "…").charAt(0).toUpperCase() + firstSentence.substring(1, 48).trim() + "…";
+        } else {
+          title = "Study & Master Goals";
+        }
+      }
+      
       const type = bodyObj.type || "sequential";
       const newId = "rm_" + Date.now();
 

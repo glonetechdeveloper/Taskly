@@ -1,8 +1,8 @@
 /* ==========================================================
    TASKLY — sidebar.css
-   Pixel-perfect modern sidebar matching the Study Case design
-   Supports Full & Collapsed states, Light & Dark themes, and
-   Ultra-responsive mobile drawer with hardware acceleration.
+   Pixel-perfect modern sidebar with profile footer widget,
+   top "New Chat" action, dark/light theme tokens, and
+   responsive collapse/mobile drawer support.
    ========================================================== */
 
 :root {
@@ -87,11 +87,11 @@ body.sidebar-is-collapsed .sidebar {
 
 /* ----------------- Header / Brand ----------------- */
 .sidebar-header-box {
-  padding: 22px 18px 18px 18px;
+  padding: 18px 16px 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   position: relative;
   flex-shrink: 0;
 }
@@ -107,9 +107,9 @@ body.sidebar-is-collapsed .sidebar {
 }
 
 .sidebar-brand-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   border-radius: 12px;
   background: #F0FDFA;
   border: 1px solid #CCFBF1;
@@ -126,8 +126,8 @@ body.sidebar-is-collapsed .sidebar {
 }
 
 .sidebar-brand-icon img {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 
@@ -157,7 +157,7 @@ body.sidebar-is-collapsed .sidebar {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* Collapse / Expand Button */
@@ -189,7 +189,7 @@ body.sidebar-is-collapsed .sidebar {
   transition: transform 0.2s ease;
 }
 
-/* Mobile Close Button (Hidden on Desktop) */
+/* Mobile Close Button */
 .sidebar-close-btn {
   display: none;
   width: 32px;
@@ -216,15 +216,81 @@ body.sidebar-is-collapsed .sidebar {
   height: 18px;
 }
 
+/* ----------------- Top Action: New Chat ----------------- */
+.sidebar-action-wrap {
+  padding: 4px 14px 8px 14px;
+  flex-shrink: 0;
+}
+
+.sidebar-btn-new-chat {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0D9488, #0F766E);
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.28);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+
+.sidebar-btn-new-chat:hover {
+  background: linear-gradient(135deg, #14B8A6, #0D9488);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.38);
+  transform: translateY(-1px);
+}
+
+.sidebar-btn-new-chat:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.sidebar-btn-new-chat .sidebar-link-icon {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  color: #FFFFFF;
+  stroke: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-btn-new-chat .sidebar-link-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-ai-tag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
 /* ----------------- Navigation Scroll Body ----------------- */
 .sidebar-nav-scroll {
   flex: 1;
-  padding: 10px 14px;
+  padding: 8px 14px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -240,7 +306,7 @@ body.sidebar-is-collapsed .sidebar {
 .sidebar-nav-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .sidebar-section-title {
@@ -315,19 +381,6 @@ body.sidebar-is-collapsed .sidebar {
   letter-spacing: -0.01em;
 }
 
-.sidebar-link-chevron {
-  width: 14px;
-  height: 14px;
-  color: #CBD5E1;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.sidebar-link:hover .sidebar-link-chevron {
-  opacity: 1;
-  transform: translateX(2px);
-}
-
 /* Active State */
 .sidebar-link.is-active {
   background: var(--sb-active-bg) !important;
@@ -358,15 +411,132 @@ body.sidebar-is-collapsed .sidebar {
   color: #38BDF8;
 }
 
-/* ----------------- Footer / Theme Toggle ----------------- */
-.sidebar-footer {
-  padding: 14px 16px 18px 16px;
+/* ----------------- Footer Group: Profile Card + Settings + Theme ----------------- */
+.sidebar-footer-group {
+  padding: 12px 14px 14px 14px;
   border-top: 1px solid var(--sb-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  background: inherit;
+  box-sizing: border-box;
+}
+
+/* Profile Row Widget */
+.sidebar-profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: var(--sb-hover-bg);
+  border: 1px solid var(--sb-border);
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.sidebar-profile-card:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+}
+
+.sidebar-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 2px 4px;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-profile-link:hover {
+  opacity: 0.85;
+}
+
+.sidebar-profile-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--sb-accent-cyan);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-profile-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sidebar-profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sb-text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.sidebar-profile-email {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+/* Settings Icon Button */
+.sidebar-settings-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sb-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  background: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-settings-btn:hover {
+  background: var(--sb-bg);
+  color: var(--sb-text-title);
+  border-color: var(--sb-border);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.sidebar-settings-btn.is-active {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+.sidebar-settings-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Theme Switch */
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .sidebar-theme-switch {
@@ -433,24 +603,39 @@ body.sidebar-is-collapsed .sidebar {
 
 /* ----------------- Collapsed State Styling ----------------- */
 body.sidebar-is-collapsed .sidebar-header-box {
-  padding: 20px 10px;
+  padding: 18px 10px 14px 10px;
   justify-content: center;
 }
 
 body.sidebar-is-collapsed .sidebar-brand-info,
 body.sidebar-is-collapsed .sidebar-section-title,
-body.sidebar-is-collapsed .sidebar-link-chevron,
 body.sidebar-is-collapsed .sidebar-link-label,
+body.sidebar-is-collapsed .sidebar-ai-tag,
 body.sidebar-is-collapsed .sidebar-pill-badge,
+body.sidebar-is-collapsed .sidebar-profile-meta,
 body.sidebar-is-collapsed .sidebar-theme-icon {
   display: none !important;
+}
+
+body.sidebar-is-collapsed .sidebar-action-wrap {
+  padding: 4px 10px 8px 10px;
+  display: flex;
+  justify-content: center;
+}
+
+body.sidebar-is-collapsed .sidebar-btn-new-chat {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 12px;
 }
 
 body.sidebar-is-collapsed .sidebar-toggle-btn {
   display: flex;
   position: absolute;
   right: -12px;
-  top: 26px;
+  top: 24px;
   width: 24px;
   height: 24px;
   min-width: 24px;
@@ -476,7 +661,7 @@ body.sidebar-is-collapsed .sidebar-brand-icon {
 }
 
 body.sidebar-is-collapsed .sidebar-nav-scroll {
-  padding: 8px 8px;
+  padding: 6px 8px;
   align-items: center;
 }
 
@@ -498,8 +683,34 @@ body.sidebar-is-collapsed .sidebar-link {
   border-radius: 12px;
 }
 
-body.sidebar-is-collapsed .sidebar-footer {
-  padding: 12px 6px 18px 6px;
+body.sidebar-is-collapsed .sidebar-footer-group {
+  padding: 10px 8px 14px 8px;
+  align-items: center;
+}
+
+body.sidebar-is-collapsed .sidebar-profile-card {
+  flex-direction: column;
+  width: 44px;
+  padding: 4px;
+  justify-content: center;
+  gap: 4px;
+}
+
+body.sidebar-is-collapsed .sidebar-profile-link {
+  justify-content: center;
+  padding: 0;
+}
+
+body.sidebar-is-collapsed .sidebar-profile-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+}
+
+body.sidebar-is-collapsed .sidebar-settings-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
 }
 
 body.sidebar-is-collapsed .sidebar-theme-switch {
@@ -631,17 +842,34 @@ body.drawer-open {
   /* Restore labels in mobile drawer even if collapsed flag is set */
   body.sidebar-is-collapsed .sidebar-brand-info,
   body.sidebar-is-collapsed .sidebar-section-title,
-  body.sidebar-is-collapsed .sidebar-link-chevron,
   body.sidebar-is-collapsed .sidebar-link-label,
+  body.sidebar-is-collapsed .sidebar-ai-tag,
   body.sidebar-is-collapsed .sidebar-pill-badge,
+  body.sidebar-is-collapsed .sidebar-profile-meta,
   body.sidebar-is-collapsed .sidebar-theme-icon {
     display: initial !important;
+  }
+  body.sidebar-is-collapsed .sidebar-action-wrap {
+    padding: 4px 14px 8px 14px !important;
+    display: block !important;
+  }
+  body.sidebar-is-collapsed .sidebar-btn-new-chat {
+    width: 100% !important;
+    height: auto !important;
+    padding: 10px 14px !important;
+    justify-content: flex-start !important;
   }
   body.sidebar-is-collapsed .sidebar-link {
     width: 100% !important;
     height: auto !important;
     padding: 9px 12px !important;
     justify-content: flex-start !important;
+  }
+  body.sidebar-is-collapsed .sidebar-profile-card {
+    flex-direction: row !important;
+    width: 100% !important;
+    padding: 6px 8px !important;
+    justify-content: space-between !important;
   }
   body.sidebar-is-collapsed .sidebar-theme-switch {
     width: 100% !important;

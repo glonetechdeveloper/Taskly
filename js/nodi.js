@@ -116,7 +116,7 @@
           </div>
 
           <div class="nodi-input-row">
-            <input class="nodi-input" id="nodiInput" type="text" placeholder="Ask Nodi anything…" maxlength="400">
+            <input class="nodi-input" id="nodiInput" type="text" placeholder="Ask Nodi anything…" maxlength="500">
             <button class="send-btn" id="nodiSendBtn" type="button" aria-label="Send message">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m22 2-7 20-4-9-9-4Z"/>

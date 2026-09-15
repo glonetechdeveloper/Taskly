@@ -538,7 +538,7 @@ window.TasklyDashboard = (function () {
         if (genState) genState.classList.add("is-active");
 
         try {
-          const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text });
+          const res = await window.TasklyAPI.createRoadmap({ goal_text: text });
           const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
           
           if (!newId) throw new Error("Could not retrieve roadmap ID from server");
@@ -578,7 +578,7 @@ window.TasklyDashboard = (function () {
 
       btn.disabled = true;
       try {
-        const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text });
+        const res = await window.TasklyAPI.createRoadmap({ goal_text: text });
         const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
         if (!newId) throw new Error("Could not retrieve roadmap ID from server");
 

@@ -4,7 +4,8 @@
    - Ultra-responsive mobile drawer with gestures & scroll lock
    - Collapse / Expand toggle with local storage persistence
    - Hover tooltips in collapsed desktop mode
-   - Light / Dark theme toggle
+   - Light / Dark theme toggle applied globally
+   - User profile footer widget sync
    - Active page highlights & dynamic notification badges
    ========================================================== */
 
@@ -13,6 +14,7 @@
     init() {
       this.initTheme();
       this.initCollapseState();
+      this.initUserInfo();
       this.initTooltips();
       this.initActiveItem();
       this.initBadges();
@@ -52,6 +54,36 @@
       } catch (e) {}
     },
 
+    initUserInfo() {
+      const nameEl = document.getElementById("sidebarUserName");
+      const emailEl = document.getElementById("sidebarUserEmail");
+      const avatarEl = document.getElementById("sidebarUserAvatar");
+
+      try {
+        const rawName = localStorage.getItem("taskly_user_name") || "";
+        const rawEmail = localStorage.getItem("taskly_user_email") || "";
+
+        if (nameEl) {
+          if (rawName.trim()) {
+            nameEl.textContent = rawName.trim();
+          } else if (rawEmail) {
+            nameEl.textContent = rawEmail.split("@")[0];
+          } else {
+            nameEl.textContent = "Taskly User";
+          }
+        }
+
+        if (emailEl) {
+          emailEl.textContent = rawEmail || "user@taskly.app";
+        }
+
+        const customAvatar = localStorage.getItem("taskly_user_avatar");
+        if (avatarEl && customAvatar) {
+          avatarEl.src = customAvatar;
+        }
+      } catch (e) {}
+    },
+
     initActiveItem() {
       const path = window.location.pathname.toLowerCase();
       const links = document.querySelectorAll(".sidebar-link");
@@ -61,11 +93,31 @@
         link.classList.remove("is-active");
 
         if (href) {
-          if (path.endsWith(href) || (href === "dashboard.html" && (path.endsWith("/") || path.endsWith("index.html")))) {
+          if (path.endsWith(href) || (href === "dashboard.html" && (path.endsWith("/") || path.endsWith("index.html") || path === ""))) {
             link.classList.add("is-active");
           }
         }
       });
+
+      // Check settings active
+      const settingsBtn = document.getElementById("sidebarSettingsBtn");
+      if (settingsBtn) {
+        if (path.endsWith("settings.html")) {
+          settingsBtn.classList.add("is-active");
+        } else {
+          settingsBtn.classList.remove("is-active");
+        }
+      }
+
+      // Check profile active
+      const profileLink = document.getElementById("sidebarProfileLink");
+      if (profileLink) {
+        if (path.endsWith("account.html")) {
+          profileLink.parentElement?.classList.add("is-active");
+        } else {
+          profileLink.parentElement?.classList.remove("is-active");
+        }
+      }
     },
 
     async initBadges() {
@@ -96,21 +148,28 @@
         document.body.appendChild(tooltip);
       }
 
-      const links = document.querySelectorAll(".sidebar-link");
-      links.forEach((link) => {
-        const labelEl = link.querySelector(".sidebar-link-label");
-        const titleText = labelEl ? labelEl.textContent.trim() : (link.getAttribute("title") || "");
-        
-        link.addEventListener("mouseenter", () => {
-          if (document.body.classList.contains("sidebar-is-collapsed") && window.innerWidth > 900) {
-            const rect = link.getBoundingClientRect();
+      const elementsWithTooltip = [
+        ...document.querySelectorAll(".sidebar-link"),
+        document.getElementById("sidebarNewChatBtn"),
+        document.getElementById("sidebarProfileLink"),
+        document.getElementById("sidebarSettingsBtn"),
+        document.getElementById("sidebarThemeSwitch")
+      ].filter(Boolean);
+
+      elementsWithTooltip.forEach((el) => {
+        const labelEl = el.querySelector(".sidebar-link-label") || el.querySelector(".sidebar-profile-name");
+        const titleText = el.getAttribute("title") || (labelEl ? labelEl.textContent.trim() : "");
+
+        el.addEventListener("mouseenter", () => {
+          if (document.body.classList.contains("sidebar-is-collapsed") && window.innerWidth > 900 && titleText) {
+            const rect = el.getBoundingClientRect();
             tooltip.textContent = titleText;
             tooltip.style.top = `${rect.top + rect.height / 2}px`;
             tooltip.classList.add("is-visible");
           }
         });
 
-        link.addEventListener("mouseleave", () => {
+        el.addEventListener("mouseleave", () => {
           tooltip.classList.remove("is-visible");
         });
       });
@@ -153,7 +212,6 @@
 
       sidebar.addEventListener("touchend", () => {
         if (!isTouching || window.innerWidth > 900) return;
-        // If swiped left by 45px or more, close the drawer
         if (startX - currentX > 45 && currentX !== 0) {
           this.closeDrawer();
         }
@@ -224,7 +282,7 @@
       });
 
       // Auto close drawer when navigating on mobile
-      document.querySelectorAll(".sidebar-link").forEach((link) => {
+      document.querySelectorAll(".sidebar-link, .sidebar-profile-link, .sidebar-settings-btn").forEach((link) => {
         link.addEventListener("click", () => {
           if (window.innerWidth <= 900) {
             this.closeDrawer();
@@ -239,8 +297,8 @@
         }
       });
 
-      // Chat with Nodi triggers
-      document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #askNodiSidebar").forEach((btn) => {
+      // New Chat & Chat with Nodi triggers
+      document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #sidebarNewChatBtn, #askNodiSidebar").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
           if (window.innerWidth <= 900) {
@@ -255,8 +313,9 @@
         });
       });
 
-      // Logout triggers
-      document.querySelectorAll(".btn-sidebar-logout, #sidebarLogoutBtn").forEach((btn) => {
+      // Logout triggers (only when explicitly present)
+      document.querySelectorAll(".btn-sidebar-logout, #sidebarLogoutBtn, #openLogoutBtn").forEach((btn) => {
+        if (btn.id === "openLogoutBtn") return; // Handled by page modal
         btn.addEventListener("click", (e) => {
           e.preventDefault();
           if (window.TasklyAPI && typeof window.TasklyAPI.clearToken === "function") {

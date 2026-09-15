@@ -44,6 +44,63 @@
   --ease-snap: cubic-bezier(.65, 0, .35, 1);
 }
 
+[data-theme="dark"] {
+  --color-cream: #131B2A;
+  --color-cream-soft: #1A2538;
+  --color-white: #0B111A;
+
+  --color-ink: #F1F5F9;
+  --color-ink-soft: #94A3B8;
+  --color-ink-faint: #64748B;
+
+  --color-border: #1E293B;
+  --color-orange-tint: #2C2210;
+  --color-teal-tint: #132E35;
+  --color-error-tint: #3A1C1C;
+  --shadow-card: 0 24px 60px -22px rgba(0, 0, 0, 0.65);
+  --shadow-avatar: 0 8px 18px -6px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 4px rgba(45, 212, 191, 0.2);
+}
+
+[data-theme="dark"] body {
+  background: #0B111A;
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .topbar {
+  background: #0D131F;
+  border-bottom: 1px solid #1E293B;
+}
+
+[data-theme="dark"] .bg-pattern svg.pattern-root {
+  opacity: 0.12;
+}
+
+[data-theme="dark"] .settings-card,
+[data-theme="dark"] .settings-row,
+[data-theme="dark"] .modal {
+  background: #131B2A;
+  border-color: #1E293B;
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .settings-select {
+  background: #1A2538;
+  border-color: #1E293B;
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .icon-btn-ghost {
+  color: #94A3B8;
+}
+
+[data-theme="dark"] .icon-btn-ghost:hover {
+  background: #1E293B;
+  color: #F1F5F9;
+}
+
+
 * { box-sizing: border-box; }
 body {
   margin: 0;
