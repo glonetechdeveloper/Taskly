@@ -1,46 +1,46 @@
 /* ==========================================================
    TASKLY — nodi.css
-   Classic Centered Modal for Nodi AI Chatbot
-   Clean bubbles, Markdown formatting, action pills & typing dots
+   Bottom-Right Floating Chat Window for Nodi AI Chatbot
+   Markdown formatting, action pills, typing dots & suggestions
    ========================================================== */
 
 #nodiOverlay {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
+  bottom: 24px;
+  right: 24px;
   z-index: 10000;
+  pointer-events: none;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.22s ease, visibility 0.22s ease;
-}
-
-#nodiOverlay.is-open {
-  opacity: 1;
-  visibility: visible;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
 }
 
 .modal-nodi {
-  width: 100%;
-  max-width: 480px;
-  max-height: 88vh;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 560px;
+  max-height: min(600px, calc(100vh - 100px));
   background: #FFFFFF;
   border-radius: 20px;
-  box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.35);
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: translateY(12px) scale(0.97);
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(24px) scale(0.95);
+  transform-origin: bottom right;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, visibility 0.22s ease;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   border: 1px solid #E2E8F0;
 }
 
 #nodiOverlay.is-open .modal-nodi {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0) scale(1);
 }
 
@@ -48,16 +48,18 @@
   background: #0F172A;
   border-color: #1E293B;
   color: #F8FAFC;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* Header */
 .nodi-header {
-  padding: 14px 18px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid #F1F5F9;
   background: #FAFAFA;
+  flex-shrink: 0;
 }
 
 [data-theme="dark"] .nodi-header {
@@ -67,20 +69,22 @@
 
 .nodi-header img,
 .nodi-header-avatar {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   background: #F0FDFA;
   border: 1.5px solid #CCFBF1;
+  flex-shrink: 0;
 }
 
 .nodi-header-text {
   flex: 1;
+  min-width: 0;
 }
 
 .nodi-header-text .name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: #0F172A;
   margin: 0;
@@ -103,8 +107,13 @@
   text-transform: uppercase;
 }
 
+[data-theme="dark"] .nodi-ai-tag {
+  background: #132E35;
+  color: #2DD4BF;
+}
+
 .nodi-header-text .status {
-  font-size: 11.5px;
+  font-size: 11px;
   color: #10B981;
   font-weight: 600;
   margin: 1px 0 0 0;
@@ -125,19 +134,21 @@
 .nodi-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .nodi-action-btn {
   background: transparent;
   border: none;
   color: #94A3B8;
-  padding: 6px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   transition: all 0.15s ease;
 }
 
@@ -154,23 +165,23 @@
 /* Chat Body */
 .nodi-body {
   flex: 1;
-  min-height: 280px;
-  max-height: 400px;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   background: #FFFFFF;
+  -webkit-overflow-scrolling: touch;
 }
 
 [data-theme="dark"] .nodi-body {
-  background: #0B1120;
+  background: #0F172A;
 }
 
 .nodi-body::-webkit-scrollbar {
   width: 5px;
 }
+
 .nodi-body::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.25);
   border-radius: 4px;
@@ -178,16 +189,16 @@
 
 /* Chat Bubbles */
 .chat-bubble {
-  max-width: 84%;
-  padding: 10px 14px;
-  border-radius: 14px;
+  max-width: 86%;
+  padding: 11px 14px;
+  border-radius: 16px;
   font-size: 13.5px;
   line-height: 1.5;
   word-break: break-word;
-  animation: nodiBubbleIn 0.2s ease-out;
+  animation: bubblePop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes nodiBubbleIn {
+@keyframes bubblePop {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
@@ -197,165 +208,158 @@
   background: #0D9488;
   color: #FFFFFF;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
 }
 
 .chat-bubble.from-nodi {
   align-self: flex-start;
-  background: #F1F5F9;
+  background: #F8FAFC;
   color: #1E293B;
+  border: 1px solid #E2E8F0;
   border-bottom-left-radius: 4px;
 }
 
 [data-theme="dark"] .chat-bubble.from-nodi {
   background: #1E293B;
-  color: #E2E8F0;
+  color: #F1F5F9;
+  border-color: #334155;
 }
 
-/* Markdown formatting inside nodi bubbles */
+/* Markdown typography inside Nodi bubbles */
+.chat-bubble.from-nodi h1,
+.chat-bubble.from-nodi h2,
+.chat-bubble.from-nodi h3 {
+  margin: 8px 0 4px 0;
+  font-weight: 700;
+  color: inherit;
+}
+.chat-bubble.from-nodi h1 { font-size: 15px; }
+.chat-bubble.from-nodi h2 { font-size: 14px; }
+.chat-bubble.from-nodi h3 { font-size: 13px; }
+
 .chat-bubble.from-nodi p {
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 .chat-bubble.from-nodi p:last-child {
   margin-bottom: 0;
 }
 
-.chat-bubble.from-nodi strong {
-  font-weight: 700;
-  color: #0F172A;
-}
-
-[data-theme="dark"] .chat-bubble.from-nodi strong {
-  color: #FFFFFF;
-}
-
-.chat-bubble.from-nodi h1,
-.chat-bubble.from-nodi h2,
-.chat-bubble.from-nodi h3,
-.chat-bubble.from-nodi h4 {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 8px 0 4px 0;
-  color: #0D9488;
-}
-
 .chat-bubble.from-nodi ul,
 .chat-bubble.from-nodi ol {
-  margin: 4px 0 8px 0;
-  padding-left: 20px;
+  margin: 4px 0 6px 0;
+  padding-left: 18px;
 }
 
 .chat-bubble.from-nodi li {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .chat-bubble.from-nodi code {
-  background: rgba(15, 23, 42, 0.08);
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 12px;
+  background: rgba(148, 163, 184, 0.15);
   padding: 2px 5px;
   border-radius: 4px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-}
-
-[data-theme="dark"] .chat-bubble.from-nodi code {
-  background: rgba(255, 255, 255, 0.12);
-  color: #2DD4BF;
 }
 
 .chat-bubble.from-nodi pre {
-  background: #0F172A;
-  color: #F8FAFC;
-  padding: 10px;
-  border-radius: 8px;
-  overflow-x: auto;
   margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0F172A;
+  color: #38BDF8;
+  overflow-x: auto;
+  font-size: 12px;
 }
 
 .chat-bubble.from-nodi pre code {
   background: transparent;
-  color: inherit;
   padding: 0;
+  color: inherit;
 }
 
-/* Action Execution Pills */
-.nodi-action-pill {
+.chat-bubble.from-nodi blockquote {
+  border-left: 3px solid #0D9488;
+  margin: 6px 0;
+  padding-left: 8px;
+  color: #64748B;
+  font-style: italic;
+}
+
+/* Action Badges */
+.nodi-action-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #ECFDF5;
-  color: #047857;
-  border: 1px solid #A7F3D0;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  margin-top: 8px;
+  padding: 5px 10px;
+  background: #E6F8F7;
+  border: 1px solid #99F6E4;
+  border-radius: 8px;
+  font-size: 11.5px;
   font-weight: 600;
-  margin-top: 6px;
+  color: #0D9488;
 }
 
-[data-theme="dark"] .nodi-action-pill {
-  background: #064E3B;
-  color: #6EE7B7;
-  border-color: #059669;
+[data-theme="dark"] .nodi-action-badge {
+  background: #132E35;
+  border-color: #115E59;
+  color: #2DD4BF;
 }
 
-.nodi-action-pill svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Typing Indicator */
+/* Typing Dots */
 .typing-dots {
   display: inline-flex;
-  align-items: center;
   gap: 4px;
-  padding: 4px 0;
+  padding: 4px 2px;
 }
-
 .typing-dots span {
   width: 6px;
   height: 6px;
   background: #94A3B8;
   border-radius: 50%;
-  animation: nodiDotBounce 1.2s infinite ease-in-out;
+  animation: typingBounce 1.2s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes nodiDotBounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-  40% { transform: translateY(-4px); opacity: 1; }
-}
-
-/* Suggestion Chips */
+/* Suggestions */
 .nodi-suggestions {
-  padding: 8px 16px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  padding: 8px 14px;
   overflow-x: auto;
   border-top: 1px solid #F1F5F9;
   background: #FAFAFA;
+  flex-shrink: 0;
 }
 
 [data-theme="dark"] .nodi-suggestions {
-  background: #0E1626;
+  background: #0B1120;
   border-color: #1E293B;
 }
 
 .suggestion-chip {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
   border-radius: 999px;
-  white-space: nowrap;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #475569;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
+  font-family: inherit;
 }
 
 .suggestion-chip:hover {
-  background: #F0FDFA;
+  background: #E6F8F7;
   border-color: #99F6E4;
   color: #0D9488;
 }
@@ -363,23 +367,23 @@
 [data-theme="dark"] .suggestion-chip {
   background: #1E293B;
   border-color: #334155;
-  color: #CBD5E1;
+  color: #94A3B8;
 }
 
 [data-theme="dark"] .suggestion-chip:hover {
   background: #132E35;
-  border-color: #2DD4BF;
+  border-color: #115E59;
   color: #2DD4BF;
 }
 
 /* Input Row */
 .nodi-input-row {
-  padding: 12px 16px;
+  padding: 10px 14px 14px 14px;
   display: flex;
-  align-items: center;
   gap: 8px;
   border-top: 1px solid #F1F5F9;
   background: #FFFFFF;
+  flex-shrink: 0;
 }
 
 [data-theme="dark"] .nodi-input-row {
@@ -390,18 +394,20 @@
 .nodi-input {
   flex: 1;
   border: 1px solid #E2E8F0;
-  background: #F8FAFC;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   font-size: 13.5px;
-  color: #0F172A;
+  font-family: inherit;
   outline: none;
+  background: #F8FAFC;
+  color: #0F172A;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .nodi-input:focus {
   border-color: #0D9488;
   background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 [data-theme="dark"] .nodi-input {
@@ -412,32 +418,71 @@
 
 [data-theme="dark"] .nodi-input:focus {
   border-color: #2DD4BF;
-  background: #0F172A;
+  background: #162032;
 }
 
-.nodi-input-row .send-btn {
+.send-btn {
   width: 38px;
   height: 38px;
   border-radius: 10px;
   background: #0D9488;
-  border: none;
   color: #FFFFFF;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition: transform 0.1s ease, background 0.15s ease;
+  flex-shrink: 0;
 }
 
-.nodi-input-row .send-btn:hover {
+.send-btn:hover {
   background: #0F766E;
 }
 
-.nodi-input-row .send-btn:active {
-  transform: scale(0.95);
+.send-btn:active {
+  transform: scale(0.93);
 }
 
-.nodi-input-row .send-btn svg {
-  width: 18px;
-  height: 18px;
+.send-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Mobile Responsiveness for Bottom-Right Chat Window */
+@media (max-width: 600px) {
+  #nodiOverlay {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    top: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    align-items: stretch;
+    justify-content: flex-end;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+
+  #nodiOverlay.is-open {
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal-nodi {
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    max-height: 85vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    border-bottom: none;
+  }
+
+  #nodiOverlay.is-open .modal-nodi {
+    transform: translateY(0);
+  }
 }

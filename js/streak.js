@@ -1,6 +1,7 @@
 /* ==========================================================
    TASKLY — streak.js
-   Universal Streak Controller & Live Sync across all pages
+   Universal Streak Controller & Dropdown Panel Sync
+   Opens as a topbar dropdown panel (matching Notifications)
    ========================================================== */
 
 (function () {
@@ -42,7 +43,7 @@
         el.textContent = count;
       });
 
-      // 2. Update modal big count & text
+      // 2. Update dropdown big count & text
       document.querySelectorAll("#streakCountBig, .streak-count-big, [data-streak-big]").forEach(el => {
         el.textContent = `${count} ${count === 1 ? "Day" : "Days"}`;
       });
@@ -67,7 +68,6 @@
 
       weekContainer.innerHTML = days.map((dayName, idx) => {
         const isToday = idx === todayIndex;
-        // Mark past days in streak active up to today
         const isActive = idx <= todayIndex && (todayIndex - idx) < Math.max(streakCount, 1);
         
         return `
@@ -95,11 +95,16 @@
       el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
     },
 
-    openModal() {
-      const overlay = document.getElementById("streakOverlay");
-      if (!overlay) return;
-      overlay.classList.add("is-open");
-      overlay.setAttribute("aria-hidden", "false");
+    openDropdown() {
+      const panel = document.getElementById("streakOverlay");
+      if (!panel) return;
+
+      // Close notification panel if open
+      const notifPanel = document.getElementById("notifPanel");
+      if (notifPanel) notifPanel.classList.remove("is-open");
+
+      panel.classList.add("is-open");
+      panel.setAttribute("aria-hidden", "false");
       this.tickCountdown();
       if (cachedStreakData) {
         this.renderStreak(cachedStreakData);
@@ -108,44 +113,64 @@
       }
     },
 
-    closeModal() {
-      const overlay = document.getElementById("streakOverlay");
-      if (!overlay) return;
-      overlay.classList.remove("is-open");
-      overlay.setAttribute("aria-hidden", "true");
+    closeDropdown() {
+      const panel = document.getElementById("streakOverlay");
+      if (!panel) return;
+      panel.classList.remove("is-open");
+      panel.setAttribute("aria-hidden", "true");
+    },
+
+    toggleDropdown() {
+      const panel = document.getElementById("streakOverlay");
+      if (!panel) return;
+      if (panel.classList.contains("is-open")) {
+        this.closeDropdown();
+      } else {
+        this.openDropdown();
+      }
     },
 
     wireEvents() {
-      // Streak trigger button(s)
+      // Toggle on clicking streak button in topbar or sidebar
       document.querySelectorAll("#streakBtn, .open-streak-btn, [data-open-streak]").forEach(btn => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
-          this.openModal();
+          e.stopPropagation();
+          this.toggleDropdown();
         });
       });
 
-      // Modal close button(s)
+      // Close button inside dropdown
       document.querySelectorAll('[data-close-modal="streakOverlay"], #streakOverlay .modal-close').forEach(btn => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
-          this.closeModal();
+          this.closeDropdown();
         });
       });
 
-      // Close on clicking backdrop
-      const overlay = document.getElementById("streakOverlay");
-      if (overlay) {
-        overlay.addEventListener("click", (e) => {
-          if (e.target === overlay) {
-            this.closeModal();
+      // Close on clicking outside
+      document.addEventListener("click", (e) => {
+        const panel = document.getElementById("streakOverlay");
+        const btn = document.getElementById("streakBtn");
+        if (panel && panel.classList.contains("is-open")) {
+          if (!panel.contains(e.target) && !(btn && btn.contains(e.target))) {
+            this.closeDropdown();
           }
+        }
+      });
+
+      // Close streak when notifications button is clicked
+      const notifBtn = document.getElementById("notifBtn");
+      if (notifBtn) {
+        notifBtn.addEventListener("click", () => {
+          this.closeDropdown();
         });
       }
 
-      // Close on Escape
+      // Close on Escape key
       window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && overlay && overlay.classList.contains("is-open")) {
-          this.closeModal();
+        if (e.key === "Escape") {
+          this.closeDropdown();
         }
       });
 
@@ -177,7 +202,6 @@
 
   window.StreakManager = StreakManager;
 
-  // Auto initialize on DOM ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => StreakManager.init());
   } else {

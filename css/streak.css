@@ -1,150 +1,191 @@
 /* ==========================================================
    TASKLY — streak.css
-   Shared styles for Streak Modal, Badges, and Countdown
+   Dropdown Panel for Streak (matches Notifications Dropdown)
    ========================================================== */
 
-#streakOverlay {
+#streakOverlay,
+.streak-dropdown-panel {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 99999;
+  top: 64px;
+  right: 68px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  border: 1px solid #E2E8F0;
+  z-index: 1050;
   opacity: 0;
   visibility: hidden;
+  transform: translateY(-8px);
   pointer-events: none;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
 }
 
-#streakOverlay.is-open {
+#streakOverlay.is-open,
+.streak-dropdown-panel.is-open {
   opacity: 1;
   visibility: visible;
+  transform: translateY(0);
   pointer-events: auto;
 }
 
-#streakOverlay .modal-streak {
-  background: #ffffff;
-  border-radius: 24px;
-  width: 100%;
-  max-width: 420px;
-  padding: 28px 24px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.06);
-  text-align: center;
-  position: relative;
-  transform: scale(0.92) translateY(12px);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box;
+[data-theme="dark"] #streakOverlay,
+[data-theme="dark"] .streak-dropdown-panel {
+  background: #0F172A;
+  border-color: #1E293B;
+  color: #F8FAFC;
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-#streakOverlay.is-open .modal-streak {
-  transform: scale(1) translateY(0);
-}
-
-.modal-header {
+/* Header */
+#streakOverlay .dropdown-header,
+#streakOverlay .modal-header {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 13.5px;
+  border-bottom: 1px solid #F1F5F9;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.modal-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
+  background: #FAFAFA;
   margin: 0;
+  color: #0F172A;
 }
 
-.modal-close {
-  background: #F3F4F6;
+[data-theme="dark"] #streakOverlay .dropdown-header,
+[data-theme="dark"] #streakOverlay .modal-header {
+  background: #111C33;
+  border-color: #1E293B;
+  color: #F8FAFC;
+}
+
+#streakOverlay .modal-header h3 {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin: 0;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#streakOverlay .modal-close {
+  background: transparent;
   border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6B7280;
+  color: #94A3B8;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
+  padding: 0;
+  transition: all 0.15s ease;
 }
 
-.modal-close:hover {
-  background: #E5E7EB;
-  color: #111827;
-  transform: scale(1.06);
+#streakOverlay .modal-close:hover {
+  background: #EDF2F7;
+  color: #0F172A;
+}
+
+[data-theme="dark"] #streakOverlay .modal-close:hover {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+#streakOverlay .modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Streak Body Content */
+#streakOverlay .modal-streak {
+  padding: 18px 16px;
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  max-width: 100%;
 }
 
 .streak-flame-big {
-  width: 76px;
-  height: 76px;
-  margin: 0 auto 16px;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 12px;
   border-radius: 50%;
   background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  box-shadow: 0 12px 28px -6px rgba(255, 107, 0, 0.45);
-  animation: flamePulse 2.4s ease-in-out infinite alternate;
+  box-shadow: 0 8px 20px -4px rgba(255, 107, 0, 0.4);
 }
 
 .streak-flame-big svg {
-  width: 42px;
-  height: 42px;
-}
-
-@keyframes flamePulse {
-  0% { transform: scale(0.96); box-shadow: 0 8px 20px -6px rgba(255, 107, 0, 0.35); }
-  100% { transform: scale(1.05); box-shadow: 0 16px 36px -4px rgba(255, 107, 0, 0.6); }
+  width: 32px;
+  height: 32px;
 }
 
 .streak-count-big {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 800;
-  color: #111827;
-  margin: 0 0 6px 0;
-  letter-spacing: -0.5px;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+[data-theme="dark"] .streak-count-big {
+  color: #F8FAFC;
 }
 
 .streak-sub {
-  font-size: 14px;
-  color: #6B7280;
-  margin: 0 0 24px 0;
-  line-height: 1.5;
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0 0 14px 0;
+  line-height: 1.45;
 }
 
-/* Week dots */
+[data-theme="dark"] .streak-sub {
+  color: #94A3B8;
+}
+
+/* Weekly streak circles */
 .streak-week {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  margin-bottom: 24px;
-  padding: 14px;
-  background: #F9FAFB;
-  border-radius: 16px;
-  border: 1px solid #F3F4F6;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1px solid #F1F5F9;
+}
+
+[data-theme="dark"] .streak-week {
+  background: #162032;
+  border-color: #1E293B;
 }
 
 .streak-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 5px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: #9CA3AF;
-  text-transform: uppercase;
+  color: #94A3B8;
 }
 
 .streak-day-dot {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #E5E7EB;
+  background: #E2E8F0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,43 +193,73 @@
   transition: all 0.2s ease;
 }
 
-.streak-day-dot.is-active {
-  background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
-  box-shadow: 0 4px 10px -2px rgba(255, 107, 0, 0.4);
+[data-theme="dark"] .streak-day-dot {
+  background: #334155;
 }
 
-.streak-day-dot.is-active svg {
-  width: 14px;
-  height: 14px;
+.streak-day-dot.is-active {
+  background: #FF6B00;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(255, 107, 0, 0.35);
 }
 
 .streak-day-dot.is-today {
-  outline: 2px solid #FF6B00;
-  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #FF6B00, 0 2px 6px rgba(255, 107, 0, 0.35);
 }
 
-/* Countdown box */
+.streak-day-dot svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Countdown container */
 .streak-countdown-box {
   background: #FFF7ED;
   border: 1px solid #FFEDD5;
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 10px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+[data-theme="dark"] .streak-countdown-box {
+  background: #231B15;
+  border-color: #432818;
+}
+
 .streak-countdown-label {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: #9A3412;
+  color: #C2410C;
   margin: 0;
 }
 
+[data-theme="dark"] .streak-countdown-label {
+  color: #FB923C;
+}
+
 .streak-countdown {
-  font-size: 16px;
-  font-weight: 800;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #C2410C;
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #EA580C;
   margin: 0;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="dark"] .streak-countdown {
+  color: #FDBA74;
+}
+
+/* Mobile Responsiveness for Dropdown */
+@media (max-width: 600px) {
+  #streakOverlay,
+  .streak-dropdown-panel {
+    top: 60px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
 }

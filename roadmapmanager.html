@@ -400,15 +400,18 @@
   </div>
 </div>
 
-<!-- ============ Streak modal ============ -->
-<div class="modal-overlay" id="streakOverlay">
-  <div class="modal modal-streak" role="dialog" aria-modal="true" aria-label="Your streak">
-    <div class="modal-header">
-      <h3>Your Streak</h3>
-      <button class="modal-close" data-close-modal="streakOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
+<!-- ============ Streak dropdown panel ============ -->
+<div class="dropdown-panel modal-streak-dropdown" id="streakOverlay" role="dialog" aria-label="Your streak">
+  <div class="dropdown-header">
+    <span style="display:inline-flex; align-items:center; gap:6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF6B00" stroke="none"><use href="#ic-flame"/></svg>
+      Your Streak
+    </span>
+    <button class="modal-close" data-close-modal="streakOverlay" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+    </button>
+  </div>
+  <div class="modal-streak">
     <div class="streak-flame-big">
       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
     </div>
@@ -420,6 +423,7 @@
       <p class="streak-countdown" id="streakCountdown">--:--:--</p>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ============ Add New Roadmap modal ============ -->
