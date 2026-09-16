@@ -40,6 +40,10 @@ function clearToken() {
       localStorage.removeItem(key);
     } catch (e) {}
   });
+  try {
+    localStorage.removeItem("taskly_nodi_history_v2");
+    localStorage.removeItem("taskly_nodi_history");
+  } catch (e) {}
 }
 
 /**

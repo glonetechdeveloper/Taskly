@@ -424,6 +424,8 @@ window.TasklyAccount = (function () {
         localStorage.removeItem("taskly_user_name");
         localStorage.removeItem("taskly_user_avatar");
         localStorage.removeItem("taskly_user_password");
+        localStorage.removeItem("taskly_nodi_history_v2");
+        localStorage.removeItem("taskly_nodi_history");
       } catch (e) {}
       closeModal("logoutOverlay");
       showToast("Signed out.");
@@ -438,6 +440,8 @@ window.TasklyAccount = (function () {
           localStorage.removeItem("taskly_user_name");
           localStorage.removeItem("taskly_user_avatar");
           localStorage.removeItem("taskly_user_password");
+          localStorage.removeItem("taskly_nodi_history_v2");
+          localStorage.removeItem("taskly_nodi_history");
         } catch (e) {}
         window.location.href = "login.html";
       });

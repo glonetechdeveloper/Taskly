@@ -64,10 +64,40 @@
     return formatted || html;
   }
 
+  /* ---------------- Robust Python List & String Parser ---------------- */
+  function parsePythonList(raw) {
+    if (!raw) return [];
+    const items = [];
+    const regex = /'([^'\\]*(?:\\.[^'\\]*)*)'|"([^"\\]*(?:\\.[^"\\]*)*)"/g;
+    let match;
+    while ((match = regex.exec(raw)) !== null) {
+      items.push(match[1] !== undefined ? match[1] : match[2]);
+    }
+    return items;
+  }
+
   /* ---------------- Human Text Sanitizer ---------------- */
   function formatHumanText(text) {
     if (!text) return "";
     let clean = String(text);
+
+    // Convert raw "No node in this roadmap matches..." Python error dump into polite, clean markdown
+    const nodeMismatchRegex = /No node in this roadmap matches\s+['"]?([^'".]+)['"]?\.\s*Here are the available nodes:\s*\[([\s\S]*?)\]/i;
+    const nodeMismatchMatch = clean.match(nodeMismatchRegex);
+    if (nodeMismatchMatch) {
+      const query = nodeMismatchMatch[1].trim();
+      const items = parsePythonList(nodeMismatchMatch[2]);
+      if (items.length > 0) {
+        return `I couldn't find a task matching **"${query}"** in this roadmap.\n\n**Here are the tasks available in this roadmap:**\n` + items.map(it => `• ${it}`).join("\n");
+      }
+      return `I couldn't find a task matching **"${query}"** in this roadmap.`;
+    }
+
+    // Convert generic Python list array dumps: ['item 1', 'item 2'] into clean comma-separated text
+    clean = clean.replace(/\[\s*(?:'[^']*'|"[^"]*")(?:\s*,\s*(?:'[^']*'|"[^"]*"))*\s*\]/g, (match) => {
+      const items = parsePythonList(match);
+      return items.length > 0 ? items.join(", ") : match;
+    });
 
     // Convert raw markdown tables with IDs/UUIDs into clean conversational English bullet points
     if (clean.includes("|") && (clean.toLowerCase().includes("id") || /[0-9a-f]{8}-[0-9a-f]{4}/i.test(clean))) {
@@ -274,8 +304,14 @@
     },
 
     formatCleanActionResult(act) {
-      if (!act) return "Action completed";
+      if (!act) return null;
       const result = typeof act.result === "string" ? act.result : (typeof act === "string" ? act : "");
+
+      // Filter out internal noisy discovery/listing tool steps that clutter the conversation
+      if (/^listed\s+\d+\s+roadmap/i.test(result.trim()) || /^list_roadmaps/i.test(String(act.tool || ""))) {
+        return null;
+      }
+
       let clean = result.replace(/\(id:[^)]+\)/gi, "").replace(/status:\s*\w+/gi, "").trim();
       clean = clean.replace(/,\s*\)/g, ")").replace(/\s{2,}/g, " ").trim();
       
@@ -284,7 +320,7 @@
         const tool = String(act.tool).replace(/_/g, " ");
         return tool.charAt(0).toUpperCase() + tool.slice(1);
       }
-      return "Action completed";
+      return null;
     },
 
     appendMessageDOM(msg) {
