@@ -315,8 +315,16 @@
       if (notifBtn && notifPanel) {
         notifBtn.addEventListener("click", (e) => {
           e.stopPropagation();
+          // Close streak if open
+          const streakOverlay = document.getElementById("streakOverlay");
+          if (streakOverlay) streakOverlay.classList.remove("is-open");
+
           const isOpen = notifPanel.classList.toggle("is-open");
-          if (isOpen) this.renderNavbarNotifications();
+          if (isOpen) {
+            this.renderNavbarNotifications();
+            const dot = document.getElementById("notifDot");
+            if (dot) dot.style.display = "none";
+          }
         });
 
         document.addEventListener("click", (e) => {

@@ -165,10 +165,22 @@
         </div>
       `;
 
-      // Inject floating toggle button on bottom-right of every page
-      let floatBtn = document.getElementById("nodiFloatingBtn");
-      if (!floatBtn) {
-        floatBtn = document.createElement("button");
+      // Don't render floating chatbot button on login or signup pages
+      const path = (window.location.pathname || "").toLowerCase();
+      const isAuthPage = path.endsWith("login.html") || path.endsWith("signup.html");
+
+      // Remove any duplicate or legacy buttons first
+      document.querySelectorAll("#nodiBtn, .help-bubble, #nodiFloatingBtn, #helpBubble, .nodi-floating-trigger").forEach((btn, idx) => {
+        if (isAuthPage || idx > 0) {
+          btn.remove();
+        }
+      });
+
+      if (isAuthPage) return;
+
+      let existingFloat = document.getElementById("nodiFloatingBtn");
+      if (!existingFloat) {
+        const floatBtn = document.createElement("button");
         floatBtn.id = "nodiFloatingBtn";
         floatBtn.className = "nodi-floating-trigger open-nodi-modal";
         floatBtn.type = "button";
@@ -225,8 +237,7 @@
       if (overlay) {
         overlay.classList.add("is-open");
         document.body.classList.add("nodi-open");
-        const floatBtn = document.getElementById("nodiFloatingBtn");
-        if (floatBtn) floatBtn.style.display = "none";
+        document.querySelectorAll("#nodiBtn, .help-bubble, #nodiFloatingBtn").forEach(b => b.style.display = "none");
         setTimeout(() => {
           const input = document.getElementById("nodiInput");
           if (input) input.focus();
@@ -239,8 +250,7 @@
       const overlay = document.getElementById("nodiOverlay");
       if (overlay) overlay.classList.remove("is-open");
       document.body.classList.remove("nodi-open");
-      const floatBtn = document.getElementById("nodiFloatingBtn");
-      if (floatBtn) floatBtn.style.display = "flex";
+      document.querySelectorAll("#nodiBtn, .help-bubble, #nodiFloatingBtn").forEach(b => b.style.display = "flex");
     },
 
     toggle() {

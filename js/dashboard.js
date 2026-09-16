@@ -431,21 +431,41 @@ window.TasklyDashboard = (function () {
     });
 
     const renameBtn = $("#renameRoadmapOption");
-    renameBtn && renameBtn.addEventListener("click", async () => {
+    const customRenameInput = $("#customRenameInput");
+    const customRenameSaveBtn = $("#customRenameSaveBtn");
+
+    renameBtn && renameBtn.addEventListener("click", () => {
       if (!currentActiveRoadmap) return;
-      const currentTitle = currentActiveRoadmap.title || currentActiveRoadmap.goal_text || "";
-      const newTitle = window.prompt("Rename roadmap:", currentTitle);
-      if (newTitle && newTitle.trim()) {
-        closeModal("roadmapOptionsOverlay");
-        try {
-          await window.TasklyAPI.updateRoadmap(currentActiveRoadmap.id, { title: newTitle.trim() });
-          showToast("Roadmap renamed.", "success");
-          await fetchUserRoadmaps();
-        } catch (err) {
-          showToast(err.message || "Failed to rename roadmap", "error");
-        }
-      }
+      closeModal("roadmapOptionsOverlay");
+      if (customRenameInput) customRenameInput.value = currentActiveRoadmap.title || currentActiveRoadmap.goal_text || "";
+      openModal("renameRoadmapModal");
+      setTimeout(() => customRenameInput && customRenameInput.focus(), 50);
     });
+
+    const submitCustomRename = async () => {
+      if (!currentActiveRoadmap || !customRenameInput) return;
+      const newTitle = customRenameInput.value.trim();
+      if (!newTitle) return;
+
+      closeModal("renameRoadmapModal");
+      try {
+        await window.TasklyAPI.updateRoadmap(currentActiveRoadmap.id, { title: newTitle });
+        showToast("Roadmap renamed.", "success");
+        await fetchUserRoadmaps();
+      } catch (err) {
+        showToast(err.message || "Failed to rename roadmap", "error");
+      }
+    };
+
+    if (customRenameSaveBtn) customRenameSaveBtn.onclick = submitCustomRename;
+    if (customRenameInput) {
+      customRenameInput.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitCustomRename();
+        }
+      };
+    }
 
     const regenBtn = $("#regenerateRoadmapOption");
     regenBtn && regenBtn.addEventListener("click", async () => {
@@ -576,16 +596,16 @@ window.TasklyDashboard = (function () {
       const text = (input.value || "").trim();
       if (!text) return;
 
-      btn.disabled = true;
-      try {
-        const res = await window.TasklyAPI.createRoadmap({ goal_text: text });
-        const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
-        if (!newId) throw new Error("Could not retrieve roadmap ID from server");
+      input.value = "";
+      updateCharCount();
 
-        window.location.href = `roadmap.html?id=${encodeURIComponent(newId)}`;
-      } catch (err) {
-        showToast(err.message || "Failed to create roadmap", "error");
-        btn.disabled = false;
+      // Connect hero prompt directly to NODi bot
+      if (window.NodiAI && typeof window.NodiAI.open === "function") {
+        window.NodiAI.open();
+        window.NodiAI.sendMessage(text);
+      } else {
+        const overlay = document.getElementById("nodiOverlay");
+        if (overlay) overlay.classList.add("is-open");
       }
     }
 

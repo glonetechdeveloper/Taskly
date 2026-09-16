@@ -278,11 +278,13 @@ window.TasklyRoadmap = (function () {
 
   function computeProgress() {
     if (!roadmap) return 0;
-    if (typeof roadmap.progress_percentage === "number") {
-      return Math.round(roadmap.progress_percentage);
-    }
     const nodes = Array.isArray(roadmap.nodes) ? roadmap.nodes : [];
-    if (nodes.length === 0) return 0;
+    if (nodes.length === 0) {
+      if (typeof roadmap.progress_percentage === "number") {
+        return Math.round(roadmap.progress_percentage);
+      }
+      return 0;
+    }
     const completed = nodes.filter(n => n.completed).length;
     return Math.round((completed / nodes.length) * 100);
   }
@@ -335,7 +337,7 @@ window.TasklyRoadmap = (function () {
 
   function startPolling() {
     stopPolling();
-    pollIntervalId = setInterval(async () => {
+    const pollFn = async () => {
       try {
         const statusData = await window.TasklyAPI.getGenerationStatus(roadmapId);
         const currentStatus = (statusData && (statusData.status || (statusData.roadmap && statusData.roadmap.status) || "")).toLowerCase();
@@ -358,7 +360,9 @@ window.TasklyRoadmap = (function () {
       } catch (e) {
         console.warn("Polling generation status error:", e);
       }
-    }, 2500);
+    };
+    pollFn();
+    pollIntervalId = setInterval(pollFn, 1000);
   }
 
   function stopPolling() {
@@ -763,11 +767,51 @@ window.TasklyRoadmap = (function () {
 
   function wireNodeCards() {
     $all(".node-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const nodeId = item.dataset.nodeId;
-        const node = findNodeById(nodeId);
-        if (!node) return;
+      const nodeId = item.dataset.nodeId;
+      const node = findNodeById(nodeId);
+      if (!node) return;
 
+      const circle = item.querySelector(".node-icon-circle");
+      const card = item.querySelector(".node-card");
+
+      // Clicking circle icon directly toggles complete for available tasks
+      if (circle) {
+        circle.style.cursor = "pointer";
+        circle.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const nodeMap = getNodeMap();
+          const state = getNodeState(node, nodeMap);
+
+          if (state === "locked") {
+            const depNames = getDependencyNames(node, nodeMap);
+            const reqText = depNames.length ? `Complete "${depNames.join(', ')}" first.` : "Finish prerequisite tasks first to unlock this milestone.";
+            showToast(reqText, "error");
+            return;
+          }
+
+          const isCompleted = Boolean(node.completed);
+          node.completed = !isCompleted;
+          render();
+
+          try {
+            if (isCompleted) {
+              await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
+            } else {
+              await window.TasklyAPI.completeNode(roadmapId, node.id);
+              showToast("Nice work! Task complete.", "success");
+            }
+            if (window.StreakManager && typeof window.StreakManager.loadStreak === "function") {
+              window.StreakManager.loadStreak();
+            }
+          } catch (err) {
+            node.completed = isCompleted;
+            render();
+            showToast(err.message || "Failed to update task status", "error");
+          }
+        });
+      }
+
+      const openDetailHandler = (e) => {
         const type = (roadmap && roadmap.type === "flat") ? "flat" : "sequential";
 
         if (type !== "flat") {
@@ -783,7 +827,13 @@ window.TasklyRoadmap = (function () {
         }
 
         openNodeDetail(nodeId);
-      });
+      };
+
+      if (card) {
+        card.addEventListener("click", openDetailHandler);
+      } else {
+        item.addEventListener("click", openDetailHandler);
+      }
     });
   }
 
@@ -1004,24 +1054,42 @@ window.TasklyRoadmap = (function () {
     if (menuBtn) menuBtn.addEventListener("click", () => openModal("roadmapMenuOverlay"));
 
     const renameBtn = $("#renameRoadmapBtn");
-    renameBtn && renameBtn.addEventListener("click", async () => {
+    const customRenameInput = $("#customRenameInput");
+    const customRenameSaveBtn = $("#customRenameSaveBtn");
+
+    renameBtn && renameBtn.addEventListener("click", () => {
+      closeModal("roadmapMenuOverlay");
       const current = (roadmap && (roadmap.title || roadmap.goal_text)) || "";
-      const next = window.prompt("Rename roadmap", current);
-      if (next && next.trim()) {
-        const trimmed = next.trim();
-        closeModal("roadmapMenuOverlay");
-        try {
-          await window.TasklyAPI.updateRoadmap(roadmapId, { title: trimmed });
-          if (roadmap) roadmap.title = trimmed;
-          renderHeader();
-          showToast("Roadmap renamed.", "success");
-        } catch (err) {
-          showToast(err.message || "Could not rename roadmap", "error");
-        }
-      } else {
-        closeModal("roadmapMenuOverlay");
-      }
+      if (customRenameInput) customRenameInput.value = current;
+      openModal("renameRoadmapModal");
+      setTimeout(() => customRenameInput && customRenameInput.focus(), 50);
     });
+
+    const submitCustomRename = async () => {
+      if (!customRenameInput || !roadmapId) return;
+      const trimmed = customRenameInput.value.trim();
+      if (!trimmed) return;
+
+      closeModal("renameRoadmapModal");
+      try {
+        await window.TasklyAPI.updateRoadmap(roadmapId, { title: trimmed });
+        if (roadmap) roadmap.title = trimmed;
+        renderHeader();
+        showToast("Roadmap renamed.", "success");
+      } catch (err) {
+        showToast(err.message || "Could not rename roadmap", "error");
+      }
+    };
+
+    if (customRenameSaveBtn) customRenameSaveBtn.onclick = submitCustomRename;
+    if (customRenameInput) {
+      customRenameInput.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitCustomRename();
+        }
+      };
+    }
 
     const regenBtn = $("#regenerateRoadmapBtn");
     if (regenBtn) {

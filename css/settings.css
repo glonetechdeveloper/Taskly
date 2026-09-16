@@ -573,54 +573,7 @@ svg { display: block; }
 .modal-close:hover { background: var(--color-cream-soft); color: var(--color-ink); }
 .modal-close svg { width: 18px; height: 18px; }
 
-/* --- Streak modal --- */
-#streakOverlay {
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 68px var(--sp-4) var(--sp-4);
-  background: transparent !important;
-  pointer-events: none !important;
-}
-#streakOverlay .modal-streak {
-  width: 340px;
-  max-width: calc(100vw - 32px);
-  margin-top: 0;
-  text-align: center;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-card);
-  transform: translateY(-10px) scale(0.98);
-  transform-origin: top right;
-}
-#streakOverlay.is-open .modal-streak {
-  transform: translateY(0) scale(1);
-}
-.modal-streak { text-align: center; }
-.streak-flame-big {
-  width: 60px; height: 60px;
-  margin: 0 auto var(--sp-2);
-  border-radius: 50%;
-  background: var(--color-orange-tint);
-  color: var(--color-orange);
-  display: flex; align-items: center; justify-content: center;
-}
-.streak-flame-big svg { width: 30px; height: 30px; }
-.streak-count-big { font-family: var(--font-display); font-size: 30px; font-weight: 700; }
-.streak-sub { font-size: 13px; color: var(--color-ink-soft); margin: 2px 0 var(--sp-4); }
-
-.streak-countdown-box {
-  background: var(--color-cream-soft);
-  border-radius: var(--radius-md);
-  padding: var(--sp-3);
-  margin-bottom: var(--sp-2);
-}
-.streak-countdown-label { font-size: 11.5px; color: var(--color-ink-soft); margin-bottom: 4px; }
-.streak-countdown {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  font-variant-numeric: tabular-nums;
-}
+/* --- Streak modal (managed by css/streak.css) --- */
 
 /* --- Notifications Dropdown --- */
 .dropdown-panel {

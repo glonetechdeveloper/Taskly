@@ -433,21 +433,42 @@ window.TasklyManager = (function () {
     });
 
     const renameBtn = $("#renameRoadmapOption");
-    renameBtn && renameBtn.addEventListener("click", async () => {
+    const customRenameInput = $("#customRenameInput");
+    const customRenameSaveBtn = $("#customRenameSaveBtn");
+
+    renameBtn && renameBtn.addEventListener("click", () => {
       if (!activeRoadmap) return;
-      const currentTitle = activeRoadmap.title || activeRoadmap.goal_text || "";
-      const newTitle = window.prompt("Rename roadmap:", currentTitle);
-      if (newTitle && newTitle.trim()) {
-        closeModal("roadmapOptionsOverlay");
+      closeModal("roadmapOptionsOverlay");
+      if (customRenameInput) customRenameInput.value = activeRoadmap.title || activeRoadmap.goal_text || "";
+      openModal("renameRoadmapModal");
+      setTimeout(() => customRenameInput && customRenameInput.focus(), 50);
+    });
+
+    const submitCustomRename = async () => {
+      if (!activeRoadmap || !customRenameInput) return;
+      const newTitle = customRenameInput.value.trim();
+      if (newTitle) {
+        activeRoadmap.title = newTitle;
+        closeModal("renameRoadmapModal");
+        renderRoadmapList();
+        showToast("Roadmap renamed.", "success");
         try {
-          await window.TasklyAPI.updateRoadmap(activeRoadmap.id, { title: newTitle.trim() });
-          showToast("Roadmap renamed.", "success");
-          await fetchUserRoadmaps();
+          await window.TasklyAPI.updateRoadmap(activeRoadmap.id, { title: newTitle });
         } catch (err) {
           showToast(err.message || "Failed to rename roadmap", "error");
         }
       }
-    });
+    };
+
+    if (customRenameSaveBtn) customRenameSaveBtn.onclick = submitCustomRename;
+    if (customRenameInput) {
+      customRenameInput.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitCustomRename();
+        }
+      };
+    }
 
     const regenBtn = $("#regenerateRoadmapOption");
     regenBtn && regenBtn.addEventListener("click", async () => {
