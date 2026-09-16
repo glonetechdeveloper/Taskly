@@ -678,22 +678,21 @@ window.TasklyRoadmap = (function () {
 
       const toggleDone = async () => {
         const isDone = Boolean(node.completed);
+        node.completed = !isDone;
+        render(); // Immediate instant re-render!
+
         try {
           if (isDone) {
             await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
-            node.completed = false;
           } else {
             await window.TasklyAPI.completeNode(roadmapId, node.id);
-            node.completed = true;
           }
-          // Refresh
-          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
-          if (freshData) roadmap = (freshData.roadmap || freshData.data) || freshData;
           if (window.StreakManager && typeof window.StreakManager.loadStreak === "function") {
             window.StreakManager.loadStreak();
           }
-          render();
         } catch (err) {
+          node.completed = isDone;
+          render();
           showToast(err.message || "Failed to update status", "error");
         }
       };
@@ -818,35 +817,23 @@ window.TasklyRoadmap = (function () {
       if (!node || !roadmapId) return;
 
       const isCompleted = Boolean(node.completed);
-      completeBtn.disabled = true;
+      node.completed = !isCompleted;
+      closeModal("nodeDetailOverlay");
+      render();
 
       try {
         if (isCompleted) {
           await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
-          node.completed = false;
           showToast("Marked incomplete.");
         } else {
           await window.TasklyAPI.completeNode(roadmapId, node.id);
-          node.completed = true;
           showToast("Nice work! Task complete.", "success");
         }
-
-        closeModal("nodeDetailOverlay");
-
-        // Sync with live backend progress
-        try {
-          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
-          if (freshData) roadmap = (freshData.roadmap || freshData.data) || freshData;
-          await loadStreak();
-          await loadNotifications();
-        } catch (e) {}
-
-        render();
+        await loadStreak();
       } catch (err) {
-        console.error("Failed to toggle completion:", err);
+        node.completed = isCompleted;
+        render();
         showToast(err.message || "Failed to update task status", "error");
-      } finally {
-        completeBtn.disabled = false;
       }
     });
 

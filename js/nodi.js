@@ -64,6 +64,39 @@
     return formatted || html;
   }
 
+  /* ---------------- Human Text Sanitizer ---------------- */
+  function formatHumanText(text) {
+    if (!text) return "";
+    let clean = String(text);
+
+    // Convert raw markdown tables with IDs/UUIDs into clean conversational English bullet points
+    if (clean.includes("|") && (clean.toLowerCase().includes("id") || /[0-9a-f]{8}-[0-9a-f]{4}/i.test(clean))) {
+      const lines = clean.split("\n");
+      const items = [];
+      lines.forEach(line => {
+        const parts = line.split("|").map(p => p.trim()).filter(Boolean);
+        if (parts.length >= 2) {
+          if (parts[0].toLowerCase().includes("id") || parts[0].includes("---")) return;
+          const title = parts.find(p => !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(p) && p !== "sequential" && p !== "flat" && p !== "done" && p !== "pending" && !/^\d+%$/.test(p));
+          const pct = parts.find(p => /^\d+%$/.test(p)) || "0%";
+          if (title) {
+            items.push(`• **${title}** (${pct} complete)`);
+          }
+        }
+      });
+      if (items.length > 0) {
+        return "Here's a list of your active roadmaps:\n\n" + items.join("\n");
+      }
+    }
+
+    // Strip raw UUIDs and backend JSON formatting
+    clean = clean.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "");
+    clean = clean.replace(/\|---.*---|/g, "");
+    clean = clean.replace(/\|\s*(sequential|flat)\s*\|\s*(done|pending)\s*\|/gi, "");
+
+    return clean;
+  }
+
   /* ---------------- Nodi AI Controller ---------------- */
   const NodiAI = {
     history: [],
@@ -71,6 +104,10 @@
     isSending: false,
 
     init() {
+      const path = window.location.pathname.toLowerCase();
+      if (path.endsWith("login.html") || path.endsWith("signup.html")) {
+        return; // Exclude chatbot on login and signup pages
+      }
       this.ensureModalDOM();
       this.loadHistory();
       this.bindEvents();
@@ -127,6 +164,22 @@
           </div>
         </div>
       `;
+
+      // Inject floating toggle button on bottom-right of every page
+      let floatBtn = document.getElementById("nodiFloatingBtn");
+      if (!floatBtn) {
+        floatBtn = document.createElement("button");
+        floatBtn.id = "nodiFloatingBtn";
+        floatBtn.className = "nodi-floating-trigger open-nodi-modal";
+        floatBtn.type = "button";
+        floatBtn.setAttribute("aria-label", "Open Nodi AI Chat");
+        floatBtn.setAttribute("title", "Ask Nodi AI");
+        floatBtn.innerHTML = `
+          <img src="assets/Nodi.png" alt="Nodi AI" class="nodi-float-avatar" onerror="this.src='assets/tasklylogo.png'">
+          <span class="nodi-float-label">Ask Nodi</span>
+        `;
+        document.body.appendChild(floatBtn);
+      }
     },
 
     loadHistory() {
@@ -172,11 +225,12 @@
       if (overlay) {
         overlay.classList.add("is-open");
         document.body.classList.add("nodi-open");
-        document.body.style.overflow = "hidden";
+        const floatBtn = document.getElementById("nodiFloatingBtn");
+        if (floatBtn) floatBtn.style.display = "none";
         setTimeout(() => {
           const input = document.getElementById("nodiInput");
           if (input) input.focus();
-        }, 120);
+        }, 50);
       }
     },
 
@@ -185,7 +239,8 @@
       const overlay = document.getElementById("nodiOverlay");
       if (overlay) overlay.classList.remove("is-open");
       document.body.classList.remove("nodi-open");
-      document.body.style.overflow = "";
+      const floatBtn = document.getElementById("nodiFloatingBtn");
+      if (floatBtn) floatBtn.style.display = "flex";
     },
 
     toggle() {
@@ -211,8 +266,6 @@
     formatCleanActionResult(act) {
       if (!act) return "Action completed";
       const result = typeof act.result === "string" ? act.result : (typeof act === "string" ? act : "");
-      
-      // Clean raw IDs / technical statuses e.g. "Created roadmap 'Python' (id: ..., status: pending)"
       let clean = result.replace(/\(id:[^)]+\)/gi, "").replace(/status:\s*\w+/gi, "").trim();
       clean = clean.replace(/,\s*\)/g, ")").replace(/\s{2,}/g, " ").trim();
       
@@ -234,9 +287,9 @@
       if (msg.sender === "user") {
         bubble.textContent = msg.text;
       } else {
-        bubble.innerHTML = parseMarkdown(msg.text);
+        const humanified = formatHumanText(msg.text);
+        bubble.innerHTML = parseMarkdown(humanified);
 
-        // Render Clean Action Badges only if helpful and non-redundant
         if (Array.isArray(msg.actions) && msg.actions.length > 0) {
           msg.actions.forEach(act => {
             const cleanLabel = this.formatCleanActionResult(act);
@@ -303,11 +356,9 @@
 
         if (window.TasklyAPI && typeof window.TasklyAPI.chat === "function") {
           const res = await window.TasklyAPI.chat(text);
-          reply = res.reply || res.message || "I didn't quite catch that.";
+          reply = res.reply || res.message || "I processed your request.";
           actions = res.actions_taken || res.actions || [];
         } else {
-          // Fallback simulation
-          await new Promise(r => setTimeout(r, 700));
           reply = `I processed your request for: "${text}". You can ask me to create roadmaps or check your streak anytime!`;
         }
 
@@ -315,7 +366,7 @@
 
         const nodiMsg = {
           sender: "nodi",
-          text: reply,
+          text: formatHumanText(reply),
           actions: actions,
           timestamp: new Date().toISOString()
         };
@@ -323,7 +374,6 @@
         this.appendMessageDOM(nodiMsg);
         this.saveHistory();
 
-        // Dispatch events if actions were taken
         if (Array.isArray(actions) && actions.length > 0) {
           actions.forEach(a => {
             const tool = String(a.tool || "");
@@ -383,11 +433,11 @@
         });
       }
 
-      // Close on clicking outside the floating chat window
+      // Close on clicking outside floating chat modal
       document.addEventListener("click", (e) => {
         if (!this.isOpen) return;
         const modal = document.querySelector(".modal-nodi");
-        const isTrigger = e.target.closest(".open-nodi-modal, #sidebarChatBtn, #askNodiSidebar, #nodiBtn");
+        const isTrigger = e.target.closest(".open-nodi-modal, #sidebarNewChatBtn, .sidebar-btn-new-chat, #sidebarChatBtn, #askNodiSidebar, #nodiBtn, #nodiFloatingBtn");
         if (modal && !modal.contains(e.target) && !isTrigger) {
           this.close();
         }
@@ -401,11 +451,11 @@
       });
 
       // Bind all Nodi opening triggers across the app
-      document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #askNodiSidebar, #nodiBtn").forEach(btn => {
+      document.querySelectorAll(".open-nodi-modal, #sidebarNewChatBtn, .sidebar-btn-new-chat, #sidebarChatBtn, #askNodiSidebar, #nodiBtn, #nodiFloatingBtn").forEach(btn => {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          this.toggle();
+          this.open();
         });
       });
     }

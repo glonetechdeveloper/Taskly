@@ -5,15 +5,65 @@ body.nodi-open {
 }
 
 #nodiOverlay {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  top: auto !important;
+  left: auto !important;
+  width: auto !important;
+  height: auto !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-content: flex-end !important;
+}
+
+/* Floating Launcher Trigger Button on bottom-right of every page */
+.nodi-floating-trigger {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 10000;
-  pointer-events: none;
+  z-index: 9999;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 10px;
+  background: #0D9488;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9999px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.nodi-floating-trigger:hover {
+  background: #0F766E;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 14px 30px -5px rgba(13, 148, 136, 0.55);
+}
+.nodi-floating-trigger:active {
+  transform: scale(0.96);
+}
+.nodi-float-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #FFFFFF;
+  border: 1.5px solid #CCFBF1;
+}
+
+[data-theme="dark"] .nodi-floating-trigger {
+  background: #14B8A6;
+  color: #0F172A;
+  box-shadow: 0 10px 25px -5px rgba(20, 184, 166, 0.5);
 }
 
 .modal-nodi {

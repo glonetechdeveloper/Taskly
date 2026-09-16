@@ -841,7 +841,8 @@ svg { display: block; }
   align-items: flex-start;
   justify-content: flex-end;
   padding: 68px var(--sp-4) var(--sp-4);
-  background: rgba(36, 28, 16, .22);
+  background: transparent !important;
+  pointer-events: none !important;
 }
 #streakOverlay .modal-streak {
   width: 340px;
@@ -961,7 +962,8 @@ svg { display: block; }
   align-items: flex-end;
   justify-content: flex-end;
   padding: var(--sp-4);
-  background: rgba(36, 28, 16, .22);
+  background: transparent !important;
+  pointer-events: none !important;
 }
 #nodiOverlay .modal-nodi {
   width: 380px;

@@ -300,6 +300,32 @@
         }
       });
 
+      // Navbar Topbar Profile Avatar click -> Redirect to account.html
+      document.querySelectorAll(".topbar-avatar, #topbarAvatar").forEach((avatar) => {
+        avatar.style.cursor = "pointer";
+        avatar.addEventListener("click", (e) => {
+          e.preventDefault();
+          window.location.href = "account.html";
+        });
+      });
+
+      // Navbar Notifications bell setup (top 5 max, categorized read/unread)
+      const notifBtn = document.getElementById("notifBtn");
+      const notifPanel = document.getElementById("notifPanel");
+      if (notifBtn && notifPanel) {
+        notifBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isOpen = notifPanel.classList.toggle("is-open");
+          if (isOpen) this.renderNavbarNotifications();
+        });
+
+        document.addEventListener("click", (e) => {
+          if (notifPanel.classList.contains("is-open") && !notifPanel.contains(e.target) && !notifBtn.contains(e.target)) {
+            notifPanel.classList.remove("is-open");
+          }
+        });
+      }
+
       // New Chat & Chat with Nodi triggers
       document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #sidebarNewChatBtn, #askNodiSidebar").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -332,6 +358,87 @@
           window.location.href = "login.html";
         });
       });
+    },
+
+    renderNavbarNotifications() {
+      const panel = document.getElementById("notifPanel");
+      const dot = document.getElementById("notifDot");
+      if (!panel) return;
+
+      let notifs = [];
+      try {
+        const raw = localStorage.getItem("taskly_notifications");
+        notifs = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        notifs = [];
+      }
+
+      if (notifs.length === 0) {
+        notifs = [
+          { id: "n1", message: "Welcome to Taskly! Create your first roadmap to get started.", read: false, created_at: new Date().toISOString() },
+          { id: "n2", message: "You're on a 5 day streak. Keep it going today!", read: true, created_at: new Date(Date.now() - 3600000).toISOString() }
+        ];
+        try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+      }
+
+      const unreadList = notifs.filter(n => !n.read);
+      const readList = notifs.filter(n => n.read);
+
+      if (dot) dot.style.display = unreadList.length > 0 ? "block" : "none";
+
+      // Combine: unread on top, then read, max 5 items total
+      const combined = [...unreadList, ...readList].slice(0, 5);
+
+      panel.innerHTML = `
+        <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Notifications</span>
+          ${unreadList.length > 0 ? '<button id="markAllReadNavBtn" type="button" style="background:none; border:none; color:var(--color-teal); font-size:11.5px; font-weight:700; cursor:pointer;">Mark all read</button>' : ''}
+        </div>
+        <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
+          ${combined.length === 0 ? `
+            <div style="padding: 20px 16px; text-align: center; color: #94A3B8; font-size: 13px;">No notifications</div>
+          ` : combined.map(n => `
+            <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" style="padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.05)'}; cursor: pointer; transition: background 0.15s ease;">
+              <div style="display:flex; gap:10px; align-items:flex-start;">
+                <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/></svg>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <p style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${n.message}</p>
+                  <span style="font-size:11px; color:#94A3B8; margin-top:2px; display:block;">${n.read ? 'Read' : '• Unread'}</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="dropdown-footer" style="padding:8px; text-align:center; border-top:1px solid var(--color-border, #f1f5f9);">
+          <a href="notifications.html" class="view-all-btn" style="color:var(--color-teal, #0d9488); font-weight:700; font-size:12.5px; text-decoration:none;">View all notifications</a>
+        </div>
+      `;
+
+      // Mark single item as read on click
+      panel.querySelectorAll(".notif-item").forEach(item => {
+        item.addEventListener("click", () => {
+          const id = item.dataset.notifId;
+          const found = notifs.find(n => n.id === id);
+          if (found) {
+            found.read = true;
+            try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+            this.renderNavbarNotifications();
+          }
+        });
+      });
+
+      // Mark all read button
+      const markBtn = document.getElementById("markAllReadNavBtn");
+      if (markBtn) {
+        markBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          notifs.forEach(n => n.read = true);
+          try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+          this.renderNavbarNotifications();
+        });
+      }
     }
   };
 

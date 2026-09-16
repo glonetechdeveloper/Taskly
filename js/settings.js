@@ -293,22 +293,34 @@ window.TasklySettings = (function () {
     const tzSelect = $("#timezoneSelect");
 
     try {
+      const savedLang = localStorage.getItem("taskly_language") || "en";
+      if (langSelect) langSelect.value = savedLang;
+
       const localPrefs = JSON.parse(localStorage.getItem("taskly_local_settings") || "{}");
       if (soundToggle && typeof localPrefs.sound === "boolean") soundToggle.checked = localPrefs.sound;
-      if (langSelect && localPrefs.language) langSelect.value = localPrefs.language;
       if (tzSelect && localPrefs.timezone) tzSelect.value = localPrefs.timezone;
     } catch (e) {}
 
     const saveLocal = () => {
+      const selectedLang = langSelect ? langSelect.value : "en";
       const prefs = {
         sound: soundToggle ? soundToggle.checked : true,
-        language: langSelect ? langSelect.value : "en",
+        language: selectedLang,
         timezone: tzSelect ? tzSelect.value : "gmt+1"
       };
       try {
+        localStorage.setItem("taskly_language", selectedLang);
         localStorage.setItem("taskly_local_settings", JSON.stringify(prefs));
       } catch (e) {}
-      showToast("Settings saved.", "success");
+
+      const langNames = {
+        "en": "English (US)",
+        "en-gb": "English (UK)",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch"
+      };
+      showToast(`Language updated to ${langNames[selectedLang] || selectedLang}`, "success");
     };
 
     soundToggle && soundToggle.addEventListener("change", saveLocal);

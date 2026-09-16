@@ -192,41 +192,99 @@ window.TasklyNotifications = (function () {
 
     if (emptyState) emptyState.classList.remove("is-visible");
 
-    let html = '<div class="notif-group">';
-    html += '<p class="notif-group-label">Recent Notifications</p>';
-    html += '<div class="notif-page-list">';
+    const unread = notifs.filter(n => !n.read);
+    const read = notifs.filter(n => n.read);
 
-    notifs.forEach((n, i) => {
-      const isMilestone = n.type === "milestone";
-      const icon = isMilestone ? "ic-flame" : "ic-check";
-      const variant = isMilestone ? "is-teal" : "";
-      const timeStr = n.created_at ? new Date(n.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Recently";
+    let html = "";
 
-      html += `<div class="notif-page-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="animation-delay:${i * 0.04}s; cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
-        <div class="notif-page-icon ${variant}">
-          <svg viewBox="0 0 24 24" fill="${isMilestone ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <use href="#${icon}"></use>
-          </svg>
-        </div>
-        <div class="notif-page-body">
-          <p class="notif-page-text">${escapeHtml(n.message || 'Notification update')}</p>
-          <p class="notif-page-time">${timeStr}</p>
-        </div>
-      </div>`;
-    });
+    // 1. Unread section
+    if (unread.length > 0) {
+      html += '<div class="notif-group" style="margin-bottom: 24px;">';
+      html += `<p class="notif-group-label" style="font-weight:700; color:var(--color-teal); display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <span>Unread (${unread.length})</span>
+        <button id="markAllReadPageBtn" type="button" style="background:none; border:none; color:var(--color-teal); font-weight:700; font-size:12.5px; cursor:pointer;">Mark all as read</button>
+      </p>`;
+      html += '<div class="notif-page-list">';
+      unread.forEach((n, i) => {
+        const isMilestone = n.type === "milestone";
+        const icon = isMilestone ? "ic-flame" : "ic-check";
+        const variant = isMilestone ? "is-teal" : "";
+        const timeStr = n.created_at ? new Date(n.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Just now";
 
-    html += '</div></div>';
+        html += `<div class="notif-page-item is-unread" data-id="${n.id}" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="background: rgba(13, 148, 136, 0.05); border-left: 4px solid var(--color-teal); margin-bottom: 8px; border-radius: 12px; padding: 12px 16px; cursor: pointer;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div class="notif-page-icon ${variant}">
+              <svg viewBox="0 0 24 24" fill="${isMilestone ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8">
+                <use href="#${icon}"></use>
+              </svg>
+            </div>
+            <div class="notif-page-body" style="flex:1;">
+              <p class="notif-page-text" style="font-weight:700; margin:0 0 4px 0;">${escapeHtml(n.message || 'Notification update')}</p>
+              <p class="notif-page-time" style="font-size:11.5px; color:#94A3B8; margin:0;">${timeStr}</p>
+            </div>
+          </div>
+        </div>`;
+      });
+      html += '</div></div>';
+    }
+
+    // 2. Read section
+    if (read.length > 0) {
+      html += '<div class="notif-group">';
+      html += `<p class="notif-group-label" style="font-weight:700; color:var(--color-ink-soft); margin-bottom:12px;">Read (${read.length})</p>`;
+      html += '<div class="notif-page-list">';
+      read.forEach((n, i) => {
+        const isMilestone = n.type === "milestone";
+        const icon = isMilestone ? "ic-flame" : "ic-check";
+        const timeStr = n.created_at ? new Date(n.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Previously";
+
+        html += `<div class="notif-page-item is-read" data-id="${n.id}" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="opacity: 0.75; margin-bottom: 8px; border-radius: 12px; padding: 12px 16px; cursor: pointer;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div class="notif-page-icon" style="background:#F1F5F9; color:#94A3B8;">
+              <svg viewBox="0 0 24 24" fill="${isMilestone ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8">
+                <use href="#${icon}"></use>
+              </svg>
+            </div>
+            <div class="notif-page-body" style="flex:1;">
+              <p class="notif-page-text" style="font-weight:500; margin:0 0 4px 0;">${escapeHtml(n.message || 'Notification update')}</p>
+              <p class="notif-page-time" style="font-size:11.5px; color:#94A3B8; margin:0;">${timeStr}</p>
+            </div>
+          </div>
+        </div>`;
+      });
+      html += '</div></div>';
+    }
+
     container.innerHTML = html;
 
-    // Wire clicks on items with roadmap_id
-    $all(".notif-page-item[data-roadmap-id]").forEach(item => {
-      const rmId = item.dataset.roadmapId;
-      if (rmId) {
-        item.addEventListener("click", () => {
+    // Wire clicks on items
+    $all(".notif-page-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const id = item.dataset.id;
+        const rmId = item.dataset.roadmapId;
+        const target = notifs.find(n => n.id === id);
+        if (target) {
+          target.read = true;
+          saveStoredNotifications(notifs);
+        }
+        if (rmId) {
           window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
-        });
-      }
+        } else {
+          renderNotificationsPage();
+        }
+      });
     });
+
+    const markAllBtn = $("#markAllReadPageBtn");
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        notifs.forEach(n => n.read = true);
+        saveStoredNotifications(notifs);
+        renderNotificationsPage();
+        showToast("All notifications marked as read.", "success");
+      });
+    }
   }
 
   function wireClearAllBtn() {
@@ -234,9 +292,11 @@ window.TasklyNotifications = (function () {
     if (!btn) return;
 
     btn.addEventListener("click", () => {
-      localStorage.removeItem("taskly_notifications");
+      const notifs = getStoredNotifications();
+      notifs.forEach(n => n.read = true);
+      saveStoredNotifications(notifs);
       renderNotificationsPage();
-      showToast("All notifications cleared.", "success");
+      showToast("All notifications marked as read.", "success");
     });
   }
 
