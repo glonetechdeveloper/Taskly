@@ -240,57 +240,6 @@ window.TasklyNotifications = (function () {
     });
   }
 
-  /* ---------- Ask Nodi ---------- */
-
-  const nodiReplies = [
-    "Notifications keep you updated whenever a roadmap finishes generation or reaches a milestone threshold.",
-    "You can clear notifications anytime using the button in the top right.",
-    "Complete tasks to build your streak and unlock new milestones!"
-  ];
-
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
-
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input && input.focus(), 250);
-    });
-
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function sendMessage(text) {
-      const msg = (text || (input ? input.value : "")).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      if (input) input.value = "";
-
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
-
-      setTimeout(() => {
-        typing.remove();
-        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 900);
-    }
-
-    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
-    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
-  }
-
   /* ---------- Sidebar Logout ---------- */
 
   function wireSidebarLogout() {
@@ -318,7 +267,6 @@ window.TasklyNotifications = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifDropdown();
-      wireNodiModal();
       wireSidebarLogout();
       wireClearAllBtn();
 

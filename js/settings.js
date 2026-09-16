@@ -318,53 +318,31 @@ window.TasklySettings = (function () {
 
   /* ---------- Ask Nodi ---------- */
 
-  const nodiReplies = [
-    "You can manage your email alerts, milestone notifications, and timezone preferences right here.",
-    "Looking to change how often you receive updates? Toggle Email Reminders or Milestone Notifications above.",
-    "Settings are automatically synced across your devices when you're signed in."
-  ];
+  /* ---------- Appearance / Theme Preference ---------- */
 
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
+  function initThemePreference() {
+    const darkToggle = $("#darkModeToggle");
+    const currentTheme = document.documentElement.getAttribute("data-theme") || localStorage.getItem("taskly_theme") || "light";
+    
+    if (darkToggle) {
+      darkToggle.checked = currentTheme === "dark";
+      darkToggle.addEventListener("change", () => {
+        const newTheme = darkToggle.checked ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        try {
+          localStorage.setItem("taskly_theme", newTheme);
+        } catch (e) {}
+        if (window.TasklyAPI) {
+          window.TasklyAPI.emit("taskly:theme-changed", { theme: newTheme });
+        }
+      });
+    }
 
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input && input.focus(), 250);
+    window.addEventListener("taskly:theme-changed", (e) => {
+      const t = (e.detail && e.detail.theme) || localStorage.getItem("taskly_theme") || "light";
+      if (darkToggle) darkToggle.checked = t === "dark";
+      document.documentElement.setAttribute("data-theme", t);
     });
-
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function sendMessage(text) {
-      const msg = (text || (input ? input.value : "")).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      if (input) input.value = "";
-
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
-
-      setTimeout(() => {
-        typing.remove();
-        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 900);
-    }
-
-    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
-    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
   /* ---------- Sidebar Logout ---------- */
@@ -394,8 +372,8 @@ window.TasklySettings = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifDropdown();
-      wireNodiModal();
       wireSidebarLogout();
+      initThemePreference();
       initLocalPreferences();
 
       await Promise.all([

@@ -13,6 +13,12 @@
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/streak.css">
   <link rel="stylesheet" href="css/nodi.css">
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("taskly_theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    } catch (e) {}
+  </script>
 </head>
 <body>
 

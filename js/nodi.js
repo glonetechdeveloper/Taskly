@@ -68,6 +68,7 @@
   const NodiAI = {
     history: [],
     isOpen: false,
+    isSending: false,
 
     init() {
       this.ensureModalDOM();
@@ -170,6 +171,8 @@
       const overlay = document.getElementById("nodiOverlay");
       if (overlay) {
         overlay.classList.add("is-open");
+        document.body.classList.add("nodi-open");
+        document.body.style.overflow = "hidden";
         setTimeout(() => {
           const input = document.getElementById("nodiInput");
           if (input) input.focus();
@@ -181,6 +184,8 @@
       this.isOpen = false;
       const overlay = document.getElementById("nodiOverlay");
       if (overlay) overlay.classList.remove("is-open");
+      document.body.classList.remove("nodi-open");
+      document.body.style.overflow = "";
     },
 
     toggle() {
@@ -203,6 +208,22 @@
       body.scrollTop = body.scrollHeight;
     },
 
+    formatCleanActionResult(act) {
+      if (!act) return "Action completed";
+      const result = typeof act.result === "string" ? act.result : (typeof act === "string" ? act : "");
+      
+      // Clean raw IDs / technical statuses e.g. "Created roadmap 'Python' (id: ..., status: pending)"
+      let clean = result.replace(/\(id:[^)]+\)/gi, "").replace(/status:\s*\w+/gi, "").trim();
+      clean = clean.replace(/,\s*\)/g, ")").replace(/\s{2,}/g, " ").trim();
+      
+      if (clean) return clean;
+      if (act.tool) {
+        const tool = String(act.tool).replace(/_/g, " ");
+        return tool.charAt(0).toUpperCase() + tool.slice(1);
+      }
+      return "Action completed";
+    },
+
     appendMessageDOM(msg) {
       const body = document.getElementById("nodiBody");
       if (!body) return;
@@ -215,18 +236,21 @@
       } else {
         bubble.innerHTML = parseMarkdown(msg.text);
 
-        // Render Action Badges if actions were executed
+        // Render Clean Action Badges only if helpful and non-redundant
         if (Array.isArray(msg.actions) && msg.actions.length > 0) {
           msg.actions.forEach(act => {
-            const badge = document.createElement("div");
-            badge.className = "nodi-action-badge";
-            badge.innerHTML = `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              <span>${typeof act.result === "string" ? act.result : (act.tool ? `Executed ${act.tool}` : "Action completed")}</span>
-            `;
-            bubble.appendChild(badge);
+            const cleanLabel = this.formatCleanActionResult(act);
+            if (cleanLabel) {
+              const badge = document.createElement("div");
+              badge.className = "nodi-action-badge";
+              badge.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>${cleanLabel}</span>
+              `;
+              bubble.appendChild(badge);
+            }
           });
         }
       }
@@ -253,11 +277,14 @@
     },
 
     async sendMessage(customText) {
+      if (this.isSending) return; // Prevent double sending
+
       const input = document.getElementById("nodiInput");
       const text = (typeof customText === "string" ? customText : (input ? input.value : "")).trim();
       if (!text) return;
 
-      if (input && !customText) input.value = "";
+      this.isSending = true;
+      if (input) input.value = "";
 
       const userMsg = {
         sender: "user",
@@ -313,14 +340,17 @@
         }
       } catch (err) {
         this.hideTyping();
+        const friendlyMsg = window.TasklyAPI && window.TasklyAPI.sanitizeError ? window.TasklyAPI.sanitizeError(err) : "Failed to reach Nodi AI. Please try again in a moment.";
         const errorMsg = {
           sender: "nodi",
-          text: `⚠️ *Error:* ${err.message || "Failed to reach Nodi AI. Please try again."}`,
+          text: `⚠️ ${friendlyMsg}`,
           timestamp: new Date().toISOString()
         };
         this.history.push(errorMsg);
         this.appendMessageDOM(errorMsg);
         this.saveHistory();
+      } finally {
+        this.isSending = false;
       }
     },
 

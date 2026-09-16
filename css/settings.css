@@ -77,18 +77,46 @@
 }
 
 [data-theme="dark"] .settings-card,
-[data-theme="dark"] .settings-row,
 [data-theme="dark"] .modal {
   background: #131B2A;
   border-color: #1E293B;
   color: #F1F5F9;
 }
 
-[data-theme="dark"] .settings-input,
-[data-theme="dark"] .settings-select {
-  background: #1A2538;
-  border-color: #1E293B;
+[data-theme="dark"] .settings-card-header {
+  border-bottom-color: #1E293B;
+}
+
+[data-theme="dark"] .setting-row {
+  border-bottom-color: #1E293B;
+}
+
+[data-theme="dark"] .setting-title {
   color: #F1F5F9;
+}
+
+[data-theme="dark"] .setting-desc {
+  color: #94A3B8;
+}
+
+[data-theme="dark"] .setting-select,
+[data-theme="dark"] .settings-input {
+  background: #1A2538;
+  border-color: #334155;
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .setting-select:focus {
+  border-color: #2DD4BF;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+}
+
+[data-theme="dark"] .switch-slider {
+  background: #334155;
+}
+
+[data-theme="dark"] .switch-slider:before {
+  background: #F8FAFC;
 }
 
 [data-theme="dark"] .icon-btn-ghost {

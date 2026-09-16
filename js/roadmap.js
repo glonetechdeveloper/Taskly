@@ -440,13 +440,15 @@ window.TasklyRoadmap = (function () {
     const addBtn = $("#addTaskBtn");
     if (addBtn) addBtn.style.display = "none";
 
+    const cleanMsg = window.TasklyAPI ? window.TasklyAPI.sanitizeError(errMsg) : "We were unable to complete generation for this roadmap. Please try again.";
+
     body.innerHTML = `
-      <div class="empty-roadmaps is-visible" style="border-color:var(--color-error-tint);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-error);">
+      <div class="empty-roadmaps is-visible" style="border-color:var(--color-error-tint); padding:var(--sp-6) var(--sp-4);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-error); width:36px; height:36px; margin:0 auto var(--sp-2);">
           <use href="#ic-warn"/>
         </svg>
-        <strong style="color:var(--color-error);">Roadmap generation failed</strong>
-        <p style="margin-top:6px; margin-bottom:16px;">${escapeHtml(errMsg || "We were unable to complete generation for this roadmap.")}</p>
+        <strong style="color:var(--color-error); font-size:16px;">Roadmap generation failed</strong>
+        <p style="margin-top:6px; margin-bottom:18px; line-height:1.5; color:var(--color-ink-soft); max-width:440px; margin-left:auto; margin-right:auto;">${escapeHtml(cleanMsg)}</p>
         <div style="display:flex; gap:12px; justify-content:center;">
           <button class="btn-solid" id="retryRegenBtn" type="button" style="display:inline-flex;">Retry Generation</button>
           <a href="roadmapmanager.html" class="btn-ghost" style="display:inline-flex; text-decoration:none;">Back to Manager</a>
@@ -457,12 +459,14 @@ window.TasklyRoadmap = (function () {
     const retryBtn = $("#retryRegenBtn");
     if (retryBtn) {
       retryBtn.addEventListener("click", async () => {
+        retryBtn.disabled = true;
+        renderWaitingState("generating_tasks");
         try {
           await window.TasklyAPI.regenerateRoadmap(roadmapId);
-          showToast("Retrying roadmap generation…", "success");
-          await loadRoadmap(roadmapId);
+          startPolling();
         } catch (err) {
-          showToast(err.message || "Failed to regenerate", "error");
+          console.warn("Regenerate request failed:", err);
+          renderFailedState(err);
         }
       });
     }
@@ -1064,57 +1068,6 @@ window.TasklyRoadmap = (function () {
     });
   }
 
-  /* ---------- Ask Nodi ---------- */
-
-  const nodiReplies = [
-    "I'm here to help you turn your goals into clear, actionable roadmaps.",
-    "Whenever you want to start learning something new, enter your goal and I'll generate a step-by-step path for you.",
-    "Tip: Breaking tasks down into smaller milestones makes them much easier to finish!"
-  ];
-
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
-
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input && input.focus(), 250);
-    });
-
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function sendMessage(text) {
-      const msg = (text || (input ? input.value : "")).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      if (input) input.value = "";
-
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
-
-      setTimeout(() => {
-        typing.remove();
-        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 900);
-    }
-
-    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
-    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
-  }
-
   /* ---------- Sidebar Logout ---------- */
 
   function wireSidebarLogout() {
@@ -1148,7 +1101,6 @@ window.TasklyRoadmap = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifications();
-      wireNodiModal();
       wireSidebarLogout();
       wireNodeDetailModal();
       wireTaskForm();

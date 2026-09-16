@@ -243,55 +243,6 @@ window.TasklyAccount = (function () {
 
   /* ---------- Ask Nodi ---------- */
 
-  const nodiReplies = [
-    "Good question — you can manage your personal information, update your profile picture, and view your account email right here.",
-    "Looking to customize your learning roadmaps? Head over to the Roadmap Manager to adjust your milestones.",
-    "Tip: Keeping your daily streak active boosts your learning retention!"
-  ];
-
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
-
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input && input.focus(), 250);
-    });
-
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function sendMessage(text) {
-      const msg = (text || (input ? input.value : "")).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      if (input) input.value = "";
-
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
-
-      setTimeout(() => {
-        typing.remove();
-        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 900);
-    }
-
-    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
-    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
-  }
-
   /* ---------- Password Visibility Toggle ---------- */
 
   const EYE_OPEN_SVG = `<svg class="icon-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="3" r="3"/></svg>`;
@@ -571,7 +522,6 @@ window.TasklyAccount = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifications();
-      wireNodiModal();
       wirePasswordToggle();
       wireAvatarUpload();
       wireProfileDetailsForm();

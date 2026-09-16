@@ -36,6 +36,9 @@
       try {
         localStorage.setItem("taskly_theme", next);
       } catch (e) {}
+      if (window.TasklyAPI && typeof window.TasklyAPI.emit === "function") {
+        window.TasklyAPI.emit("taskly:theme-changed", { theme: next });
+      }
     },
 
     initCollapseState() {

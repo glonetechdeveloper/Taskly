@@ -68,7 +68,7 @@
 
       weekContainer.innerHTML = days.map((dayName, idx) => {
         const isToday = idx === todayIndex;
-        const isActive = idx <= todayIndex && (todayIndex - idx) < Math.max(streakCount, 1);
+        const isActive = streakCount > 0 && idx <= todayIndex && (todayIndex - idx) < streakCount;
         
         return `
           <div class="streak-day">

@@ -775,8 +775,22 @@ svg { display: block; }
 .roadmap-icon.is-teal { background: var(--color-teal-tint); color: var(--color-teal-deep); }
 .roadmap-icon svg { width: 22px; height: 22px; }
 
-.roadmap-body { flex: 1; min-width: 0; }
-.roadmap-title { font-size: 14.5px; font-weight: 700; margin-bottom: 8px; }
+.roadmap-body { flex: 1; min-width: 0; overflow: hidden; }
+.roadmap-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--color-ink);
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+}
 
 .progress-track {
   width: 100%;

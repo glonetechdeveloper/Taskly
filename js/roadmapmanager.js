@@ -545,7 +545,7 @@ window.TasklyManager = (function () {
         if (genState) genState.classList.add("is-active");
 
         try {
-          const res = await window.TasklyAPI.createRoadmap({ title: text, goal_text: text, type: "sequential" });
+          const res = await window.TasklyAPI.createRoadmap({ goal_text: text, type: "sequential" });
           const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
 
           if (!newId) throw new Error("Could not retrieve roadmap ID from server");
@@ -555,7 +555,7 @@ window.TasklyManager = (function () {
 
         } catch (err) {
           console.error("Roadmap creation failed:", err);
-          showToast(err.message || "Failed to create roadmap", "error");
+          showToast(window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : "Failed to create roadmap", "error");
           if (formView) formView.classList.remove("is-hidden");
           if (genState) genState.classList.remove("is-active");
           generateBtn.disabled = false;
@@ -600,72 +600,20 @@ window.TasklyManager = (function () {
 
         checklistSaveBtn.disabled = true;
         try {
-          const res = await window.TasklyAPI.createRoadmap({ title: name, goal_text: name, type: "flat" });
+          const res = await window.TasklyAPI.createRoadmap({ goal_text: name, type: "flat" });
           const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || res;
 
           if (!newId) throw new Error("Could not create checklist");
 
           closeModal("createChecklistOverlay");
-          showToast("Checklist created.", "success");
           window.location.href = `roadmap.html?id=${encodeURIComponent(newId)}`;
         } catch (err) {
           console.error("Checklist creation failed:", err);
-          showToast(err.message || "Failed to create checklist", "error");
+          showToast(window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : "Failed to create checklist", "error");
           checklistSaveBtn.disabled = false;
         }
       });
     }
-  }
-
-  /* ---------- Ask Nodi ---------- */
-
-  const nodiReplies = [
-    "I'm here to help you organize and build roadmap milestones.",
-    "Try creating a goal like 'Learn TypeScript' or 'Plan home renovation' to generate a full roadmap.",
-    "Tip: Consistent progress on milestones helps unlock complex skills faster."
-  ];
-
-  function wireNodiModal() {
-    const openBtn = $("#nodiBtn");
-    const input = $("#nodiInput");
-    const sendBtn = $("#nodiSendBtn");
-    const body = $("#nodiBody");
-    if (!openBtn) return;
-
-    openBtn.addEventListener("click", () => {
-      openModal("nodiOverlay");
-      setTimeout(() => input && input.focus(), 250);
-    });
-
-    function appendBubble(text, from) {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble from-" + from;
-      bubble.textContent = text;
-      body.appendChild(bubble);
-      body.scrollTop = body.scrollHeight;
-    }
-
-    function sendMessage(text) {
-      const msg = (text || (input ? input.value : "")).trim();
-      if (!msg) return;
-      appendBubble(msg, "user");
-      if (input) input.value = "";
-
-      const typing = document.createElement("div");
-      typing.className = "chat-bubble from-nodi";
-      typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
-      body.appendChild(typing);
-      body.scrollTop = body.scrollHeight;
-
-      setTimeout(() => {
-        typing.remove();
-        appendBubble(nodiReplies[Math.floor(Math.random() * nodiReplies.length)], "nodi");
-      }, 900);
-    }
-
-    sendBtn && sendBtn.addEventListener("click", () => sendMessage());
-    input && input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-    $all(".suggestion-chip").forEach((chip) => chip.addEventListener("click", () => sendMessage(chip.textContent)));
   }
 
   /* ---------- Sidebar Logout ---------- */
@@ -695,7 +643,6 @@ window.TasklyManager = (function () {
       wireDrawer();
       wireStreakPopup();
       wireNotifDropdown();
-      wireNodiModal();
       wireSidebarLogout();
       wireFilterChips();
       wireAddRoadmapModal();

@@ -369,31 +369,22 @@ function handleOfflineFallback(path, options = {}) {
       let bodyObj = {};
       try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
       const goalText = bodyObj.goal_text || bodyObj.title || "New Roadmap";
+      const type = bodyObj.type || "sequential";
       
       let title = bodyObj.title;
-      if (!title || title === goalText) {
-        let cleaned = String(goalText).trim();
-        cleaned = cleaned.replace(/^(i\s+want\s+to\s+|please\s+|can\s+you\s+|how\s+to\s+|i\s+need\s+to\s+|help\s+me\s+|create\s+(a\s+|an\s+)?(new\s+)?(roadmap\s+(for\s+|about\s+|on\s+)?|study\s+plan\s+(for\s+)?|path\s+(for\s+)?)?)/i, "").trim();
-        const firstSentence = cleaned.split(/[.\n!?]/)[0].trim();
-        if (firstSentence.length > 3 && firstSentence.length <= 55) {
-          title = firstSentence.charAt(0).toUpperCase() + firstSentence.slice(1);
-        } else if (firstSentence.length > 55) {
-          title = (firstSentence.substring(0, 48).trim() + "…").charAt(0).toUpperCase() + firstSentence.substring(1, 48).trim() + "…";
-        } else {
-          title = "Study & Master Goals";
-        }
+      if (!title || title === goalText || title.length > 50 || title.includes("...")) {
+        title = TasklyAPI.summarizeTitle(goalText, type);
       }
       
-      const type = bodyObj.type || "sequential";
       const newId = "rm_" + Date.now();
 
       /* Generate demo nodes only if sequential; flat checklist starts empty for manual additions */
       const demoNodes = type === "flat" ? [] : [
-        { id: newId + "_n1", name: "Research & understand the basics", description: "Gather resources and understand foundational concepts for: " + title, time_estimate: "1-2 hours", completed: false, depends_on: [], order: 0 },
-        { id: newId + "_n2", name: "Set up your environment", description: "Prepare everything you need to get started.", time_estimate: "30 min", completed: false, depends_on: [newId + "_n1"], order: 1 },
-        { id: newId + "_n3", name: "Practice the core skills", description: "Hands-on practice with the most important elements.", time_estimate: "2-3 hours", completed: false, depends_on: [newId + "_n2"], order: 2 },
-        { id: newId + "_n4", name: "Build a small project", description: "Apply what you've learned in a real mini-project.", time_estimate: "3-4 hours", completed: false, depends_on: [newId + "_n3"], order: 3 },
-        { id: newId + "_n5", name: "Review & refine", description: "Look back at your progress, fill gaps, and polish.", time_estimate: "1 hour", completed: false, depends_on: [newId + "_n4"], order: 4 }
+        { id: newId + "_n1", name: "Core Concepts & Fundamentals", description: "Understand foundational principles for: " + title, time_estimate: "1-2 hours", completed: false, depends_on: [], order: 0 },
+        { id: newId + "_n2", name: "Environment & Tooling Setup", description: "Prepare the workspace and required tools.", time_estimate: "30 min", completed: false, depends_on: [newId + "_n1"], order: 1 },
+        { id: newId + "_n3", name: "Hands-on Practice & Exercises", description: "Practical exercises to master key techniques.", time_estimate: "2-3 hours", completed: false, depends_on: [newId + "_n2"], order: 2 },
+        { id: newId + "_n4", name: "Real-World Project Implementation", description: "Apply knowledge in a comprehensive mini-project.", time_estimate: "3-4 hours", completed: false, depends_on: [newId + "_n3"], order: 3 },
+        { id: newId + "_n5", name: "Review & Advanced Polish", description: "Assess progress, test skills, and refine.", time_estimate: "1 hour", completed: false, depends_on: [newId + "_n4"], order: 4 }
       ];
 
       const newRoadmap = {
@@ -649,14 +640,28 @@ const TasklyAPI = {
   // POST /roadmaps — Request body (RoadmapCreate): { goal_text, title?, type? }
   async createRoadmap(input = {}) {
     const payload = {};
+    let rawGoal = "";
+    let givenTitle = "";
+    let reqType = "sequential";
+
     if (typeof input === "string") {
-      payload.goal_text = input.trim();
+      rawGoal = input.trim();
     } else if (input && typeof input === "object") {
-      const goal = input.goal_text || input.title || "";
-      payload.goal_text = String(goal).trim();
-      if (input.title) payload.title = String(input.title).trim();
-      if (input.type) payload.type = input.type;
+      rawGoal = String(input.goal_text || input.title || "").trim();
+      givenTitle = input.title ? String(input.title).trim() : "";
+      if (input.type) reqType = input.type;
     }
+
+    payload.goal_text = rawGoal;
+    payload.type = reqType;
+
+    // Formulate a concise, summarized title if not given or if identical to raw goal
+    if (givenTitle && givenTitle !== rawGoal && givenTitle.length <= 50) {
+      payload.title = givenTitle;
+    } else {
+      payload.title = this.summarizeTitle(rawGoal, reqType);
+    }
+
     return await apiRequest("/roadmaps", {
       method: "POST",
       body: JSON.stringify(payload)
@@ -762,9 +767,11 @@ const TasklyAPI = {
 
   // POST /roadmaps/{roadmap_id}/nodes/{node_id}/complete — Response 200 (NodeOut with completed: true)
   async completeNode(roadmapId, nodeId) {
-    return await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
+    const res = await apiRequest(`/roadmaps/${roadmapId}/nodes/${nodeId}/complete`, {
       method: "POST"
     });
+    this.recordStreakActivity();
+    return res;
   },
 
   // POST /roadmaps/{roadmap_id}/nodes/{node_id}/uncomplete — Response 200 (NodeOut with completed: false)
@@ -793,10 +800,102 @@ const TasklyAPI = {
     }
   },
 
-  /* ---------------- Streak ---------------- */
-  // GET /streak → UserStreakOut: { user_id, current_streak, longest_streak, last_active_date } (read-only)
+  /* ---------------- Streak Tracking ---------------- */
+  getTodayString() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+
+  getYesterdayString() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+
+  getStoredStreak() {
+    try {
+      const raw = localStorage.getItem("taskly_streak_data");
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {
+      current_streak: 1,
+      longest_streak: 1,
+      last_active_date: this.getTodayString()
+    };
+  },
+
+  saveStoredStreak(data) {
+    try {
+      localStorage.setItem("taskly_streak_data", JSON.stringify(data));
+      this.emit("taskly:streak-updated", data);
+    } catch (e) {}
+  },
+
+  calculateCurrentStreak(streakData) {
+    const today = this.getTodayString();
+    const yesterday = this.getYesterdayString();
+    const lastActive = streakData ? streakData.last_active_date : null;
+
+    if (!lastActive) {
+      return { ...streakData, current_streak: 0 };
+    }
+
+    if (lastActive === today || lastActive === yesterday) {
+      return streakData;
+    }
+
+    // Skipped more than 1 day -> reset streak to 0
+    const resetData = {
+      ...streakData,
+      current_streak: 0
+    };
+    this.saveStoredStreak(resetData);
+    return resetData;
+  },
+
+  recordStreakActivity() {
+    const today = this.getTodayString();
+    const yesterday = this.getYesterdayString();
+    let streak = this.getStoredStreak();
+
+    if (streak.last_active_date === today) {
+      return streak;
+    }
+
+    if (streak.last_active_date === yesterday) {
+      streak.current_streak = (streak.current_streak || 0) + 1;
+    } else {
+      streak.current_streak = 1;
+    }
+
+    streak.last_active_date = today;
+    streak.longest_streak = Math.max(streak.longest_streak || 0, streak.current_streak);
+    this.saveStoredStreak(streak);
+    return streak;
+  },
+
+  // GET /streak → UserStreakOut: { user_id, current_streak, longest_streak, last_active_date }
   async getStreak() {
-    return await apiRequest("/streak", { method: "GET" });
+    try {
+      const res = await apiRequest("/streak", { method: "GET" });
+      if (res && typeof res.current_streak === "number") {
+        let localData = this.getStoredStreak();
+        // If backend returned fresh active date, reconcile
+        if (res.last_active_date) {
+          localData.last_active_date = res.last_active_date;
+        }
+        if (typeof res.current_streak === "number" && res.current_streak > 0) {
+          localData.current_streak = res.current_streak;
+        }
+        if (typeof res.longest_streak === "number") {
+          localData.longest_streak = Math.max(res.longest_streak, localData.longest_streak || 0);
+        }
+        const evaluated = this.calculateCurrentStreak(localData);
+        return evaluated;
+      }
+    } catch (e) {}
+
+    return this.calculateCurrentStreak(this.getStoredStreak());
   },
 
   /* ---------------- Notifications ---------------- */
@@ -828,11 +927,75 @@ const TasklyAPI = {
     });
   },
 
+  /* ---------------- Smart Title Summarizer ---------------- */
+  summarizeTitle(input, type = "sequential") {
+    if (!input || !String(input).trim()) {
+      return type === "flat" ? "Quick Checklist" : "Goal Roadmap";
+    }
+    let str = String(input).trim();
+
+    // Strip leading command/filler phrasing
+    str = str.replace(/^(i\s+want\s+to\s+|please\s+|can\s+you\s+|how\s+to\s+|how\s+do\s+i\s+|i\s+need\s+to\s+|help\s+me\s+|create\s+(a\s+|an\s+)?(new\s+)?(roadmap\s+(for\s+|about\s+|on\s+)?|study\s+plan\s+(for\s+)?|path\s+(for\s+)?|checklist\s+(for\s+)?|guide\s+(for\s+)?)?|teach\s+me\s+(how\s+to\s+)?|learn\s+how\s+to\s+|build\s+(a\s+|an\s+)?|make\s+(a\s+|an\s+)?|plan\s+(a\s+|an\s+)?)/i, "").trim();
+    
+    // Strip trailing punctuation
+    str = str.replace(/[.!?]+$/, "").trim();
+
+    if (!str) return type === "flat" ? "General Checklist" : "Goal Roadmap";
+
+    // Split words
+    const words = str.split(/\s+/);
+    
+    // Take core 3-6 words
+    const coreWords = words.slice(0, 6);
+    let title = coreWords.join(" ");
+
+    // Clean word capitalization
+    const ACRONYMS = new Set(["API", "UI", "UX", "HTML", "CSS", "JS", "SNR", "SEO", "AI", "ML", "AWS", "SQL", "IELTS", "TOEFL", "REST", "GIT", "PHP", "SASS"]);
+    const MINOR = new Set(["a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "from", "by", "over", "in", "of", "with"]);
+
+    title = title.split(" ").map((w, idx) => {
+      const cleanW = w.replace(/[^a-zA-Z0-9]/g, "");
+      const upper = cleanW.toUpperCase();
+      if (ACRONYMS.has(upper)) return upper + w.replace(/[a-zA-Z0-9]/g, "");
+      const lower = w.toLowerCase();
+      if (idx > 0 && MINOR.has(lower)) return lower;
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(" ");
+
+    if (title.length > 40) {
+      title = title.substring(0, 37).trim() + "…";
+    }
+
+    if (type === "flat" && !/checklist|list|tasks|items/i.test(title)) {
+      if (title.length < 28) title += " Checklist";
+    }
+
+    return title;
+  },
+
+  /* ---------------- Friendly Error Sanitizer ---------------- */
+  sanitizeError(err) {
+    if (!err) return "An unexpected issue occurred. Please try again.";
+    const str = typeof err === "object" ? (err.message || err.detail || JSON.stringify(err)) : String(err);
+    if (str.includes("429") || str.includes("Rate limit") || str.includes("rate_limit_exceeded") || str.includes("TPM") || str.includes("tokens per minute")) {
+      return "Our AI service is experiencing high demand right now. Please wait a few moments and try again.";
+    }
+    if (str.includes("Groq call") || str.includes("phase_tasks") || str.includes("500") || str.includes("503") || str.includes("Internal Server Error")) {
+      return "The AI generator encountered a temporary hiccup. Please tap Retry to generate your roadmap steps.";
+    }
+    if (str.includes("Network error") || str.includes("Failed to fetch") || str.includes("Unable to reach")) {
+      return "Network connection issue. Please check your connection and try again.";
+    }
+    if (str.length > 130 || str.includes("{") || str.includes("Traceback")) {
+      return "Generation was interrupted. Please tap Retry Generation to resume.";
+    }
+    return str;
+  },
+
   /* ---------------- Event Bus & App Sync ---------------- */
   emit(eventName, detail = {}) {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
     try {
-      // Sync across tabs/windows
       localStorage.setItem("taskly_sync_event", JSON.stringify({ event: eventName, detail, time: Date.now() }));
     } catch (e) {}
   },

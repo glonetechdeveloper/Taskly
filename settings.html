@@ -12,6 +12,12 @@
 <link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/streak.css">
 <link rel="stylesheet" href="css/nodi.css">
+<script>
+  try {
+    const savedTheme = localStorage.getItem("taskly_theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  } catch (e) {}
+</script>
 <script src="js/session-guard.js"></script>
 </head>
 <body>
@@ -294,7 +300,36 @@
           </div>
         </div>
 
-        <!-- 3. General Preferences Card -->
+        <!-- 3. Appearance & Theme Card -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </div>
+            <div class="settings-card-title-group">
+              <h3>Appearance</h3>
+              <p>Customize the interface theme and visual mode.</p>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <p class="setting-title">Dark Mode</p>
+              <p class="setting-desc">Toggle between clean light mode and sleek dark mode across the entire workspace.</p>
+            </div>
+            <div class="setting-control">
+              <label class="switch-label">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. General Preferences Card -->
         <div class="settings-card">
           <div class="settings-card-header">
             <div class="settings-card-icon">
