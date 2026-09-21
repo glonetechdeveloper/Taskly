@@ -317,8 +317,9 @@ window.TasklyRoadmap = (function () {
       }
 
       const status = (roadmap.status || "").toLowerCase();
+      const hasNodes = Array.isArray(roadmap.nodes) && roadmap.nodes.length > 0;
 
-      if (status === "done") {
+      if (status === "done" || hasNodes) {
         stopPolling();
         render();
       } else if (status === "failed") {
@@ -335,38 +336,55 @@ window.TasklyRoadmap = (function () {
     }
   }
 
+  let isPolling = false;
+
   function startPolling() {
     stopPolling();
-    const pollFn = async () => {
-      try {
-        const statusData = await window.TasklyAPI.getGenerationStatus(roadmapId);
-        const currentStatus = (statusData && (statusData.status || (statusData.roadmap && statusData.roadmap.status) || "")).toLowerCase();
+    isPolling = true;
 
-        if (currentStatus === "done") {
-          stopPolling();
-          showToast("Roadmap generation complete!", "success");
-          // Fetch full roadmap with generated nodes
-          const freshData = await window.TasklyAPI.getRoadmap(roadmapId);
-          roadmap = (freshData && (freshData.roadmap || freshData.data)) || freshData;
-          render();
-          await loadNotifications();
-        } else if (currentStatus === "failed") {
-          stopPolling();
-          renderFailedState(statusData && statusData.error_message);
-        } else if (currentStatus) {
-          roadmap.status = currentStatus;
-          renderWaitingState(currentStatus);
+    const pollFn = async () => {
+      if (!isPolling || !roadmapId) return;
+
+      try {
+        // Direct roadmap fetch gets both the updated status and nodes in a single fast request
+        const data = await window.TasklyAPI.getRoadmap(roadmapId);
+        const fresh = (data && (data.roadmap || data.data)) ? (data.roadmap || data.data) : data;
+
+        if (fresh && fresh.id) {
+          roadmap = fresh;
+          const currentStatus = (fresh.status || "").toLowerCase();
+          const hasNodes = Array.isArray(fresh.nodes) && fresh.nodes.length > 0;
+
+          if (currentStatus === "done" || hasNodes) {
+            stopPolling();
+            showToast("Roadmap generation complete!", "success");
+            render();
+            loadNotifications();
+            return;
+          } else if (currentStatus === "failed") {
+            stopPolling();
+            renderFailedState(fresh.error_message);
+            return;
+          } else if (currentStatus) {
+            renderWaitingState(currentStatus);
+          }
         }
       } catch (e) {
         console.warn("Polling generation status error:", e);
       }
+
+      if (isPolling) {
+        pollIntervalId = setTimeout(pollFn, 800);
+      }
     };
-    pollFn();
-    pollIntervalId = setInterval(pollFn, 1000);
+
+    pollIntervalId = setTimeout(pollFn, 800);
   }
 
   function stopPolling() {
+    isPolling = false;
     if (pollIntervalId) {
+      clearTimeout(pollIntervalId);
       clearInterval(pollIntervalId);
       pollIntervalId = null;
     }
@@ -430,13 +448,23 @@ window.TasklyRoadmap = (function () {
       submessage = "Your roadmap request has been received.";
     }
 
-    body.innerHTML = `
-      <div class="generation-state is-active" style="background:var(--color-cream); border:1.5px solid var(--color-border); border-radius:var(--radius-md); padding:var(--sp-6) var(--sp-4); margin-top:var(--sp-4);">
-        <div class="gen-ring"></div>
-        <p class="generation-message">${escapeHtml(message)}</p>
-        <p class="generation-submessage">${escapeHtml(submessage)}</p>
-      </div>
-    `;
+    const existingMsg = body ? body.querySelector(".generation-message") : null;
+    const existingSub = body ? body.querySelector(".generation-submessage") : null;
+    if (existingMsg && existingSub) {
+      if (existingMsg.textContent !== message) existingMsg.textContent = message;
+      if (existingSub.textContent !== submessage) existingSub.textContent = submessage;
+      return;
+    }
+
+    if (body) {
+      body.innerHTML = `
+        <div class="generation-state is-active" style="background:var(--color-cream); border:1.5px solid var(--color-border); border-radius:var(--radius-md); padding:var(--sp-6) var(--sp-4); margin-top:var(--sp-4);">
+          <div class="gen-ring"></div>
+          <p class="generation-message">${escapeHtml(message)}</p>
+          <p class="generation-submessage">${escapeHtml(submessage)}</p>
+        </div>
+      `;
+    }
   }
 
   function renderFailedState(errMsg) {
@@ -1224,16 +1252,16 @@ window.TasklyRoadmap = (function () {
       wireTaskForm();
       wireRoadmapMenu();
 
-      await Promise.all([
-        loadStreak(),
-        loadNotifications()
-      ]);
-
+      // Start loading roadmap immediately without delay
       if (id) {
-        await loadRoadmap(id);
+        loadRoadmap(id);
       } else {
         renderNoIdState();
       }
+
+      // Load streak and notifications in parallel background
+      loadStreak();
+      loadNotifications();
     };
 
     if (document.readyState === "loading") {

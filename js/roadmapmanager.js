@@ -356,7 +356,7 @@ window.TasklyManager = (function () {
       }
     };
 
-    roadmapPollInterval = setInterval(pollTick, 2500);
+    roadmapPollInterval = setInterval(pollTick, 1000);
   }
 
   function renderRoadmapList() {
@@ -753,11 +753,9 @@ window.TasklyManager = (function () {
       wireCreateChecklistModal();
       wireRoadmapOptionsMenu();
 
-      await Promise.all([
-        fetchUserRoadmaps(),
-        loadStreak(),
-        loadNotifications()
-      ]);
+      fetchUserRoadmaps();
+      loadStreak();
+      loadNotifications();
 
       window.addEventListener("focus", () => fetchUserRoadmaps());
       document.addEventListener("visibilitychange", () => {
