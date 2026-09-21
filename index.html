@@ -1,512 +1,581 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taskly — Dashboard</title>
-<link rel="shortcut icon"  href="assets/Icon.png" type="image/png">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0D9488">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Taskly">
-<link rel="apple-touch-icon" href="assets/Icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/dashboard.css">
-<link rel="stylesheet" href="css/sidebar.css">
-<link rel="stylesheet" href="css/streak.css">
-<link rel="stylesheet" href="css/nodi.css">
-<script>
-  try {
-    const savedTheme = localStorage.getItem("taskly_theme") || "light";
-    document.documentElement.setAttribute("data-theme", savedTheme);
-  } catch (e) {}
-</script>
-<script src="js/session-guard.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskly — From Task to Done | Turn Goals Into Real Achievement</title>
+  <link rel="shortcut icon" href="assets/Icon.png" type="image/png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#F2A30D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Taskly">
+  <link rel="apple-touch-icon" href="assets/Icon.png">
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
 
-<!-- Icon sprite -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></symbol>
-    <symbol id="ic-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V13a4 4 0 0 0 4 4h4"/></symbol>
-    <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
-    <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></symbol>
-    <symbol id="ic-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
-    <symbol id="ic-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
-    <symbol id="ic-close" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
-    <symbol id="ic-send" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></symbol>
-    <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
-    <symbol id="ic-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="ic-paperclip" viewBox="0 0 24 24"><path d="M17 7 8.5 15.5a3 3 0 0 0 4.24 4.24L21 11.5a5 5 0 0 0-7.07-7.07L5.5 12.8"/></symbol>
-    <symbol id="ic-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="m4 18 5-5 3.5 3.5L17 12l3.5 3.5"/></symbol>
-    <symbol id="ic-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M2 19h20"/></symbol>
-    <symbol id="ic-car" viewBox="0 0 24 24"><path d="M4 16V11l2-4h12l2 4v5"/><path d="M4 16h16"/><circle cx="7.5" cy="16" r="1.6"/><circle cx="16.5" cy="16" r="1.6"/></symbol>
-    <symbol id="ic-pot" viewBox="0 0 24 24"><path d="M4 11h16v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M2 11h20"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
-    <symbol id="ic-wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.4 4.8L4 16.4V20h3.6l5.1-5.1a4 4 0 0 0 4.8-5.4L15 12l-3-3Z"/></symbol>
-    <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
-    <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></symbol>
-    <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
-  </defs>
-</svg>
-
-<div class="app-shell">
-
-  <div class="drawer-overlay" id="drawerOverlay"></div>
-
-  <!-- Sidebar (Modern Study Case Design) -->
-  <aside class="sidebar" id="sidebar">
-    <!-- Header / Brand -->
-    <div class="sidebar-header-box">
-      <a href="dashboard.html" class="sidebar-brand">
-        <div class="sidebar-brand-icon" id="sidebarBrandIcon" title="Taskly Workspace">
-          <img src="assets/Icon.png" alt="Taskly">
-        </div>
-        <div class="sidebar-brand-info">
-          <span class="sidebar-brand-title">Taskly</span>
-          <span class="sidebar-brand-sub">Workspace</span>
-        </div>
+  <!-- ============================================================
+       FLOATING TOP NAVIGATION PILL (Login & Sign Up only)
+       ============================================================ -->
+  <header class="nav-wrapper">
+    <nav class="nav-pill">
+      <a href="#" class="nav-brand" aria-label="Taskly Home">
+        <img src="assets/tasklylogo.png" alt="Taskly logo">
+        <span>Taskly</span>
       </a>
-      <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
-      </button>
-      <button class="sidebar-close-btn" id="sidebarCloseBtn" title="Close menu" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
 
-    <!-- Top Action: New Chat -->
-    <div class="sidebar-action-wrap">
-      <button class="sidebar-btn-new-chat open-nodi-modal" type="button" id="sidebarNewChatBtn" title="New Chat with Nodi">
-        <div class="sidebar-link-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-        </div>
-        <span class="sidebar-link-label">New Chat</span>
-        <span class="sidebar-ai-tag">AI</span>
-      </button>
-    </div>
-
-    <!-- Navigation Body -->
-    <div class="sidebar-nav-scroll">
-      <!-- Section: OVERVIEW -->
-      <div class="sidebar-nav-section">
-        <h4 class="sidebar-section-title">Overview</h4>
-        <ul class="sidebar-menu">
-          <li>
-            <a class="sidebar-link is-active" href="dashboard.html" title="Dashboard">
-              <div class="sidebar-link-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-              </div>
-              <span class="sidebar-link-label">Dashboard</span>
-            </a>
-          </li>
-          <li>
-            <a class="sidebar-link" href="roadmapmanager.html" title="Roadmaps">
-              <div class="sidebar-link-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-              </div>
-              <span class="sidebar-link-label">Roadmaps</span>
-            </a>
-          </li>
-          <li>
-            <a class="sidebar-link" href="notifications.html" title="Notifications">
-              <div class="sidebar-link-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              </div>
-              <span class="sidebar-link-label">Notifications</span>
-              <span class="sidebar-pill-badge" id="sidebarNotifBadge" style="display:none;">0</span>
-            </a>
-          </li>
-        </ul>
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-ghost" id="navLoginBtn">Log in</a>
+        <a href="signup.html" class="btn btn-primary" id="navSignUpBtn">Sign up</a>
       </div>
-    </div>
+    </nav>
+  </header>
 
-    <!-- Bottom: Profile Card + Settings + Theme Toggle -->
-    <div class="sidebar-footer-group">
-      <div class="sidebar-profile-card">
-        <a href="account.html" class="sidebar-profile-link" id="sidebarProfileLink" title="View Profile">
-          <img class="sidebar-profile-avatar" id="sidebarUserAvatar" src="assets/profile.png" alt="Profile avatar">
-          <div class="sidebar-profile-meta">
-            <span class="sidebar-profile-name" id="sidebarUserName">Taskly User</span>
-            <span class="sidebar-profile-email" id="sidebarUserEmail">user@taskly.app</span>
+  <!-- ============================================================
+       HERO SECTION
+       ============================================================ -->
+  <main>
+    <section class="hero-section" id="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="hero-title">
+            Where every <span class="highlight">TASK</span> drives<br>
+            real daily <span class="highlight">PROGRESS</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Taskly gives students and high-achievers an intuitive way to manage tasks, master academic roadmaps, and stay accountable with streaks — with the tools to see it through.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="signup.html" class="btn btn-primary btn-lg" id="heroSignUpBtn">
+              Get Started Free
+            </a>
+            <a href="login.html" class="btn btn-outline btn-lg" id="heroLoginBtn">
+              Log in to Taskly
+            </a>
           </div>
-        </a>
-        <a href="settings.html" class="sidebar-settings-btn" id="sidebarSettingsBtn" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-        </a>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main column -->
-  <div class="main-column">
-
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-menu"/></svg>
-        </button>
-        <span class="topbar-title">Taskly</span>
-      </div>
-      <div class="topbar-right">
-        <button class="icon-btn-ghost navbar-theme-btn" id="navbarThemeBtn" aria-label="Toggle Light / Dark Mode" title="Toggle theme">
-          <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
-        <button class="icon-btn-ghost" id="streakBtn" aria-label="Your streak">
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
-          <span class="badge-count" id="streakBadge">5</span>
-        </button>
-        <button class="icon-btn-ghost" id="notifBtn" aria-label="Notifications">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-bell"/></svg>
-          <span class="notif-dot" id="notifDot"></span>
-        </button>
-        <img class="topbar-avatar" src="assets/profile.png" alt="Your profile">
-      </div>
-    </header>
-
-    <main class="main-content">
-
-      <!-- Minimal slanted productivity-icon wallpaper, yellow, on the white content area -->
-      <div class="bg-pattern" id="bgPattern" aria-hidden="true">
-        <svg class="pattern-root" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <symbol id="pat-notebook" viewBox="0 0 40 40">
-              <rect x="7" y="4" width="24" height="32" rx="3"/>
-              <circle cx="11" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
-              <circle cx="17" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
-              <circle cx="23" cy="4.5" r="1.1" fill="currentColor" stroke="none"/>
-              <line x1="12" y1="15" x2="26" y2="15"/>
-              <line x1="12" y1="21" x2="26" y2="21"/>
-              <line x1="12" y1="27" x2="22" y2="27"/>
-            </symbol>
-            <symbol id="pat-calculator" viewBox="0 0 40 40">
-              <rect x="7" y="4" width="26" height="32" rx="4"/>
-              <rect x="11" y="9" width="18" height="7" rx="1.5"/>
-              <circle cx="13" cy="22" r="1.4" fill="currentColor" stroke="none"/>
-              <circle cx="20" cy="22" r="1.4" fill="currentColor" stroke="none"/>
-              <circle cx="27" cy="22" r="1.4" fill="currentColor" stroke="none"/>
-              <circle cx="13" cy="29" r="1.4" fill="currentColor" stroke="none"/>
-              <circle cx="20" cy="29" r="1.4" fill="currentColor" stroke="none"/>
-              <circle cx="27" cy="29" r="1.4" fill="currentColor" stroke="none"/>
-            </symbol>
-            <symbol id="pat-pencil" viewBox="0 0 40 40">
-              <path d="M7 33 L27 13"/>
-              <path d="M27 13 L31 9 L34 12 L30 16 Z"/>
-              <path d="M7 33 L5 36 L9 34 Z" fill="currentColor" stroke="none"/>
-            </symbol>
-            <symbol id="pat-clock" viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="15"/>
-              <line x1="20" y1="20" x2="20" y2="10"/>
-              <line x1="20" y1="20" x2="27" y2="23"/>
-            </symbol>
-            <symbol id="pat-check" viewBox="0 0 40 40">
-              <rect x="6" y="6" width="28" height="28" rx="7"/>
-              <path d="M13 20 L18 25 L28 13"/>
-            </symbol>
-            <symbol id="pat-cup" viewBox="0 0 40 40">
-              <path d="M9 13 H26 V25 A8.5 8.5 0 0 1 9 25 Z"/>
-              <path d="M26 16 A5.5 5.5 0 0 1 26 27"/>
-              <line x1="12" y1="8" x2="12" y2="11"/>
-              <line x1="17.5" y1="6" x2="17.5" y2="9.5"/>
-            </symbol>
-            <pattern id="dash-pattern" width="260" height="260" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
-              <use class="pat-icon" href="#pat-notebook" x="6" y="14" width="34" height="34"/>
-              <use class="pat-icon" href="#pat-calculator" x="150" y="46" width="30" height="30"/>
-              <use class="pat-icon" href="#pat-pencil" x="60" y="150" width="30" height="30"/>
-              <use class="pat-icon" href="#pat-clock" x="196" y="176" width="28" height="28"/>
-              <use class="pat-icon" href="#pat-check" x="16" y="206" width="24" height="24"/>
-              <use class="pat-icon" href="#pat-cup" x="150" y="4" width="26" height="26"/>
-              <use class="pat-icon" href="#pat-notebook" x="220" y="220" width="24" height="24"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dash-pattern)"/>
-        </svg>
-      </div>
-
-      <div class="content-inner">
-
-        <div class="greeting">
-          <h1 id="greetingHeading">Welcome back!</h1>
-          <p>What would you like to get done? Tell Taskly and we'll guide you all the way.</p>
         </div>
 
-        <div class="chat-card">
-          <textarea class="chat-textarea" id="goalInput" placeholder="What's on your mind?" rows="2" maxlength="500"></textarea>
-          <div class="chat-toolbar">
-            <div class="chat-toolbar-left">
-              <button class="chat-icon-btn" type="button" aria-label="Attach a file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-paperclip"/></svg>
-              </button>
-              <button class="chat-icon-btn" type="button" aria-label="Attach an image">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-image"/></svg>
-              </button>
-              <span class="char-count" id="charCount">0/500</span>
+        <!-- Hand-drawn Annotation pointing to slider -->
+        <div class="hand-annotation hand-annotation-hero" aria-hidden="true">
+          <span>Drag to explore both views</span>
+          <svg viewBox="0 0 50 65" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M35 5C38 20 42 38 18 48M18 48L28 42M18 48L24 56" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <!-- Interactive Browser Comparison / Split Showcase -->
+        <div class="showcase-wrapper">
+          <div class="showcase-browser">
+            <div class="browser-header">
+              <div class="browser-dots">
+                <span class="browser-dot red"></span>
+                <span class="browser-dot yellow"></span>
+                <span class="browser-dot green"></span>
+              </div>
+              <div class="browser-search-bar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>taskly.app/dashboard</span>
+              </div>
+              <div class="browser-tabs">
+                <button class="browser-tab-btn active" data-view="split">Split View</button>
+                <button class="browser-tab-btn" data-view="dashboard">Dashboard</button>
+                <button class="browser-tab-btn" data-view="roadmap">Roadmap</button>
+              </div>
             </div>
-            <button class="send-btn" id="sendBtn" type="button" aria-label="Send" disabled>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-send"/></svg>
-            </button>
+
+            <!-- Split Drag Slider -->
+            <div class="split-slider-container" id="splitSlider">
+              <!-- Before Image (Dashboard) -->
+              <img src="assets/screenshot1.png" alt="Taskly Dashboard Interface" class="slider-img" id="sliderBeforeImg">
+              
+              <!-- After Image (Roadmap / Details) -->
+              <div class="slider-img-after" id="sliderAfter">
+                <img src="assets/screenshot2.png" alt="Taskly Roadmap Interface" id="sliderAfterImg">
+              </div>
+
+              <!-- Handle -->
+              <div class="slider-handle" id="sliderHandle">
+                <div class="slider-button">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18-6-6 6-6"/>
+                    <path d="m15 6 6 6-6 6"/>
+                  </svg>
+                </div>
+              </div>
+
+              <span class="slider-label label-left">Active Dashboard</span>
+              <span class="slider-label label-right">Interactive Roadmap</span>
+            </div>
           </div>
-          <div class="chat-conversation-view" id="chatConversationView" style="display:none;"></div>
-        </div>
-
-        <button class="btn-add-roadmap" id="addRoadmapBtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><use href="#ic-plus"/></svg>
-          Add New Roadmap
-        </button>
-
-        <h2 class="section-heading">Your Roadmaps</h2>
-
-        <div class="roadmap-list" id="roadmapList">
-          <!-- Dynamically populated from GET /roadmaps endpoint -->
-        </div>
-
-        <div class="empty-roadmaps is-visible" id="emptyRoadmaps">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
-          <strong>No roadmaps yet</strong>
-          Type a goal above or tap "Add New Roadmap" to get your first checkable path.
-        </div>
-
-      </div>
-    </main>
-  </div>
-</div>
-
-
-
-<!-- ============ Notifications dropdown ============ -->
-<div class="dropdown-panel" id="notifPanel" role="menu" aria-label="Notifications">
-  <div class="dropdown-header">Notifications</div>
-
-  <div class="notif-item">
-    <div class="notif-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check"/></svg></div>
-    <div>
-      <p class="notif-text"><strong>My Figma course</strong> — you finished "Auto layout basics".</p>
-      <p class="notif-time">12 minutes ago</p>
-    </div>
-  </div>
-
-  <div class="notif-item">
-    <div class="notif-icon is-teal"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg></div>
-    <div>
-      <p class="notif-text">You're on a <strong>5 day streak</strong>. Keep it going today!</p>
-      <p class="notif-time">3 hours ago</p>
-    </div>
-  </div>
-
-  <div class="notif-item">
-    <div class="notif-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg></div>
-    <div>
-      <p class="notif-text">Your <strong>Jollof Rice recipe</strong> roadmap is almost done — 2 tasks left.</p>
-      <p class="notif-time">Yesterday</p>
-    </div>
-  </div>
-
-  <div class="notif-item">
-    <div class="notif-icon is-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-plus"/></svg></div>
-    <div>
-      <p class="notif-text">"Plumbing" roadmap was created and is ready to start.</p>
-      <p class="notif-time">2 days ago</p>
-    </div>
-  </div>
-
-  <div class="dropdown-footer">
-    <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
-  </div>
-</div>
-
-<!-- ============ Streak dropdown panel ============ -->
-<div class="dropdown-panel modal-streak-dropdown" id="streakOverlay" role="dialog" aria-label="Your streak">
-  <div class="dropdown-header">
-    <span style="display:inline-flex; align-items:center; gap:6px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF6B00" stroke="none"><use href="#ic-flame"/></svg>
-      Your Streak
-    </span>
-    <button class="modal-close" data-close-modal="streakOverlay" aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-    </button>
-  </div>
-  <div class="modal-streak">
-    <div class="streak-flame-big">
-      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#ic-flame"/></svg>
-    </div>
-    <p class="streak-count-big" id="streakCountBig">5 Days</p>
-    <p class="streak-sub">You're on fire! Complete a task today to keep it going.</p>
-    <div class="streak-week" id="streakWeek"></div>
-    <div class="streak-countdown-box">
-      <p class="streak-countdown-label">Streak resets in</p>
-      <p class="streak-countdown" id="streakCountdown">--:--:--</p>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Custom Rename Roadmap modal ============ -->
-<div class="modal-overlay" id="renameRoadmapModal">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Rename roadmap">
-    <div class="modal-header">
-      <h3>Rename Roadmap</h3>
-      <button class="modal-close" data-close-modal="renameRoadmapModal" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
-    <p class="modal-sub">Enter a new name for this roadmap.</p>
-    <div style="margin: 16px 0;">
-      <input type="text" class="modal-input" id="customRenameInput" placeholder="Roadmap title…" maxlength="120">
-    </div>
-    <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-      <button class="btn-ghost" type="button" data-close-modal="renameRoadmapModal">Cancel</button>
-      <button class="btn-solid" id="customRenameSaveBtn" type="button">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Add New Roadmap modal ============ -->
-<div class="modal-overlay" id="addRoadmapOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Add a new roadmap">
-
-    <div class="form-view" id="addRoadmapFormView">
-      <div class="modal-header">
-        <h3>Start a new roadmap</h3>
-        <button class="modal-close" data-close-modal="addRoadmapOverlay" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-        </button>
-      </div>
-      <p class="modal-sub">Type any goal, from a skill to an errand. Taskly will figure out whether it needs a step-by-step path or a simple checklist.</p>
-
-      <textarea class="modal-textarea" id="modalGoalInput" maxlength="500" placeholder="e.g. Learn Rust, plan a wedding, buy groceries for the week…"></textarea>
-      <p class="modal-char-count"><span id="modalCharCount">0</span>/500</p>
-
-      <div class="example-chips">
-        <button class="example-chip" type="button" data-example="Learn the basics of Rust">Learn Rust</button>
-        <button class="example-chip" type="button" data-example="Plan a wedding in 6 months">Plan a wedding</button>
-        <button class="example-chip" type="button" data-example="Buy groceries for the week">Weekly groceries</button>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-ghost" type="button" data-close-modal="addRoadmapOverlay">Cancel</button>
-        <button class="btn-solid" id="generateRoadmapBtn" type="button" disabled>Generate Roadmap</button>
-      </div>
-    </div>
-
-    <div class="generation-state" id="generationState">
-      <div class="gen-ring"></div>
-      <p class="generation-message" id="generationMessage">Breaking this into phases…</p>
-      <p class="generation-submessage">This usually takes a few seconds.</p>
-    </div>
-
-  </div>
-</div>
-
-<!-- ============ Roadmap options modal ============ -->
-<div class="modal-overlay" id="roadmapOptionsOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Roadmap options">
-
-    <div id="roadmapOptionsView">
-      <div class="modal-header">
-        <h3>Roadmap Options</h3>
-        <button class="modal-close" data-close-modal="roadmapOptionsOverlay" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-        </button>
-      </div>
-
-      <div class="roadmap-options-header">
-        <div class="roadmap-icon" id="optionsRoadmapIcon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route" id="optionsRoadmapIconUse"/></svg>
-        </div>
-        <div class="roadmap-options-header-text">
-          <p class="title" id="optionsRoadmapTitle">Roadmap</p>
-          <p class="meta" id="optionsRoadmapMeta">—</p>
         </div>
       </div>
+    </section>
 
-      <div class="option-list">
-        <button class="option-item" type="button" id="viewRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route"/></svg>
-          View Roadmap
-        </button>
-        <button class="option-item" type="button" id="renameRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          Rename Roadmap
-        </button>
-        <button class="option-item" type="button" id="regenerateRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
-          Regenerate Roadmap
-        </button>
-        <button class="option-item is-danger" type="button" id="deleteRoadmapOption">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
-          Delete Roadmap
-        </button>
+    <!-- ============================================================
+         DARK SECTION (Task Speech Bubble Swarm & Big Statement)
+         ============================================================ -->
+    <section class="dark-section" id="impact">
+      <div class="container">
+        <div class="dark-grid">
+          <!-- Bubble Metaphor -->
+          <div class="bubble-tornado" aria-hidden="true">
+            <div class="bubble-item b1">📝 "When is the lab report due?"</div>
+            <div class="bubble-item b2">🔥 "5-day streak at risk!"</div>
+            <div class="bubble-item b3">📚 "Need to review 4 chapters tonight"</div>
+            <div class="bubble-item b4">⚡ "CS Midterm in 3 days"</div>
+            <div class="bubble-item b5">🎯 "Complete Week 6 Milestone"</div>
+            <div class="bubble-item b6">✨ "All caught up on Taskly!"</div>
+          </div>
+
+          <!-- Bold Statement -->
+          <div class="dark-statement">
+            <h2>
+              Taskly turns <span class="text-orange">"everyone is overwhelmed"</span> into a clear plan you actually finish.
+            </h2>
+            <p>
+              No more scattered reminders or missed assignments. From daily check-ins to multi-month roadmaps, Taskly organizes your momentum so you can focus on mastering what matters.
+            </p>
+
+            <a href="signup.html" class="btn btn-dark btn-lg">
+              Start Tracking Free
+            </a>
+
+            <!-- Streak Soundwave Meter -->
+            <div class="streak-wave-bar">
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+              <div class="wave-bar active"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         "THE SOLUTION" SECTION
+         ============================================================ -->
+    <section class="solution-section" id="solution">
+      <div class="container">
+        <div class="solution-grid">
+          <!-- Left Column -->
+          <div class="solution-content">
+            <span class="eyebrow">THE SOLUTION</span>
+            <h2 class="title">
+              Real Structure.<br>Real Results.
+            </h2>
+
+            <div class="solution-features">
+              <div class="feature-card active" data-index="0">
+                <div class="feature-icon-box">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </div>
+                <div class="feature-text">
+                  <h3>Smart Task Organization</h3>
+                  <p>Organize assignments, exams, and daily priorities with custom tags, categories, and reminders.</p>
+                </div>
+              </div>
+
+              <div class="feature-card" data-index="1">
+                <div class="feature-icon-box">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v4a3 3 0 0 0 3 3h5"/></svg>
+                </div>
+                <div class="feature-text">
+                  <h3>Master Visual Roadmaps</h3>
+                  <p>Break complex courses and semester goals into clear, visual milestones you can track step by step.</p>
+                </div>
+              </div>
+
+              <div class="feature-card" data-index="2">
+                <div class="feature-icon-box">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                </div>
+                <div class="feature-text">
+                  <h3>Streaks & AI Assistant Nodi</h3>
+                  <p>Build unbreakable daily study habits, maintain your streak, and chat with Nodi when you need direction.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column (Browser Mockup) -->
+          <div class="mockup-window">
+            <div class="mockup-header">
+              <div class="browser-dots">
+                <span class="browser-dot red"></span>
+                <span class="browser-dot yellow"></span>
+                <span class="browser-dot green"></span>
+              </div>
+              <div class="mockup-header-url">taskly.app/workspace</div>
+            </div>
+            <div class="mockup-body">
+              <img src="assets/screenshot3.png" alt="Taskly Feature Preview" id="solutionPreviewImg">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         "TRACK" STATUS PIPELINE SECTION (Flowchart + Handwritten Notes)
+         ============================================================ -->
+    <section class="track-section" id="track">
+      <div class="container">
+        <!-- Handwritten Notes -->
+        <div class="track-hand-left" aria-hidden="true">
+          <span>Task status</span>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8 8 C 18 10, 30 18, 22 32 M 16 28 L 22 32 L 28 26" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="track-hand-right" aria-hidden="true">
+          <span>Roadmap status</span>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M32 8 C 22 10, 10 18, 18 32 M 24 28 L 18 32 L 12 26" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="track-header">
+          <h2 class="track-title">Track</h2>
+          <p class="track-subtitle">
+            Watch it move. Every task, milestone, and roadmap carries a live status, so you always know where things stand.
+          </p>
+        </div>
+
+        <div class="track-pipelines">
+          <!-- Column 1: Task Pipeline -->
+          <div class="pipeline-col">
+            <div class="pipeline-node">
+              <span class="status-dot"></span>
+              <span>Pending Task</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-node">
+              <span class="status-dot warning"></span>
+              <span>In Progress</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-node">
+              <span class="status-dot active"></span>
+              <span>Completed</span>
+            </div>
+          </div>
+
+          <!-- Column 2: Roadmap Pipeline -->
+          <div class="pipeline-col">
+            <div class="pipeline-node">
+              <span class="status-dot"></span>
+              <span>Planned Milestone</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-node">
+              <span class="status-dot pulse"></span>
+              <span>Active Sprint</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-node">
+              <span class="status-dot active"></span>
+              <span>Goal Achieved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SCREENSHOT GALLERY (8 Real Screenshots Showcase)
+         ============================================================ -->
+    <section class="gallery-section" id="gallery">
+      <div class="container">
+        <div class="gallery-header">
+          <h2 class="gallery-title">
+            Built for total <span class="orange-word">focus & clarity</span>
+          </h2>
+          <p style="color: var(--color-ink-muted); font-size: 1.1rem;">
+            Explore every feature designed to keep your academic workload completely under control.
+          </p>
+        </div>
+
+        <div class="gallery-grid">
+          <!-- Card 1 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/screenshot1.png" alt="Taskly Dashboard Overview" loading="lazy">
+              <span class="gallery-badge">01. Overview</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Live Workspace</h4>
+              <p>Get a glance at urgent tasks, current courses, and daily productivity breakdown.</p>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/screenshot2.png" alt="Taskly Visual Roadmap Timeline" loading="lazy">
+              <span class="gallery-badge">02. Roadmap</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Interactive Timeline</h4>
+              <p>Organize academic semesters into clear multi-step milestones with visual progress bars.</p>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/screenshot3.png" alt="Task Management Details" loading="lazy">
+              <span class="gallery-badge">03. Tasks</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Task Breakdown</h4>
+              <p>Filter by course, set high-priority flags, and mark items done in seconds.</p>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/screenshot4.png" alt="Roadmap Manager Studio" loading="lazy">
+              <span class="gallery-badge">04. Studio</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Roadmap Manager</h4>
+              <p>Create new paths, connect learning resources, and manage multiple course tracks.</p>
+            </div>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/screenshot5.png" alt="Streaks & Notifications" loading="lazy">
+              <span class="gallery-badge">05. Streaks</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Daily Streaks</h4>
+              <p>Build positive habits with streak meters and instant notifications for upcoming deadlines.</p>
+            </div>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/Screenshot6.png" alt="Nodi AI Productivity Companion" loading="lazy">
+              <span class="gallery-badge">06. AI Companion</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Nodi Assistant</h4>
+              <p>Ask questions, get smart schedule advice, and organize study sessions with AI.</p>
+            </div>
+          </div>
+
+          <!-- Card 7 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/Screenshot7.png" alt="Analytics and Performance Stats" loading="lazy">
+              <span class="gallery-badge">07. Progress</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Goal Completion</h4>
+              <p>Celebrate milestones, view historical stats, and maintain peak semester momentum.</p>
+            </div>
+          </div>
+
+          <!-- Card 8 -->
+          <div class="gallery-card">
+            <div class="gallery-img-wrapper">
+              <img src="assets/Screenshot8.png" alt="Account and Workspace Settings" loading="lazy">
+              <span class="gallery-badge">08. Preferences</span>
+            </div>
+            <div class="gallery-card-content">
+              <h4>Personalized Space</h4>
+              <p>Dark/light themes, offline PWA access, and customized alerts suited to your schedule.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         TESTIMONIAL SECTION
+         ============================================================ -->
+    <section class="testimonial-section">
+      <div class="container">
+        <div class="testimonial-container">
+          <div class="testimonial-avatar-wrapper">
+            <img src="assets/profile.png" alt="Student achiever portrait" class="avatar-halftone">
+          </div>
+
+          <div class="testimonial-content">
+            <div class="quote-icon">“</div>
+            <blockquote class="quote-text">
+              I believe Taskly has to be one of the most impactful tools I've used throughout my academic journey. Moving from chaotic sticky notes to structured roadmaps changed everything.
+            </blockquote>
+            <div class="quote-author">
+              Rukevwe Agoreyo
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </div>
+            <div class="quote-role">Student journalist and youth advocate, Covenant University</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         ORANGE BANNER SECTION ("For Students & Achievers")
+         ============================================================ -->
+    <section class="orange-banner-section">
+      <div class="container">
+        <div class="orange-banner-header">
+          <div class="banner-tag">FOR STUDENTS & ACHIEVERS</div>
+          <h2 class="banner-title">
+            Everything you need to run your academics on real momentum, not stress.
+          </h2>
+          <p style="font-size: 1.15rem; opacity: 0.95; max-width: 600px; margin: 0 auto;">
+            Bring structure to chaos and turn every big project into manageable daily wins.
+          </p>
+        </div>
+
+        <div class="banner-mockups-grid">
+          <div class="banner-card">
+            <img src="assets/Screenshot6.png" alt="Taskly in action" loading="lazy">
+          </div>
+          <div class="banner-card">
+            <img src="assets/Screenshot7.png" alt="Taskly progress tracking" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FAQ SECTION
+         ============================================================ -->
+    <section class="faq-section" id="faq">
+      <div class="container">
+        <div class="faq-header">
+          <h2 class="faq-title">Frequently Asked Questions</h2>
+          <p style="color: var(--color-ink-muted);">Everything you need to know about getting started with Taskly.</p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item open">
+            <button class="faq-question">
+              <span>Is Taskly free to use for students?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes! Taskly is completely free for individual students and creators. You can create unlimited tasks, track roadmaps, and maintain daily streaks with no hidden paywalls.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>How do visual roadmaps work?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Roadmaps allow you to outline large goals—like completing a 12-week course or finishing a final year thesis—into progressive milestones. As you complete each stage, your roadmap automatically updates your completion rate.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Can I use Taskly offline or on my phone?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Absolutely. Taskly is built as a Progressive Web App (PWA). You can install it straight to your home screen or desktop and access your tasks even without an active internet connection.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Who is Nodi?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Nodi is your friendly AI productivity companion inside Taskly. Nodi provides instant motivation, tips on prioritizing backlog tasks, and quick breakdowns when you feel stuck.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FINAL CTA SECTION
+         ============================================================ -->
+    <section class="final-cta-section">
+      <div class="container">
+        <div class="cta-box">
+          <h2 class="cta-title">Ready to take control of your time?</h2>
+          <p class="cta-subtitle">
+            Join students and achievers transforming their daily routines with Taskly.
+          </p>
+
+          <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <a href="signup.html" class="btn btn-primary btn-lg" id="finalSignUpBtn">
+              Create Your Free Account
+            </a>
+            <a href="login.html" class="btn btn-dark btn-lg" id="finalLoginBtn">
+              Sign In
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="assets/tasklylogo.png" alt="Taskly">
+          <span>Taskly</span>
+        </div>
+
+        <p class="footer-copy">
+          © <span id="currentYear">2026</span> Taskly. From task to done.
+        </p>
+
+        <div class="footer-links">
+          <a href="login.html">Sign In</a>
+          <a href="signup.html">Create Account</a>
+        </div>
       </div>
     </div>
+  </footer>
 
-    <div class="confirm-view" id="deleteConfirmView">
-      <div class="warn-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-      </div>
-      <p>Delete "<strong id="deleteConfirmTitle">this roadmap</strong>"? This can't be undone.</p>
-      <div class="confirm-actions">
-        <button class="btn-ghost" type="button" id="cancelDeleteBtn">Cancel</button>
-        <button class="btn-solid is-danger" type="button" id="confirmDeleteBtn">Delete</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ============ Ask Nodi modal ============ -->
-<div class="modal-overlay" id="nodiOverlay">
-  <div class="modal modal-nodi" role="dialog" aria-modal="true" aria-label="Ask Nodi">
-    <div class="nodi-header">
-      <img src="assets/Nodi.png" alt="">
-      <div class="nodi-header-text">
-        <p class="name">Nodi</p>
-        <p class="status">Online</p>
-      </div>
-      <button class="modal-close" data-close-modal="nodiOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
-    </div>
-
-    <div class="nodi-body" id="nodiBody">
-      <div class="chat-bubble from-nodi">Hey, I'm Nodi 👋 Ask me anything about your roadmaps, or tell me what you're stuck on.</div>
-    </div>
-
-    <div class="nodi-suggestions" id="nodiSuggestions">
-      <button class="suggestion-chip" type="button">Help me get unstuck</button>
-      <button class="suggestion-chip" type="button">Explain this task</button>
-      <button class="suggestion-chip" type="button">Suggest resources</button>
-    </div>
-
-    <div class="nodi-input-row">
-      <input class="nodi-input" id="nodiInput" type="text" placeholder="Message Nodi…" maxlength="500">
-      <button class="send-btn" id="nodiSendBtn" type="button" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-send"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script src="js/api.js"></script>
-<script src="js/pwa.js"></script>
-<script src="js/streak.js"></script>
-<script src="js/sidebar.js"></script>
-<script src="js/nodi.js"></script>
-<script src="js/dashboard.js"></script>
+  <script src="js/landing.js"></script>
+  <script>
+    // Update copyright year dynamically
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
