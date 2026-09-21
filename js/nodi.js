@@ -132,6 +132,7 @@
     history: [],
     isOpen: false,
     isSending: false,
+    activePolls: {},
 
     init() {
       const path = window.location.pathname.toLowerCase();
@@ -140,6 +141,7 @@
       }
       this.ensureModalDOM();
       this.loadHistory();
+      this.reconcileIndicators();
       this.bindEvents();
       this.renderHistory();
     },
@@ -250,6 +252,114 @@
       } catch (e) {}
     },
 
+    async reconcileIndicators() {
+      let roadmaps = [];
+      try {
+        if (window.TasklyAPI && typeof window.TasklyAPI.getDashboard === "function") {
+          const res = await window.TasklyAPI.getDashboard();
+          if (Array.isArray(res)) roadmaps = res;
+          else if (res && Array.isArray(res.roadmaps)) roadmaps = res.roadmaps;
+        }
+      } catch (e) {}
+
+      let changed = false;
+      this.history.forEach((msg) => {
+        const text = msg.text !== undefined ? msg.text : (msg.content || "");
+        if (msg.indicator) {
+          const ind = msg.indicator;
+          const curStatus = (ind.status || "").toLowerCase();
+          if (curStatus !== "done" && curStatus !== "failed") {
+            let matched = null;
+            if (ind.roadmapId) {
+              matched = roadmaps.find(r => String(r.id) === String(ind.roadmapId));
+            }
+            if (!matched && text) {
+              matched = roadmaps.find(r => {
+                const t = (r.title || r.goal_text || "").toLowerCase();
+                return t && text.toLowerCase().includes(t);
+              });
+            }
+            if (matched) {
+              ind.roadmapId = matched.id;
+              const rStatus = (matched.status || "done").toLowerCase();
+              const hasNodes = Array.isArray(matched.nodes) && matched.nodes.length > 0;
+              if (rStatus === "done" || hasNodes) {
+                ind.status = "done";
+                changed = true;
+              } else if (rStatus === "failed") {
+                ind.status = "failed";
+                changed = true;
+              } else if (rStatus && rStatus !== curStatus) {
+                ind.status = rStatus;
+                changed = true;
+              }
+            }
+          }
+        }
+      });
+
+      if (changed) {
+        this.saveHistory();
+        this.renderHistory();
+      }
+
+      this.history.forEach((msg) => {
+        if (msg.indicator && msg.indicator.roadmapId) {
+          const s = (msg.indicator.status || "").toLowerCase();
+          if (s !== "done" && s !== "failed") {
+            this.startRoadmapPolling(msg.indicator.roadmapId);
+          }
+        }
+      });
+    },
+
+    startRoadmapPolling(roadmapId) {
+      if (!roadmapId || this.activePolls[roadmapId]) return;
+
+      const pollFn = async () => {
+        try {
+          if (!window.TasklyAPI || typeof window.TasklyAPI.getGenerationStatus !== "function") return;
+          const res = await window.TasklyAPI.getGenerationStatus(roadmapId);
+          const currentStatus = (res && (res.status || (res.roadmap && res.roadmap.status) || "")).toLowerCase();
+
+          this.loadHistory();
+          let changed = false;
+          this.history.forEach((m) => {
+            if (m.indicator && String(m.indicator.roadmapId) === String(roadmapId)) {
+              if (m.indicator.status !== currentStatus) {
+                m.indicator.status = currentStatus;
+                if (currentStatus === "failed") {
+                  m.indicator.error = res && res.error_message;
+                }
+                changed = true;
+              }
+            }
+          });
+
+          if (changed) {
+            this.saveHistory();
+            this.renderHistory();
+          }
+
+          if (currentStatus === "done" || currentStatus === "failed") {
+            clearInterval(this.activePolls[roadmapId]);
+            delete this.activePolls[roadmapId];
+            if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
+              window.TasklyAPI.clearActiveGeneration(roadmapId);
+            }
+            if (currentStatus === "done" && window.TasklyDashboard && typeof window.TasklyDashboard.fetchUserRoadmaps === "function") {
+              window.TasklyDashboard.fetchUserRoadmaps();
+            }
+          }
+        } catch (err) {
+          console.warn("Nodi polling roadmap creation status error:", err);
+        }
+      };
+
+      this.activePolls[roadmapId] = setInterval(pollFn, 500);
+      pollFn();
+    },
+
     clearHistory() {
       this.history = [
         {
@@ -269,6 +379,7 @@
         overlay.classList.add("is-open");
         document.body.classList.add("nodi-open");
         document.querySelectorAll("#nodiBtn, .help-bubble, #nodiFloatingBtn").forEach(b => b.style.display = "none");
+        this.reconcileIndicators();
         setTimeout(() => {
           const input = document.getElementById("nodiInput");
           if (input) input.focus();
@@ -340,6 +451,7 @@
         const humanified = formatHumanText(text);
         bubble.innerHTML = parseMarkdown(humanified);
 
+        // Render Action Badges
         if (Array.isArray(msg.actions) && msg.actions.length > 0) {
           msg.actions.forEach(act => {
             const cleanLabel = this.formatCleanActionResult(act);
@@ -355,6 +467,37 @@
               bubble.appendChild(badge);
             }
           });
+        }
+
+        // Render Roadmap Indicator Badge (in sync with dashboard inline chat)
+        if (msg.indicator) {
+          const ind = msg.indicator;
+          const status = (ind.status || "generating_phases").toLowerCase();
+          const badge = document.createElement("div");
+
+          if (status === "done") {
+            badge.className = "nodi-action-badge is-done";
+            badge.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Roadmap created!</span>
+              <a href="roadmap.html?id=${encodeURIComponent(ind.roadmapId)}" class="view-link" style="color:inherit; text-decoration:underline; font-weight:700; margin-left:4px;">View Roadmap →</a>
+            `;
+          } else if (status === "failed") {
+            badge.className = "nodi-action-badge is-failed";
+            badge.style.cssText = "color:#DC2626; background:#FEE2E2; border-color:#FCA5A5;";
+            badge.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Generation failed${ind.error ? ': ' + escapeHtml(ind.error) : ''}</span>
+            `;
+          } else {
+            const stageName = status === "generating_tasks" ? "generating tasks…" : "generating phases…";
+            badge.className = "nodi-action-badge is-generating";
+            badge.innerHTML = `
+              <span class="spinner-ring" style="width:12px; height:12px; border-width:1.5px; border-top-color:currentColor;"></span>
+              <span>Creating your roadmap (${stageName})</span>
+            `;
+          }
+          bubble.appendChild(badge);
         }
       }
 
@@ -420,9 +563,44 @@
           actions: actions,
           timestamp: new Date().toISOString()
         };
-        this.history.push(nodiMsg);
-        this.appendMessageDOM(nodiMsg);
-        this.saveHistory();
+
+        // Check if actions_taken has create_roadmap
+        let createdRoadmapId = null;
+        if (Array.isArray(actions) && actions.length > 0) {
+          const createAction = actions.find(a => {
+            const tool = String(a.tool || a.name || a.action || "").toLowerCase();
+            const resText = String(a.result || "").toLowerCase();
+            return tool.includes("create_roadmap") || resText.includes("created roadmap");
+          });
+
+          if (createAction) {
+            createdRoadmapId = createAction.roadmap_id || createAction.id;
+            if (!createdRoadmapId && typeof createAction.result === "string") {
+              const idMatch = createAction.result.match(/\(id:\s*([^)]+)\)/i);
+              if (idMatch) createdRoadmapId = idMatch[1].trim();
+            }
+          }
+        }
+
+        if (createdRoadmapId) {
+          nodiMsg.indicator = {
+            roadmapId: createdRoadmapId,
+            status: "generating_phases"
+          };
+          this.history.push(nodiMsg);
+          this.appendMessageDOM(nodiMsg);
+          this.saveHistory();
+          this.startRoadmapPolling(createdRoadmapId);
+          window.dispatchEvent(new CustomEvent("taskly:roadmap-created", { detail: { id: createdRoadmapId } }));
+          if (window.TasklyDashboard && typeof window.TasklyDashboard.fetchUserRoadmaps === "function") {
+            window.TasklyDashboard.fetchUserRoadmaps();
+          }
+        } else {
+          this.history.push(nodiMsg);
+          this.appendMessageDOM(nodiMsg);
+          this.saveHistory();
+          this.reconcileIndicators();
+        }
 
         if (Array.isArray(actions) && actions.length > 0) {
           actions.forEach(a => {

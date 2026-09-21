@@ -307,6 +307,7 @@ window.TasklyDashboard = (function () {
       userRoadmaps = [];
     }
 
+    reconcileChatIndicators(userRoadmaps);
     renderRoadmapList();
   }
 
@@ -375,7 +376,7 @@ window.TasklyDashboard = (function () {
       }
     };
 
-    roadmapPollInterval = setInterval(pollTick, 1000);
+    roadmapPollInterval = setInterval(pollTick, 500);
   }
 
   function renderRoadmapList() {
@@ -705,6 +706,84 @@ window.TasklyDashboard = (function () {
     return html;
   }
 
+  function reconcileChatIndicators(roadmaps) {
+    const list = Array.isArray(roadmaps) ? roadmaps : userRoadmaps;
+    const history = getChatHistory();
+    let changed = false;
+
+    history.forEach((msg) => {
+      const sender = msg.sender || msg.role || "nodi";
+      const text = msg.text !== undefined ? msg.text : (msg.content || "");
+
+      if (msg.indicator) {
+        const ind = msg.indicator;
+        const curStatus = (ind.status || "").toLowerCase();
+        if (curStatus !== "done" && curStatus !== "failed") {
+          let matched = null;
+          if (ind.roadmapId) {
+            matched = list.find(r => String(r.id) === String(ind.roadmapId));
+          }
+          if (!matched && text) {
+            matched = list.find(r => {
+              const t = (r.title || r.goal_text || "").toLowerCase();
+              return t && text.toLowerCase().includes(t);
+            });
+          }
+          if (matched) {
+            ind.roadmapId = matched.id;
+            const rStatus = (matched.status || "done").toLowerCase();
+            const hasNodes = Array.isArray(matched.nodes) && matched.nodes.length > 0;
+            if (rStatus === "done" || hasNodes) {
+              ind.status = "done";
+              changed = true;
+            } else if (rStatus === "failed") {
+              ind.status = "failed";
+              changed = true;
+            } else if (rStatus && rStatus !== curStatus) {
+              ind.status = rStatus;
+              changed = true;
+            }
+          }
+        }
+      } else if (sender === "nodi" && text) {
+        const lower = text.toLowerCase();
+        if (lower.includes("created") && (lower.includes("roadmap") || lower.includes("study plan"))) {
+          const matched = list.find(r => {
+            const t = (r.title || r.goal_text || "").toLowerCase();
+            return t && lower.includes(t);
+          }) || (list.length > 0 ? list[0] : null);
+
+          if (matched) {
+            const rStatus = (matched.status || "done").toLowerCase();
+            const hasNodes = Array.isArray(matched.nodes) && matched.nodes.length > 0;
+            msg.indicator = {
+              roadmapId: matched.id,
+              status: (rStatus === "done" || hasNodes) ? "done" : (rStatus || "generating_phases")
+            };
+            changed = true;
+          }
+        }
+      }
+    });
+
+    if (changed) {
+      try {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
+      } catch (e) {}
+      renderHomeConversation();
+    }
+
+    // Launch polling for any active indicators that still aren't done
+    history.forEach((msg) => {
+      if (msg.indicator && msg.indicator.roadmapId) {
+        const s = (msg.indicator.status || "").toLowerCase();
+        if (s !== "done" && s !== "failed") {
+          startRoadmapCreationPolling(msg.indicator.roadmapId);
+        }
+      }
+    });
+  }
+
   function renderHomeConversation() {
     const view = $("#chatConversationView");
     if (!view) return;
@@ -784,12 +863,14 @@ window.TasklyDashboard = (function () {
         const history = getChatHistory();
         let changed = false;
         history.forEach((m) => {
-          if (m.indicator && m.indicator.roadmapId === roadmapId) {
-            m.indicator.status = currentStatus;
-            if (currentStatus === "failed") {
-              m.indicator.error = res && res.error_message;
+          if (m.indicator && String(m.indicator.roadmapId) === String(roadmapId)) {
+            if (m.indicator.status !== currentStatus) {
+              m.indicator.status = currentStatus;
+              if (currentStatus === "failed") {
+                m.indicator.error = res && res.error_message;
+              }
+              changed = true;
             }
-            changed = true;
           }
         });
 
@@ -814,7 +895,7 @@ window.TasklyDashboard = (function () {
       }
     };
 
-    activeIndicatorPolls[roadmapId] = setInterval(pollFn, 1000);
+    activeIndicatorPolls[roadmapId] = setInterval(pollFn, 500);
     pollFn();
   }
 

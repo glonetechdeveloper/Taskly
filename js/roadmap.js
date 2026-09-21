@@ -357,12 +357,18 @@ window.TasklyRoadmap = (function () {
 
           if (currentStatus === "done" || hasNodes) {
             stopPolling();
+            if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
+              window.TasklyAPI.clearActiveGeneration(roadmapId);
+            }
             showToast("Roadmap generation complete!", "success");
             render();
             loadNotifications();
             return;
           } else if (currentStatus === "failed") {
             stopPolling();
+            if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
+              window.TasklyAPI.clearActiveGeneration(roadmapId);
+            }
             renderFailedState(fresh.error_message);
             return;
           } else if (currentStatus) {
@@ -374,11 +380,11 @@ window.TasklyRoadmap = (function () {
       }
 
       if (isPolling) {
-        pollIntervalId = setTimeout(pollFn, 800);
+        pollIntervalId = setTimeout(pollFn, 400);
       }
     };
 
-    pollIntervalId = setTimeout(pollFn, 800);
+    pollIntervalId = setTimeout(pollFn, 400);
   }
 
   function stopPolling() {

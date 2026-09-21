@@ -356,7 +356,7 @@ window.TasklyManager = (function () {
       }
     };
 
-    roadmapPollInterval = setInterval(pollTick, 1000);
+    roadmapPollInterval = setInterval(pollTick, 500);
   }
 
   function renderRoadmapList() {

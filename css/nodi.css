@@ -335,7 +335,7 @@
   font-style: italic;
 }
 
-/* Action Badges */
+/* Action Badges & Indicators */
 .nodi-action-badge {
   display: inline-flex;
   align-items: center;
@@ -350,10 +350,53 @@
   color: #0D9488;
 }
 
+.nodi-action-badge.is-generating {
+  background: #FFF7ED;
+  border-color: #FED7AA;
+  color: #C2410C;
+}
+
+.nodi-action-badge.is-done {
+  background: #E6F8F7;
+  border-color: #99F6E4;
+  color: #0D9488;
+}
+
+.nodi-action-badge.is-failed {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #DC2626;
+}
+
+.nodi-action-badge .view-link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 4px;
+}
+
 [data-theme="dark"] .nodi-action-badge {
   background: #132E35;
   border-color: #115E59;
   color: #2DD4BF;
+}
+
+[data-theme="dark"] .nodi-action-badge.is-generating {
+  background: #2E1B10;
+  border-color: #7C2D12;
+  color: #FB923C;
+}
+
+[data-theme="dark"] .nodi-action-badge.is-done {
+  background: #132E35;
+  border-color: #115E59;
+  color: #2DD4BF;
+}
+
+[data-theme="dark"] .nodi-action-badge.is-failed {
+  background: #3B1219;
+  border-color: #991B1B;
+  color: #F87171;
 }
 
 /* Typing Dots */
