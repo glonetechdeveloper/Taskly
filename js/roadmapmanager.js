@@ -478,16 +478,21 @@ window.TasklyManager = (function () {
     const title = rm.title || rm.goal_text || "Roadmap";
     const status = (rm.status || "done").toLowerCase();
 
-    $("#optionsRoadmapTitle").textContent = title;
-    $("#optionsRoadmapMeta").textContent = status === "done" ? `${rm.progress_percentage || 0}% completed` : status;
+    const titleEl = $("#optionsRoadmapTitle");
+    if (titleEl) titleEl.textContent = title;
+
+    const metaEl = $("#optionsRoadmapMeta");
+    if (metaEl) metaEl.textContent = status === "done" ? `${rm.progress_percentage || 0}% completed` : status;
 
     const iconUse = $("#optionsRoadmapIconUse");
     if (iconUse) {
       iconUse.setAttribute("href", "#" + getIconForTitle(title));
     }
 
-    $("#optionsMenuRoot").style.display = "block";
-    $("#deleteConfirmView").style.display = "none";
+    const optionsView = $("#roadmapOptionsView") || $("#optionsMenuRoot");
+    const confirmView = $("#deleteConfirmView");
+    if (optionsView) optionsView.style.display = "block";
+    if (confirmView) confirmView.style.display = "none";
 
     openModal("roadmapOptionsOverlay");
   }
@@ -552,18 +557,22 @@ window.TasklyManager = (function () {
       }
     });
 
+    const optionsView = $("#roadmapOptionsView") || $("#optionsMenuRoot");
+    const confirmView = $("#deleteConfirmView");
+
     const deleteOptionBtn = $("#deleteRoadmapOption");
     deleteOptionBtn && deleteOptionBtn.addEventListener("click", () => {
       if (!activeRoadmap) return;
-      $("#deleteConfirmTitle").textContent = activeRoadmap.title || "this roadmap";
-      $("#optionsMenuRoot").style.display = "none";
-      $("#deleteConfirmView").style.display = "block";
+      const titleEl = $("#deleteConfirmTitle");
+      if (titleEl) titleEl.textContent = activeRoadmap.title || activeRoadmap.goal_text || "this roadmap";
+      if (optionsView) optionsView.style.display = "none";
+      if (confirmView) confirmView.style.display = "block";
     });
 
     const cancelDeleteBtn = $("#cancelDeleteBtn");
     cancelDeleteBtn && cancelDeleteBtn.addEventListener("click", () => {
-      $("#optionsMenuRoot").style.display = "block";
-      $("#deleteConfirmView").style.display = "none";
+      if (optionsView) optionsView.style.display = "block";
+      if (confirmView) confirmView.style.display = "none";
     });
 
     const confirmDeleteBtn = $("#confirmDeleteBtn");

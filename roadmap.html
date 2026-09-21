@@ -369,26 +369,52 @@
 <!-- ============ Roadmap-level options ============ -->
 <div class="modal-overlay" id="roadmapMenuOverlay">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Roadmap options">
-    <div class="modal-header">
-      <h3>Roadmap Options</h3>
-      <button class="modal-close" data-close-modal="roadmapMenuOverlay" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
-      </button>
+
+    <div id="roadmapOptionsView">
+      <div class="modal-header">
+        <h3>Roadmap Options</h3>
+        <button class="modal-close" data-close-modal="roadmapMenuOverlay" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><use href="#ic-close"/></svg>
+        </button>
+      </div>
+
+      <div class="roadmap-options-header">
+        <div class="roadmap-icon" id="optionsRoadmapIcon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-route" id="optionsRoadmapIconUse"/></svg>
+        </div>
+        <div class="roadmap-options-header-text">
+          <p class="title" id="optionsRoadmapTitle">Roadmap</p>
+          <p class="meta" id="optionsRoadmapMeta">—</p>
+        </div>
+      </div>
+
+      <div class="option-list">
+        <button class="option-item" type="button" id="renameRoadmapBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
+          Rename Roadmap
+        </button>
+        <button class="option-item" type="button" id="regenerateRoadmapBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-refresh"/></svg>
+          Regenerate Roadmap
+        </button>
+        <button class="option-item is-danger" type="button" id="deleteRoadmapBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
+          Delete Roadmap
+        </button>
+      </div>
     </div>
-    <div class="option-list">
-      <button class="option-item" type="button" id="renameRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-edit"/></svg>
-        Rename Roadmap
-      </button>
-      <button class="option-item" type="button" id="regenerateRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-refresh"/></svg>
-        Regenerate Roadmap
-      </button>
-      <button class="option-item is-danger" type="button" id="deleteRoadmapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-trash"/></svg>
-        Delete Roadmap
-      </button>
+
+    <div class="confirm-view" id="deleteConfirmView" style="display:none;">
+      <div class="warn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-warn"/></svg>
+      </div>
+      <p>Delete "<strong id="deleteConfirmTitle">this roadmap</strong>"? This can't be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-ghost" type="button" id="cancelDeleteRoadmapBtn">Cancel</button>
+        <button class="btn-solid is-danger" type="button" id="confirmDeleteRoadmapBtn">Delete</button>
+      </div>
     </div>
+
   </div>
 </div>
 

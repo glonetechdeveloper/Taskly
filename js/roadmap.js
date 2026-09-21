@@ -1045,13 +1045,60 @@ window.TasklyRoadmap = (function () {
     });
   }
 
+  function getIconForTitle(title) {
+    const t = (title || "").toLowerCase();
+    if (t.includes("figma") || t.includes("code") || t.includes("program") || t.includes("web") || t.includes("python") || t.includes("react") || t.includes("tech") || t.includes("design") || t.includes("laptop")) {
+      return "ic-laptop";
+    }
+    if (t.includes("drive") || t.includes("car") || t.includes("license") || t.includes("vehicle") || t.includes("travel")) {
+      return "ic-car";
+    }
+    if (t.includes("cook") || t.includes("food") || t.includes("recipe") || t.includes("rice") || t.includes("bake") || t.includes("kitchen") || t.includes("meal")) {
+      return "ic-pot";
+    }
+    if (t.includes("plumb") || t.includes("fix") || t.includes("build") || t.includes("diy") || t.includes("repair") || t.includes("wrench")) {
+      return "ic-wrench";
+    }
+    return "ic-route";
+  }
+
   /* ==========================================================
      ROADMAP-LEVEL OPTIONS (Rename / Regenerate / Delete)
      ========================================================== */
 
+  function openRoadmapMenu() {
+    const title = (roadmap && (roadmap.title || roadmap.goal_text)) || "Roadmap";
+    const status = (roadmap && roadmap.status ? roadmap.status : "done").toLowerCase();
+    const progress = computeProgress();
+
+    const titleEl = $("#optionsRoadmapTitle");
+    if (titleEl) titleEl.textContent = title;
+
+    const metaEl = $("#optionsRoadmapMeta");
+    if (metaEl) metaEl.textContent = status === "done" ? `${progress}% completed` : status;
+
+    const iconUse = $("#optionsRoadmapIconUse");
+    if (iconUse) {
+      iconUse.setAttribute("href", "#" + getIconForTitle(title));
+    }
+
+    const optionsView = $("#roadmapOptionsView");
+    const confirmView = $("#deleteConfirmView");
+    if (optionsView) optionsView.style.display = "block";
+    if (confirmView) confirmView.style.display = "none";
+
+    openModal("roadmapMenuOverlay");
+  }
+
   function wireRoadmapMenu() {
     const menuBtn = $("#roadmapMenuBtn");
-    if (menuBtn) menuBtn.addEventListener("click", () => openModal("roadmapMenuOverlay"));
+    if (menuBtn) {
+      menuBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openRoadmapMenu();
+      });
+    }
 
     const renameBtn = $("#renameRoadmapBtn");
     const customRenameInput = $("#customRenameInput");
@@ -1095,30 +1142,46 @@ window.TasklyRoadmap = (function () {
     if (regenBtn) {
       regenBtn.addEventListener("click", async () => {
         closeModal("roadmapMenuOverlay");
-        if (window.confirm("Regenerate roadmap? This will clear current tasks and re-generate milestones.")) {
-          try {
-            await window.TasklyAPI.regenerateRoadmap(roadmapId);
-            showToast("Roadmap regeneration started.", "success");
-            await loadRoadmap(roadmapId);
-          } catch (err) {
-            showToast(err.message || "Could not regenerate roadmap", "error");
-          }
+        try {
+          await window.TasklyAPI.regenerateRoadmap(roadmapId);
+          showToast("Roadmap regeneration started.", "success");
+          await loadRoadmap(roadmapId);
+        } catch (err) {
+          showToast(err.message || "Could not regenerate roadmap", "error");
         }
       });
     }
 
+    const optionsView = $("#roadmapOptionsView");
+    const confirmView = $("#deleteConfirmView");
     const deleteBtn = $("#deleteRoadmapBtn");
-    deleteBtn && deleteBtn.addEventListener("click", async () => {
-      closeModal("roadmapMenuOverlay");
+    const cancelDeleteBtn = $("#cancelDeleteRoadmapBtn");
+    const confirmDeleteBtn = $("#confirmDeleteRoadmapBtn");
+
+    deleteBtn && deleteBtn.addEventListener("click", () => {
       const title = (roadmap && (roadmap.title || roadmap.goal_text)) || "this roadmap";
-      if (window.confirm(`Delete "${title}"? This cannot be undone.`)) {
-        try {
-          await window.TasklyAPI.deleteRoadmap(roadmapId);
-          showToast("Roadmap deleted. Returning to Roadmap Manager…");
-          setTimeout(() => { window.location.href = "roadmapmanager.html"; }, 700);
-        } catch (err) {
-          showToast(err.message || "Failed to delete roadmap", "error");
-        }
+      const delTitle = $("#deleteConfirmTitle");
+      if (delTitle) delTitle.textContent = title;
+      if (optionsView) optionsView.style.display = "none";
+      if (confirmView) confirmView.style.display = "block";
+    });
+
+    cancelDeleteBtn && cancelDeleteBtn.addEventListener("click", () => {
+      if (optionsView) optionsView.style.display = "block";
+      if (confirmView) confirmView.style.display = "none";
+    });
+
+    confirmDeleteBtn && confirmDeleteBtn.addEventListener("click", async () => {
+      confirmDeleteBtn.disabled = true;
+      try {
+        await window.TasklyAPI.deleteRoadmap(roadmapId);
+        closeModal("roadmapMenuOverlay");
+        showToast("Roadmap deleted. Returning to Dashboard…");
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 600);
+      } catch (err) {
+        showToast(err.message || "Failed to delete roadmap", "error");
+      } finally {
+        confirmDeleteBtn.disabled = false;
       }
     });
   }
