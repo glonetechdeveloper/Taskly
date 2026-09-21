@@ -65,7 +65,7 @@ body.sidebar-is-collapsed .main-column {
 /* ----------------- Base Sidebar ----------------- */
 .sidebar {
   width: var(--sb-width);
-  height: 100vh;
+  height: 100%;
   position: fixed;
   top: 0;
   left: 0;
