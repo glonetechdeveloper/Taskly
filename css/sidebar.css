@@ -805,9 +805,10 @@ body.drawer-open {
 @media (max-width: 900px) {
   .sidebar {
     width: var(--sb-mobile-width) !important;
+    max-width: 85vw !important;
     transform: translate3d(-100%, 0, 0) !important;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
-    z-index: 2200;
+    z-index: 12000 !important;
     will-change: transform;
     border-right: none;
   }
@@ -871,11 +872,6 @@ body.drawer-open {
     padding: 6px 8px !important;
     justify-content: space-between !important;
   }
-  body.sidebar-is-collapsed .sidebar-theme-switch {
-    width: 100% !important;
-    padding: 6px 12px !important;
-    justify-content: space-between !important;
-  }
 
   .drawer-overlay {
     position: fixed;
@@ -883,7 +879,7 @@ body.drawer-open {
     background: rgba(15, 23, 42, 0.55);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    z-index: 2100;
+    z-index: 11900 !important;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
@@ -893,4 +889,46 @@ body.drawer-open {
     opacity: 1;
     pointer-events: auto;
   }
+}
+
+/* Hide chatbot floating button & modal when mobile sidebar drawer is open */
+body.drawer-open #nodiOverlay,
+body.drawer-open .nodi-floating-trigger {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Navbar Theme Toggle Button */
+.navbar-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-ink-soft, #64748B);
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+.navbar-theme-btn:hover {
+  color: var(--color-ink, #0F172A);
+  transform: scale(1.05);
+}
+.navbar-theme-btn svg {
+  width: 20px;
+  height: 20px;
+}
+[data-theme="dark"] .navbar-theme-btn .theme-icon-sun {
+  display: none !important;
+}
+[data-theme="dark"] .navbar-theme-btn .theme-icon-moon {
+  display: block !important;
+  color: #38BDF8;
+}
+[data-theme="light"] .navbar-theme-btn .theme-icon-sun,
+:root:not([data-theme="dark"]) .navbar-theme-btn .theme-icon-sun {
+  display: block !important;
+  color: #F59E0B;
+}
+[data-theme="light"] .navbar-theme-btn .theme-icon-moon,
+:root:not([data-theme="dark"]) .navbar-theme-btn .theme-icon-moon {
+  display: none !important;
 }

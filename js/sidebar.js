@@ -254,10 +254,18 @@
         });
       }
 
-      // Theme toggle switch
+      // Theme toggle switches (sidebar, settings, or navbar)
       const themeSwitch = document.getElementById("sidebarThemeSwitch");
       if (themeSwitch) {
         themeSwitch.addEventListener("click", () => {
+          this.toggleTheme();
+        });
+      }
+
+      const navbarThemeBtn = document.getElementById("navbarThemeBtn");
+      if (navbarThemeBtn) {
+        navbarThemeBtn.addEventListener("click", (e) => {
+          e.preventDefault();
           this.toggleTheme();
         });
       }

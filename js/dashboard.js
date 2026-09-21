@@ -622,6 +622,11 @@ window.TasklyDashboard = (function () {
         const text = (textarea.value || "").trim();
         if (!text) return;
 
+        if (window.TasklyAPI && window.TasklyAPI.isGeneratingRoadmap && window.TasklyAPI.isGeneratingRoadmap()) {
+          showToast("A roadmap is currently being generated. Please wait for it to finish before creating another.", "error");
+          return;
+        }
+
         generateBtn.disabled = true;
         if (formView) formView.classList.add("is-hidden");
         if (genState) genState.classList.add("is-active");
@@ -637,7 +642,7 @@ window.TasklyDashboard = (function () {
 
         } catch (err) {
           console.error("Roadmap creation failed:", err);
-          showToast(err.message || "Failed to create roadmap", "error");
+          showToast(window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : (err.message || "Failed to create roadmap"), "error");
           if (formView) formView.classList.remove("is-hidden");
           if (genState) genState.classList.remove("is-active");
           generateBtn.disabled = false;
@@ -646,29 +651,70 @@ window.TasklyDashboard = (function () {
     }
   }
 
-  /* ---------- Inline Homepage Chat & Roadmap Creation Polling ---------- */
+  /* ---------- Inline Homepage Chat (Synced with Nodi AI) ---------- */
 
-  let homeChatMessages = [];
+  const CHAT_STORAGE_KEY = "taskly_nodi_history_v2";
   let activeIndicatorPolls = {};
+  let isLocalTyping = false;
+
+  function getChatHistory() {
+    try {
+      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveChatHistory(history) {
+    try {
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
+      window.dispatchEvent(new CustomEvent("taskly:chat-updated", { detail: { source: "dashboard" } }));
+    } catch (e) {}
+  }
+
+  function formatDashboardText(text) {
+    if (!text) return "";
+    let clean = String(text);
+    clean = clean.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "");
+    clean = clean.replace(/\|---.*---|/g, "");
+    clean = clean.replace(/\|\s*(sequential|flat)\s*\|\s*(done|pending)\s*\|/gi, "");
+    return clean.trim();
+  }
+
+  function parseSimpleMarkdown(md) {
+    if (!md) return "";
+    let html = String(md);
+    html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/^\s*[-*]\s+(.*)$/gim, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
+    html = html.replace(/\n/g, '<br/>');
+    return html;
+  }
 
   function renderHomeConversation() {
     const view = $("#chatConversationView");
     if (!view) return;
 
-    if (homeChatMessages.length === 0) {
+    const history = getChatHistory();
+
+    if (history.length === 0 && !isLocalTyping) {
       view.style.display = "none";
       view.innerHTML = "";
       return;
     }
 
     view.style.display = "flex";
-    view.innerHTML = homeChatMessages.map((msg, idx) => {
-      if (msg.role === "user") {
-        return `<div class="home-chat-bubble from-user">${escapeHtml(msg.content)}</div>`;
-      }
-      
-      if (msg.isTyping) {
-        return `<div class="home-chat-bubble from-nodi"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    let html = history.map((msg) => {
+      const sender = msg.sender || msg.role || "nodi";
+      const text = msg.text !== undefined ? msg.text : (msg.content || "");
+
+      if (sender === "user") {
+        return `<div class="home-chat-bubble from-user">${escapeHtml(text)}</div>`;
       }
 
       let indicatorHtml = "";
@@ -701,18 +747,24 @@ window.TasklyDashboard = (function () {
         }
       }
 
+      const formatted = parseSimpleMarkdown(formatDashboardText(text));
       return `
         <div class="home-chat-bubble from-nodi">
-          <div>${escapeHtml(msg.content)}</div>
+          <div>${formatted}</div>
           ${indicatorHtml}
         </div>
       `;
     }).join("");
 
+    if (isLocalTyping) {
+      html += `<div class="home-chat-bubble from-nodi"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    }
+
+    view.innerHTML = html;
     view.scrollTop = view.scrollHeight;
   }
 
-  function startRoadmapCreationPolling(roadmapId, msgIndex) {
+  function startRoadmapCreationPolling(roadmapId) {
     if (!roadmapId || activeIndicatorPolls[roadmapId]) return;
 
     const pollFn = async () => {
@@ -720,17 +772,29 @@ window.TasklyDashboard = (function () {
         const res = await window.TasklyAPI.getGenerationStatus(roadmapId);
         const currentStatus = (res && (res.status || (res.roadmap && res.roadmap.status) || "")).toLowerCase();
 
-        if (homeChatMessages[msgIndex] && homeChatMessages[msgIndex].indicator) {
-          homeChatMessages[msgIndex].indicator.status = currentStatus;
-          if (currentStatus === "failed") {
-            homeChatMessages[msgIndex].indicator.error = res && res.error_message;
+        const history = getChatHistory();
+        let changed = false;
+        history.forEach((m) => {
+          if (m.indicator && m.indicator.roadmapId === roadmapId) {
+            m.indicator.status = currentStatus;
+            if (currentStatus === "failed") {
+              m.indicator.error = res && res.error_message;
+            }
+            changed = true;
           }
+        });
+
+        if (changed) {
+          saveChatHistory(history);
           renderHomeConversation();
         }
 
         if (currentStatus === "done" || currentStatus === "failed") {
           clearInterval(activeIndicatorPolls[roadmapId]);
           delete activeIndicatorPolls[roadmapId];
+          if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
+            window.TasklyAPI.clearActiveGeneration(roadmapId);
+          }
           if (currentStatus === "done") {
             showToast("Roadmap generation complete!", "success");
             await fetchUserRoadmaps();
@@ -768,11 +832,12 @@ window.TasklyDashboard = (function () {
       updateCharCount();
 
       // Append user message immediately
-      homeChatMessages.push({ role: "user", content: text });
-      
-      // Append temporary loading/typing indicator
-      const typingIdx = homeChatMessages.length;
-      homeChatMessages.push({ role: "nodi", isTyping: true });
+      const history = getChatHistory();
+      const userMsg = { sender: "user", text: text, timestamp: new Date().toISOString() };
+      history.push(userMsg);
+      saveChatHistory(history);
+
+      isLocalTyping = true;
       renderHomeConversation();
 
       try {
@@ -787,11 +852,14 @@ window.TasklyDashboard = (function () {
           reply = `I processed your request for: "${text}".`;
         }
 
+        isLocalTyping = false;
+
         const nodiMsg = {
-          role: "nodi",
-          content: reply
+          sender: "nodi",
+          text: formatDashboardText(reply),
+          actions: actions,
+          timestamp: new Date().toISOString()
         };
-        homeChatMessages[typingIdx] = nodiMsg;
 
         // Check if actions_taken has create_roadmap
         let createdRoadmapId = null;
@@ -816,8 +884,11 @@ window.TasklyDashboard = (function () {
             roadmapId: createdRoadmapId,
             status: "generating_phases"
           };
+          const curHistory = getChatHistory();
+          curHistory.push(nodiMsg);
+          saveChatHistory(curHistory);
           renderHomeConversation();
-          startRoadmapCreationPolling(createdRoadmapId, typingIdx);
+          startRoadmapCreationPolling(createdRoadmapId);
           await fetchUserRoadmaps();
         } else {
           // Check if response text indicates roadmap creation
@@ -831,18 +902,24 @@ window.TasklyDashboard = (function () {
                   roadmapId: topId,
                   status: topStatus || "generating_phases"
                 };
-                renderHomeConversation();
-                startRoadmapCreationPolling(topId, typingIdx);
+                startRoadmapCreationPolling(topId);
               }
             }
           }
+          const curHistory = getChatHistory();
+          curHistory.push(nodiMsg);
+          saveChatHistory(curHistory);
           renderHomeConversation();
         }
       } catch (err) {
-        homeChatMessages[typingIdx] = {
-          role: "nodi",
-          content: "Sorry, I ran into an error reaching Nodi AI. Please try again."
-        };
+        isLocalTyping = false;
+        const curHistory = getChatHistory();
+        curHistory.push({
+          sender: "nodi",
+          text: "Sorry, I ran into an error reaching Nodi AI. Please try again.",
+          timestamp: new Date().toISOString()
+        });
+        saveChatHistory(curHistory);
         renderHomeConversation();
       }
     }
@@ -854,6 +931,15 @@ window.TasklyDashboard = (function () {
         handleInlineSubmit();
       }
     });
+
+    // Listen to two-way chat events
+    window.addEventListener("taskly:chat-updated", () => renderHomeConversation());
+    window.addEventListener("storage", (e) => {
+      if (e.key === CHAT_STORAGE_KEY) renderHomeConversation();
+    });
+
+    // Initial render
+    renderHomeConversation();
   }
 
   /* ---------- Sidebar Logout ---------- */

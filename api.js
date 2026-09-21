@@ -640,9 +640,53 @@ const TasklyAPI = {
     return await apiRequest("/auth/me", { method: "GET" });
   },
 
+  /* ---------------- Single Active Roadmap Generation Guard ---------------- */
+  isGeneratingRoadmap() {
+    try {
+      const active = sessionStorage.getItem("taskly_active_generation");
+      if (active) {
+        const parsed = JSON.parse(active);
+        // Timeout safeguard: 4 minutes
+        if (Date.now() - (parsed.started_at || 0) < 240000) {
+          return true;
+        } else {
+          sessionStorage.removeItem("taskly_active_generation");
+        }
+      }
+    } catch (e) {}
+    return false;
+  },
+
+  setActiveGeneration(roadmapId) {
+    try {
+      sessionStorage.setItem("taskly_active_generation", JSON.stringify({
+        id: roadmapId,
+        started_at: Date.now()
+      }));
+      window.dispatchEvent(new CustomEvent("taskly:generation-started", { detail: { id: roadmapId } }));
+    } catch (e) {}
+  },
+
+  clearActiveGeneration(roadmapId) {
+    try {
+      const active = sessionStorage.getItem("taskly_active_generation");
+      if (active) {
+        const parsed = JSON.parse(active);
+        if (!roadmapId || parsed.id === roadmapId) {
+          sessionStorage.removeItem("taskly_active_generation");
+          window.dispatchEvent(new CustomEvent("taskly:generation-finished", { detail: { id: roadmapId } }));
+        }
+      }
+    } catch (e) {}
+  },
+
   /* ---------------- Roadmaps ---------------- */
   // POST /roadmaps — Request body (RoadmapCreate): { goal_text, title?, type? }
   async createRoadmap(input = {}) {
+    if (this.isGeneratingRoadmap()) {
+      throw new Error("A roadmap is currently being generated. Please wait for it to finish before creating another.");
+    }
+
     const payload = {};
     let rawGoal = "";
     let givenTitle = "";
@@ -666,10 +710,17 @@ const TasklyAPI = {
       payload.title = this.summarizeTitle(rawGoal, reqType);
     }
 
-    return await apiRequest("/roadmaps", {
+    const res = await apiRequest("/roadmaps", {
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    const newId = (res && (res.id || (res.roadmap && res.roadmap.id))) || (typeof res === "string" ? res : null);
+    if (newId) {
+      this.setActiveGeneration(newId);
+    }
+
+    return res;
   },
 
   // GET /roadmaps — list of current user's roadmaps (array of RoadmapSummary)
@@ -700,12 +751,21 @@ const TasklyAPI = {
 
   // POST /roadmaps/{id}/regenerate — Response 200 (RoadmapDetail)
   async regenerateRoadmap(id) {
+    if (this.isGeneratingRoadmap()) {
+      throw new Error("A roadmap is currently being generated. Please wait for it to finish before creating another.");
+    }
+    this.setActiveGeneration(id);
     return await apiRequest(`/roadmaps/${id}/regenerate`, { method: "POST" });
   },
 
   // GET /roadmaps/{id}/generation-status — Response 200 (GenerationStatus)
   async getGenerationStatus(id) {
-    return await apiRequest(`/roadmaps/${id}/generation-status`, { method: "GET" });
+    const res = await apiRequest(`/roadmaps/${id}/generation-status`, { method: "GET" });
+    const currentStatus = (res && (res.status || (res.roadmap && res.roadmap.status) || "")).toLowerCase();
+    if (currentStatus === "done" || currentStatus === "failed") {
+      this.clearActiveGeneration(id);
+    }
+    return res;
   },
 
   // GET /roadmaps/{id}/progress — Response 200 (Progress)

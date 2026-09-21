@@ -246,6 +246,7 @@
     saveHistory() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.history));
+        window.dispatchEvent(new CustomEvent("taskly:chat-updated", { detail: { source: "nodi" } }));
       } catch (e) {}
     },
 
@@ -327,13 +328,16 @@
       const body = document.getElementById("nodiBody");
       if (!body) return;
 
-      const bubble = document.createElement("div");
-      bubble.className = `chat-bubble from-${msg.sender}`;
+      const sender = msg.sender || msg.role || "nodi";
+      const text = msg.text !== undefined ? msg.text : (msg.content || "");
 
-      if (msg.sender === "user") {
-        bubble.textContent = msg.text;
+      const bubble = document.createElement("div");
+      bubble.className = `chat-bubble from-${sender}`;
+
+      if (sender === "user") {
+        bubble.textContent = text;
       } else {
-        const humanified = formatHumanText(msg.text);
+        const humanified = formatHumanText(text);
         bubble.innerHTML = parseMarkdown(humanified);
 
         if (Array.isArray(msg.actions) && msg.actions.length > 0) {
@@ -493,6 +497,20 @@
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && this.isOpen) {
           this.close();
+        }
+      });
+
+      // Two-way synchronization with dashboard chat modal & other tabs
+      window.addEventListener("taskly:chat-updated", (e) => {
+        if (e && e.detail && e.detail.source === "nodi") return;
+        this.loadHistory();
+        this.renderHistory();
+      });
+
+      window.addEventListener("storage", (e) => {
+        if (e.key === STORAGE_KEY) {
+          this.loadHistory();
+          this.renderHistory();
         }
       });
 

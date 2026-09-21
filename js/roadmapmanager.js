@@ -630,6 +630,11 @@ window.TasklyManager = (function () {
         const text = (textarea.value || "").trim();
         if (!text) return;
 
+        if (window.TasklyAPI && window.TasklyAPI.isGeneratingRoadmap && window.TasklyAPI.isGeneratingRoadmap()) {
+          showToast("A roadmap is currently being generated. Please wait for it to finish before creating another.", "error");
+          return;
+        }
+
         generateBtn.disabled = true;
         if (formView) formView.classList.add("is-hidden");
         if (genState) genState.classList.add("is-active");
