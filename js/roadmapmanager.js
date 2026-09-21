@@ -291,6 +291,74 @@ window.TasklyManager = (function () {
     renderRoadmapList();
   }
 
+  let roadmapPollInterval = null;
+
+  function startRoadmapGenerationPolling() {
+    if (roadmapPollInterval) clearInterval(roadmapPollInterval);
+
+    const pollTick = async () => {
+      const generating = userRoadmaps.filter(r => {
+        const s = (r.status || "done").toLowerCase();
+        return s !== "done" && s !== "failed";
+      });
+
+      if (generating.length === 0) {
+        if (roadmapPollInterval) {
+          clearInterval(roadmapPollInterval);
+          roadmapPollInterval = null;
+        }
+        return;
+      }
+
+      let anyDone = false;
+
+      for (const rm of generating) {
+        try {
+          const statusData = await window.TasklyAPI.getGenerationStatus(rm.id);
+          const currentStatus = (statusData && (statusData.status || (statusData.roadmap && statusData.roadmap.status) || "")).toLowerCase();
+
+          if (currentStatus && currentStatus !== (rm.status || "").toLowerCase()) {
+            rm.status = currentStatus;
+
+            const card = document.querySelector(`article.roadmap-card[data-id="${rm.id}"]`);
+            if (card) {
+              if (currentStatus === "done") {
+                anyDone = true;
+                const metaEl = card.querySelector(".roadmap-body span") || card.querySelector(".roadmap-meta");
+                if (metaEl) metaEl.outerHTML = `<p class="roadmap-meta">0% completed</p>`;
+                const progressFill = card.querySelector(".progress-fill");
+                if (progressFill) {
+                  progressFill.classList.remove("is-pulse");
+                  progressFill.style.width = "0%";
+                }
+              } else if (currentStatus === "failed") {
+                const metaEl = card.querySelector(".roadmap-body span") || card.querySelector(".roadmap-meta");
+                if (metaEl) metaEl.outerHTML = `<span style="color:var(--color-error); font-weight:600; font-size:12px;">Generation failed</span>`;
+                const progressFill = card.querySelector(".progress-fill");
+                if (progressFill) progressFill.classList.remove("is-pulse");
+              } else {
+                const metaEl = card.querySelector(".roadmap-body span");
+                if (metaEl) {
+                  const stageLabel = currentStatus === "generating_tasks" ? "Generating tasks…" : "Generating phases…";
+                  metaEl.innerHTML = `<span class="spinner-ring" style="width:12px; height:12px; border-width:1.5px; border-top-color:var(--color-orange-deep);"></span> ${stageLabel}`;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Roadmap generation poll error:", e);
+        }
+      }
+
+      if (anyDone) {
+        showToast("Roadmap generation complete!", "success");
+        await fetchUserRoadmaps();
+      }
+    };
+
+    roadmapPollInterval = setInterval(pollTick, 2500);
+  }
+
   function renderRoadmapList() {
     const grid = $("#managerList") || $("#roadmapGrid");
     if (!grid) return;
@@ -305,6 +373,7 @@ window.TasklyManager = (function () {
     });
 
     updateEmptyFilterState(filtered.length);
+    startRoadmapGenerationPolling();
   }
 
   function filterRoadmaps(list, filter) {
@@ -675,6 +744,11 @@ window.TasklyManager = (function () {
         loadStreak(),
         loadNotifications()
       ]);
+
+      window.addEventListener("focus", () => fetchUserRoadmaps());
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) fetchUserRoadmaps();
+      });
     };
 
     if (document.readyState === "loading") {

@@ -310,6 +310,74 @@ window.TasklyDashboard = (function () {
     renderRoadmapList();
   }
 
+  let roadmapPollInterval = null;
+
+  function startRoadmapGenerationPolling() {
+    if (roadmapPollInterval) clearInterval(roadmapPollInterval);
+
+    const pollTick = async () => {
+      const generating = userRoadmaps.filter(r => {
+        const s = (r.status || "done").toLowerCase();
+        return s !== "done" && s !== "failed";
+      });
+
+      if (generating.length === 0) {
+        if (roadmapPollInterval) {
+          clearInterval(roadmapPollInterval);
+          roadmapPollInterval = null;
+        }
+        return;
+      }
+
+      let anyDone = false;
+
+      for (const rm of generating) {
+        try {
+          const statusData = await window.TasklyAPI.getGenerationStatus(rm.id);
+          const currentStatus = (statusData && (statusData.status || (statusData.roadmap && statusData.roadmap.status) || "")).toLowerCase();
+
+          if (currentStatus && currentStatus !== (rm.status || "").toLowerCase()) {
+            rm.status = currentStatus;
+
+            const card = document.querySelector(`article.roadmap-card[data-id="${rm.id}"]`);
+            if (card) {
+              if (currentStatus === "done") {
+                anyDone = true;
+                const metaEl = card.querySelector(".roadmap-body span") || card.querySelector(".roadmap-meta");
+                if (metaEl) metaEl.outerHTML = `<p class="roadmap-meta">0% completed</p>`;
+                const progressFill = card.querySelector(".progress-fill");
+                if (progressFill) {
+                  progressFill.classList.remove("is-pulse");
+                  progressFill.style.width = "0%";
+                }
+              } else if (currentStatus === "failed") {
+                const metaEl = card.querySelector(".roadmap-body span") || card.querySelector(".roadmap-meta");
+                if (metaEl) metaEl.outerHTML = `<span style="color:var(--color-error); font-weight:600; font-size:12px;">Generation failed</span>`;
+                const progressFill = card.querySelector(".progress-fill");
+                if (progressFill) progressFill.classList.remove("is-pulse");
+              } else {
+                const metaEl = card.querySelector(".roadmap-body span");
+                if (metaEl) {
+                  const stageLabel = currentStatus === "generating_tasks" ? "Generating tasks…" : "Generating phases…";
+                  metaEl.innerHTML = `<span class="spinner-ring" style="width:12px; height:12px; border-width:1.5px; border-top-color:var(--color-orange-deep);"></span> ${stageLabel}`;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Roadmap generation poll error:", e);
+        }
+      }
+
+      if (anyDone) {
+        showToast("Roadmap generation complete!", "success");
+        await fetchUserRoadmaps();
+      }
+    };
+
+    roadmapPollInterval = setInterval(pollTick, 2500);
+  }
+
   function renderRoadmapList() {
     const list = $("#roadmapList");
     if (!list) return;
@@ -327,6 +395,7 @@ window.TasklyDashboard = (function () {
     });
 
     updateEmptyState();
+    startRoadmapGenerationPolling();
   }
 
   function createCardElement(rm, index) {
@@ -577,6 +646,105 @@ window.TasklyDashboard = (function () {
     }
   }
 
+  /* ---------- Inline Homepage Chat & Roadmap Creation Polling ---------- */
+
+  let homeChatMessages = [];
+  let activeIndicatorPolls = {};
+
+  function renderHomeConversation() {
+    const view = $("#chatConversationView");
+    if (!view) return;
+
+    if (homeChatMessages.length === 0) {
+      view.style.display = "none";
+      view.innerHTML = "";
+      return;
+    }
+
+    view.style.display = "flex";
+    view.innerHTML = homeChatMessages.map((msg, idx) => {
+      if (msg.role === "user") {
+        return `<div class="home-chat-bubble from-user">${escapeHtml(msg.content)}</div>`;
+      }
+      
+      if (msg.isTyping) {
+        return `<div class="home-chat-bubble from-nodi"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+      }
+
+      let indicatorHtml = "";
+      if (msg.indicator) {
+        const ind = msg.indicator;
+        const status = (ind.status || "generating_phases").toLowerCase();
+        if (status === "done") {
+          indicatorHtml = `
+            <div class="home-chat-indicator">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Roadmap created!</span>
+              <a href="roadmap.html?id=${encodeURIComponent(ind.roadmapId)}" class="view-link">View Roadmap →</a>
+            </div>
+          `;
+        } else if (status === "failed") {
+          indicatorHtml = `
+            <div class="home-chat-indicator is-failed">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Generation failed${ind.error ? ': ' + escapeHtml(ind.error) : ''}</span>
+            </div>
+          `;
+        } else {
+          const stageName = status === "generating_tasks" ? "generating tasks…" : "generating phases…";
+          indicatorHtml = `
+            <div class="home-chat-indicator">
+              <span class="spinner-ring"></span>
+              <span>Creating your roadmap (${stageName})</span>
+            </div>
+          `;
+        }
+      }
+
+      return `
+        <div class="home-chat-bubble from-nodi">
+          <div>${escapeHtml(msg.content)}</div>
+          ${indicatorHtml}
+        </div>
+      `;
+    }).join("");
+
+    view.scrollTop = view.scrollHeight;
+  }
+
+  function startRoadmapCreationPolling(roadmapId, msgIndex) {
+    if (!roadmapId || activeIndicatorPolls[roadmapId]) return;
+
+    const pollFn = async () => {
+      try {
+        const res = await window.TasklyAPI.getGenerationStatus(roadmapId);
+        const currentStatus = (res && (res.status || (res.roadmap && res.roadmap.status) || "")).toLowerCase();
+
+        if (homeChatMessages[msgIndex] && homeChatMessages[msgIndex].indicator) {
+          homeChatMessages[msgIndex].indicator.status = currentStatus;
+          if (currentStatus === "failed") {
+            homeChatMessages[msgIndex].indicator.error = res && res.error_message;
+          }
+          renderHomeConversation();
+        }
+
+        if (currentStatus === "done" || currentStatus === "failed") {
+          clearInterval(activeIndicatorPolls[roadmapId]);
+          delete activeIndicatorPolls[roadmapId];
+          if (currentStatus === "done") {
+            showToast("Roadmap generation complete!", "success");
+            await fetchUserRoadmaps();
+          }
+        }
+      } catch (err) {
+        console.warn("Error polling roadmap creation status:", err);
+      }
+    };
+
+    activeIndicatorPolls[roadmapId] = setInterval(pollFn, 2500);
+    pollFn();
+  }
+
   function wireInlineInput() {
     const input = $("#goalInput") || $("#inlineGoalInput");
     const btn = $("#sendBtn") || $("#inlineGenerateBtn");
@@ -599,13 +767,83 @@ window.TasklyDashboard = (function () {
       input.value = "";
       updateCharCount();
 
-      // Connect hero prompt directly to NODi bot
-      if (window.NodiAI && typeof window.NodiAI.open === "function") {
-        window.NodiAI.open();
-        window.NodiAI.sendMessage(text);
-      } else {
-        const overlay = document.getElementById("nodiOverlay");
-        if (overlay) overlay.classList.add("is-open");
+      // Append user message immediately
+      homeChatMessages.push({ role: "user", content: text });
+      
+      // Append temporary loading/typing indicator
+      const typingIdx = homeChatMessages.length;
+      homeChatMessages.push({ role: "nodi", isTyping: true });
+      renderHomeConversation();
+
+      try {
+        let reply = "";
+        let actions = [];
+
+        if (window.TasklyAPI && typeof window.TasklyAPI.chat === "function") {
+          const res = await window.TasklyAPI.chat(text);
+          reply = res.reply || res.message || "I processed your request.";
+          actions = res.actions_taken || res.actions || [];
+        } else {
+          reply = `I processed your request for: "${text}".`;
+        }
+
+        const nodiMsg = {
+          role: "nodi",
+          content: reply
+        };
+        homeChatMessages[typingIdx] = nodiMsg;
+
+        // Check if actions_taken has create_roadmap
+        let createdRoadmapId = null;
+        if (Array.isArray(actions) && actions.length > 0) {
+          const createAction = actions.find(a => {
+            const tool = String(a.tool || a.name || a.action || "").toLowerCase();
+            const resText = String(a.result || "").toLowerCase();
+            return tool.includes("create_roadmap") || resText.includes("created roadmap");
+          });
+
+          if (createAction) {
+            createdRoadmapId = createAction.roadmap_id || createAction.id;
+            if (!createdRoadmapId && typeof createAction.result === "string") {
+              const idMatch = createAction.result.match(/\(id:\s*([^)]+)\)/i);
+              if (idMatch) createdRoadmapId = idMatch[1].trim();
+            }
+          }
+        }
+
+        if (createdRoadmapId) {
+          nodiMsg.indicator = {
+            roadmapId: createdRoadmapId,
+            status: "generating_phases"
+          };
+          renderHomeConversation();
+          startRoadmapCreationPolling(createdRoadmapId, typingIdx);
+          await fetchUserRoadmaps();
+        } else {
+          // Check if response text indicates roadmap creation
+          if (reply.toLowerCase().includes("created a new roadmap") || reply.toLowerCase().includes("generated a roadmap") || reply.toLowerCase().includes("created roadmap")) {
+            await fetchUserRoadmaps();
+            if (userRoadmaps.length > 0 && userRoadmaps[0].id) {
+              const topId = userRoadmaps[0].id;
+              const topStatus = (userRoadmaps[0].status || "").toLowerCase();
+              if (topStatus !== "done" && topStatus !== "failed") {
+                nodiMsg.indicator = {
+                  roadmapId: topId,
+                  status: topStatus || "generating_phases"
+                };
+                renderHomeConversation();
+                startRoadmapCreationPolling(topId, typingIdx);
+              }
+            }
+          }
+          renderHomeConversation();
+        }
+      } catch (err) {
+        homeChatMessages[typingIdx] = {
+          role: "nodi",
+          content: "Sorry, I ran into an error reaching Nodi AI. Please try again."
+        };
+        renderHomeConversation();
       }
     }
 
@@ -656,6 +894,11 @@ window.TasklyDashboard = (function () {
         loadStreak(),
         loadNotifications()
       ]);
+
+      window.addEventListener("focus", () => fetchUserRoadmaps());
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) fetchUserRoadmaps();
+      });
     };
 
     if (document.readyState === "loading") {

@@ -309,31 +309,6 @@
         });
       });
 
-      // Navbar Notifications bell setup (top 5 max, categorized read/unread)
-      const notifBtn = document.getElementById("notifBtn");
-      const notifPanel = document.getElementById("notifPanel");
-      if (notifBtn && notifPanel) {
-        notifBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // Close streak if open
-          const streakOverlay = document.getElementById("streakOverlay");
-          if (streakOverlay) streakOverlay.classList.remove("is-open");
-
-          const isOpen = notifPanel.classList.toggle("is-open");
-          if (isOpen) {
-            this.renderNavbarNotifications();
-            const dot = document.getElementById("notifDot");
-            if (dot) dot.style.display = "none";
-          }
-        });
-
-        document.addEventListener("click", (e) => {
-          if (notifPanel.classList.contains("is-open") && !notifPanel.contains(e.target) && !notifBtn.contains(e.target)) {
-            notifPanel.classList.remove("is-open");
-          }
-        });
-      }
-
       // New Chat & Chat with Nodi triggers
       document.querySelectorAll(".open-nodi-modal, #sidebarChatBtn, #sidebarNewChatBtn, #askNodiSidebar").forEach((btn) => {
         btn.addEventListener("click", (e) => {

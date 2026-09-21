@@ -849,19 +849,29 @@ svg { display: block; }
   position: fixed;
   top: 64px;
   right: var(--sp-4);
-  width: 340px;
-  max-width: calc(100vw - 32px);
+  width: min(360px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
   background: var(--color-cream);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--color-border);
   border: 1px solid var(--color-border);
-  z-index: 150;
+  z-index: 2500;
   opacity: 0;
   transform: translateY(-8px);
   pointer-events: none;
   transition: opacity .2s ease, transform .2s var(--ease-snap);
 }
 .dropdown-panel.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+@media (max-width: 600px) {
+  .dropdown-panel {
+    top: 60px;
+    right: 12px;
+    left: auto;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+}
 
 .dropdown-header {
   padding: 14px 16px;
@@ -917,26 +927,9 @@ svg { display: block; }
 .help-bubble:active { transform: scale(.96); }
 .help-bubble img { width: 30px; height: 30px; display: block; border-radius: 50%; background: var(--color-white); }
 
-#nodiOverlay {
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: var(--sp-4);
-  background: transparent !important;
-  pointer-events: none !important;
-}
-#nodiOverlay .modal-nodi {
-  width: 380px;
-  max-width: calc(100vw - 32px);
-  margin-bottom: 56px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 24px 60px -16px rgba(60, 42, 10, 0.35);
-  transform: translateY(12px) scale(0.98);
-  transform-origin: bottom right;
-}
-#nodiOverlay.is-open .modal-nodi {
-  transform: translateY(0) scale(1);
-}
-.modal-nodi { max-width: 400px; padding: 0; display: flex; flex-direction: column; }
+/* ============================================================
+   ASK NODI (Styles defined in css/nodi.css)
+   ============================================================ */
 
 .nodi-header {
   display: flex; align-items: center; gap: 10px;

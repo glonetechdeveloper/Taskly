@@ -183,7 +183,7 @@ function handleOfflineFallback(path, options = {}) {
         localStorage.setItem("taskly_cached_roadmaps", JSON.stringify(cachedRoadmaps));
       } catch (e) {}
       reply = `I've created a new roadmap for "${cleanTitle}" with step-by-step milestones! You can view and manage it right away.`;
-      actions_taken = [{ tool: "create_roadmap", result: `Created roadmap '${cleanTitle}'` }];
+      actions_taken = [{ tool: "create_roadmap", result: `Created roadmap '${cleanTitle}' (id: ${newId})`, roadmap_id: newId, id: newId }];
     } else if (msg.includes("progress") || msg.includes("status") || msg.includes("how am i doing")) {
       if (cachedRoadmaps.length > 0) {
         const top = cachedRoadmaps[0];
