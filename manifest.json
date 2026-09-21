@@ -1,0 +1,76 @@
+{
+  "id": "taskly-pwa-app",
+  "name": "Taskly — AI Study & Productivity Roadmaps",
+  "short_name": "Taskly",
+  "description": "Generate, customize, track, and master your learning journeys with AI-powered roadmaps, streak tracking, and study partner Nodi AI.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "start_url": "./dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#0B0F19",
+  "theme_color": "#0D9488",
+  "categories": [
+    "productivity",
+    "education",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "assets/Icon.png",
+      "sizes": "192x192 512x512 526x475",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/Icon.png",
+      "sizes": "192x192 512x512 526x475",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/tasklylogo.png",
+      "sizes": "833x299",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "./dashboard.html",
+      "description": "View active roadmaps, streak, and daily progress",
+      "icons": [{ "src": "assets/Icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Roadmap Manager",
+      "short_name": "Roadmaps",
+      "url": "./roadmapmanager.html",
+      "description": "Create, edit, and explore your learning paths",
+      "icons": [{ "src": "assets/Icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ask Nodi AI",
+      "short_name": "Nodi AI",
+      "url": "./dashboard.html?action=chat",
+      "description": "Get real-time AI study help and explanations",
+      "icons": [{ "src": "assets/Nodi.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifs",
+      "url": "./notifications.html",
+      "description": "Check milestone badges and recent activity",
+      "icons": [{ "src": "assets/Icon.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

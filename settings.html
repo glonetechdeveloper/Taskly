@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taskly — Settings</title>
 <link rel="shortcut icon" href="assets/Icon.png" type="image/png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0D9488">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taskly">
+<link rel="apple-touch-icon" href="assets/Icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -369,6 +376,49 @@
           </div>
         </div>
 
+        <!-- 5. Progressive Web App (PWA) Card -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-card-icon" style="background: rgba(13, 148, 136, 0.12); color: #0D9488;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M7 8h10M7 12h10M7 16h6"/>
+              </svg>
+            </div>
+            <div class="settings-card-title-group">
+              <h3>Desktop & Mobile App (PWA)</h3>
+              <p>Install Taskly to your PC taskbar, Mac dock, or mobile home screen.</p>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <p class="setting-title">Add to Home Screen / Taskbar</p>
+              <p class="setting-desc">Run Taskly in full-screen standalone mode with faster load times and offline roadmap caching.</p>
+            </div>
+            <div class="setting-control">
+              <button type="button" class="btn btn-primary pwa-install-trigger" id="installAppBtn" style="background: var(--color-teal, #0D9488); color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Install App
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <p class="setting-title">App Installation Status</p>
+              <p class="setting-desc">Check if Taskly is currently operating in native standalone app mode.</p>
+            </div>
+            <div class="setting-control">
+              <span class="pwa-status-badge" style="display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #F1F5F9; color: #475569;">Browser Mode (Installable)</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>
@@ -454,6 +504,7 @@
 </div>
 
 <script src="js/api.js"></script>
+<script src="js/pwa.js"></script>
 <script src="js/streak.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/nodi.js"></script>

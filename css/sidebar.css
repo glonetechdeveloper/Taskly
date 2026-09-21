@@ -1096,3 +1096,80 @@ body.drawer-open .nodi-floating-trigger {
     max-width: calc(100vw - 24px) !important;
   }
 }
+
+/* ============================================================
+   PWA INSTALLATION UI & MODAL STYLES
+   ============================================================ */
+.sidebar-pwa-btn {
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+}
+
+.sidebar-pwa-btn:hover .sidebar-link-icon svg {
+  transform: translateY(2px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pwa-status-badge.is-installed {
+  background: #D1FAE5 !important;
+  color: #065F46 !important;
+  border: 1px solid #A7F3D0 !important;
+}
+
+[data-theme="dark"] .pwa-status-badge {
+  background: #1E293B !important;
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .pwa-status-badge.is-installed {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34D399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.pwa-install-modal {
+  background: #FFFFFF !important;
+  border-radius: 20px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  animation: pwaModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] .pwa-install-modal {
+  background: #0F172A !important;
+  border-color: #1E293B !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="dark"] #pwaModalDesktopGuide {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] #pwaModalDesktopGuide p {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] #pwaModalDesktopGuide ul {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] #pwaModalIosGuide ol {
+  color: #F1F5F9 !important;
+}
+
+@keyframes pwaModalPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
