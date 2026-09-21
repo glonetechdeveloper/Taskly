@@ -169,123 +169,15 @@ window.TasklyRoadmap = (function () {
   }
 
   function renderNotificationDropdown() {
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!panel) return;
-
-    const notifs = getStoredNotifications();
-    const unread = notifs.filter(n => !n.read);
-    if (dot) dot.style.display = unread.length > 0 ? "block" : "none";
-
-    const formatRelativeTime = (iso) => {
-      if (!iso) return "Just now";
-      try {
-        const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-        if (diff < 60) return "Just now";
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
-      } catch (e) {
-        return "Recently";
-      }
-    };
-
-    panel.innerHTML = `
-      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--color-border, #f1f5f9);">
-        <span style="font-weight:700; font-size:13.5px;">Notifications</span>
-        ${unread.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-teal, #0d9488); font-size:11.5px; font-weight:700; cursor:pointer; padding:2px 6px;">Mark all read</button>' : ''}
-      </div>
-      <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
-        ${notifs.length === 0 ? `
-          <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
-            No new notifications
-          </div>
-        ` : notifs.slice(0, 15).map(n => `
-          <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: pointer; padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.06)'};">
-            <div style="display:flex; gap:10px; align-items:flex-start;">
-              <div class="notif-icon ${n.type === 'milestone' || n.type === 'roadmap' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                  <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/>
-                </svg>
-              </div>
-              <div style="flex:1; min-width:0;">
-                <p class="notif-text" style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${escapeHtml(n.message || 'Notification update')}</p>
-                <p class="notif-time" style="font-size:11px; color:#94A3B8; margin-top:3px;">${formatRelativeTime(n.created_at)}</p>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="dropdown-footer" style="padding:8px; text-align:center; border-top:1px solid var(--color-border, #f1f5f9);">
-        <button class="view-all-btn" id="viewAllNotifsBtn" type="button" style="color:var(--color-teal, #0d9488); font-weight:700; font-size:12.5px; background:none; border:none; cursor:pointer;">View all notifications</button>
-      </div>
-    `;
-
-    const clearBtn = $("#clearNotifsBtn", panel);
-    if (clearBtn) {
-      clearBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (window.TasklyAPI && typeof window.TasklyAPI.markAllNotificationsRead === "function") {
-          window.TasklyAPI.markAllNotificationsRead();
-        } else {
-          notifs.forEach(n => n.read = true);
-          saveStoredNotifications(notifs);
-        }
-        renderNotificationDropdown();
-        showToast("All notifications marked as read.", "success");
-      });
+    if (window.SidebarController && typeof window.SidebarController.renderNavbarNotifications === "function") {
+      window.SidebarController.renderNavbarNotifications();
     }
-
-    const viewAllBtn = $("#viewAllNotifsBtn", panel);
-    if (viewAllBtn) {
-      viewAllBtn.addEventListener("click", () => {
-        panel.classList.remove("is-open");
-        window.location.href = "notifications.html";
-      });
-    }
-
-    $all(".notif-item", panel).forEach(item => {
-      item.addEventListener("click", () => {
-        const id = item.dataset.notifId;
-        const rmId = item.dataset.roadmapId;
-        const found = notifs.find(n => n.id === id);
-        if (found) {
-          found.read = true;
-          saveStoredNotifications(notifs);
-          renderNotificationDropdown();
-        }
-        if (rmId && rmId !== roadmapId) {
-          panel.classList.remove("is-open");
-          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
-        }
-      });
-    });
   }
 
   function wireNotifications() {
-    const btn = $("#notifBtn");
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!btn || !panel) return;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = !panel.classList.contains("is-open");
-      closeAllDropdowns();
-      if (willOpen) {
-        panel.classList.add("is-open");
-        if (dot) dot.style.display = "none";
-      }
-    });
-    document.addEventListener("click", (e) => {
-      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
-        panel.classList.remove("is-open");
-      }
-    });
-
-    window.addEventListener("taskly:notifications-updated", () => renderNotificationDropdown());
-    window.addEventListener("storage", (e) => {
-      if (e.key === "taskly_notifications") renderNotificationDropdown();
-    });
+    if (window.SidebarController && typeof window.SidebarController.initNotifDropdown === "function") {
+      window.SidebarController.initNotifDropdown();
+    }
   }
 
   /* ==========================================================

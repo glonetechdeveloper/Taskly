@@ -23,37 +23,77 @@
       this.initTouchGestures();
     },
 
+    escapeHtml(str) {
+      if (typeof document !== "undefined" && typeof document.createElement === "function") {
+        const d = document.createElement("div");
+        d.textContent = str || "";
+        return d.innerHTML;
+      }
+      return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    },
+
+    openNotifDropdown() {
+      const panel = document.getElementById("notifPanel");
+      const dot = document.getElementById("notifDot");
+      if (!panel) return;
+      const streakOverlay = document.getElementById("streakOverlay");
+      if (streakOverlay) streakOverlay.classList.remove("is-open");
+      document.querySelectorAll(".dropdown-panel.is-open").forEach(d => {
+        if (d !== panel) d.classList.remove("is-open");
+      });
+      panel.classList.add("is-open");
+      if (dot) dot.style.display = "none";
+      this.renderNavbarNotifications();
+    },
+
+    closeNotifDropdown() {
+      const panel = document.getElementById("notifPanel");
+      if (panel) panel.classList.remove("is-open");
+    },
+
+    toggleNotifDropdown() {
+      const panel = document.getElementById("notifPanel");
+      if (!panel) return;
+      if (panel.classList.contains("is-open")) {
+        this.closeNotifDropdown();
+      } else {
+        this.openNotifDropdown();
+      }
+    },
+
     initNotifDropdown() {
       const btn = document.getElementById("notifBtn");
       const panel = document.getElementById("notifPanel");
-      const dot = document.getElementById("notifDot");
-      if (!btn || !panel) return;
+      if (!panel) return;
 
       this.renderNavbarNotifications();
 
-      if (btn.dataset.wiredNotif) return;
-      btn.dataset.wiredNotif = "true";
-
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const willOpen = !panel.classList.contains("is-open");
-        document.querySelectorAll(".dropdown-panel.is-open").forEach(d => {
-          if (d !== panel) d.classList.remove("is-open");
+      if (btn && !btn.dataset.wiredNotif) {
+        btn.dataset.wiredNotif = "true";
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.toggleNotifDropdown();
         });
-        if (willOpen) {
-          panel.classList.add("is-open");
-          if (dot) dot.style.display = "none";
-          this.renderNavbarNotifications();
-        } else {
-          panel.classList.remove("is-open");
-        }
-      });
+      }
 
-      document.addEventListener("click", (e) => {
-        if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
-          panel.classList.remove("is-open");
-        }
-      });
+      if (!document.body.dataset.wiredNotifGlobal) {
+        document.body.dataset.wiredNotifGlobal = "true";
+        document.addEventListener("click", (e) => {
+          const p = document.getElementById("notifPanel");
+          const b = document.getElementById("notifBtn");
+          if (p && p.classList.contains("is-open")) {
+            if (!p.contains(e.target) && (!b || !b.contains(e.target))) {
+              this.closeNotifDropdown();
+            }
+          }
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            this.closeNotifDropdown();
+          }
+        });
+      }
     },
 
     initTheme() {
@@ -432,13 +472,13 @@
           ${notifs.length === 0 ? `
             <div style="padding: 24px 16px; text-align: center; color: #94A3B8; font-size: 13px;">No new notifications</div>
           ` : notifs.slice(0, 15).map(n => `
-            <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" data-roadmap-id="${n.roadmap_id || ''}" style="padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.06)'}; cursor: pointer; transition: background 0.15s ease;">
+            <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" data-roadmap-id="${this.escapeHtml(n.roadmap_id || '')}" style="padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.06)'}; cursor: pointer; transition: background 0.15s ease;">
               <div style="display:flex; gap:10px; align-items:flex-start;">
                 <div class="notif-icon ${n.type === 'milestone' || n.type === 'roadmap' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/></svg>
                 </div>
                 <div style="flex:1; min-width:0;">
-                  <p style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${n.message}</p>
+                  <p style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${this.escapeHtml(n.message || 'Notification update')}</p>
                   <span style="font-size:11px; color:#94A3B8; margin-top:3px; display:block;">${formatRelativeTime(n.created_at)}</span>
                 </div>
               </div>
@@ -501,7 +541,19 @@
   });
 
   window.addEventListener("storage", (e) => {
-    if (e.key === "taskly_notifications" && window.SidebarController) {
+    let shouldUpdate = false;
+    if (e.key === "taskly_notifications") {
+      shouldUpdate = true;
+    } else if (e.key === "taskly_sync_event") {
+      try {
+        const data = JSON.parse(e.newValue || "{}");
+        if (data.event === "taskly:notifications-updated") {
+          shouldUpdate = true;
+        }
+      } catch (err) {}
+    }
+
+    if (shouldUpdate && window.SidebarController) {
       if (typeof window.SidebarController.renderNavbarNotifications === "function") {
         window.SidebarController.renderNavbarNotifications();
       }

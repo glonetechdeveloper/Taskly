@@ -975,6 +975,7 @@ const TasklyAPI = {
   saveStoredNotifications(notifs) {
     try {
       localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+      localStorage.setItem("taskly_sync_event", JSON.stringify({ event: "taskly:notifications-updated", timestamp: Date.now() }));
       window.dispatchEvent(new CustomEvent("taskly:notifications-updated", { detail: notifs }));
     } catch (e) {}
   },
@@ -1015,6 +1016,7 @@ const TasklyAPI = {
   clearAllNotifications() {
     try {
       localStorage.removeItem("taskly_notifications");
+      localStorage.setItem("taskly_sync_event", JSON.stringify({ event: "taskly:notifications-updated", timestamp: Date.now() }));
       window.dispatchEvent(new CustomEvent("taskly:notifications-updated", { detail: [] }));
     } catch (e) {}
   },

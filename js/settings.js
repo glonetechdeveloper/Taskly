@@ -158,90 +158,15 @@ window.TasklySettings = (function () {
   }
 
   function renderNotificationDropdown() {
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!panel) return;
-
-    const notifs = getStoredNotifications();
-    if (dot) dot.style.display = notifs.length > 0 ? "block" : "none";
-
-    panel.innerHTML = `
-      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>Notifications</span>
-        ${notifs.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-ink-soft); font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 6px;">Clear all</button>' : ''}
-      </div>
-      <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
-        ${notifs.length === 0 ? `
-          <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
-            No new notifications
-          </div>
-        ` : notifs.map(n => `
-          <div class="notif-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
-            <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}">
-              <svg viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <use href="${n.type === 'milestone' ? '#ic-flame' : '#ic-check'}"></use>
-              </svg>
-            </div>
-            <div>
-              <p class="notif-text">${escapeHtml(n.message || 'Milestone update')}</p>
-              <p class="notif-time">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="dropdown-footer">
-        <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
-      </div>
-    `;
-
-    const clearBtn = $("#clearNotifsBtn", panel);
-    if (clearBtn) {
-      clearBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        localStorage.removeItem("taskly_notifications");
-        renderNotificationDropdown();
-        showToast("Notifications cleared.");
-      });
+    if (window.SidebarController && typeof window.SidebarController.renderNavbarNotifications === "function") {
+      window.SidebarController.renderNavbarNotifications();
     }
-
-    const viewAllBtn = $("#viewAllNotifsBtn", panel);
-    if (viewAllBtn) {
-      viewAllBtn.addEventListener("click", () => {
-        panel.classList.remove("is-open");
-        window.location.href = "notifications.html";
-      });
-    }
-
-    $all(".notif-item[data-roadmap-id]", panel).forEach(item => {
-      const rmId = item.dataset.roadmapId;
-      if (rmId) {
-        item.addEventListener("click", () => {
-          panel.classList.remove("is-open");
-          window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
-        });
-      }
-    });
   }
 
   function wireNotifDropdown() {
-    const btn = $("#notifBtn");
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!btn || !panel) return;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = !panel.classList.contains("is-open");
-      closeAllDropdowns();
-      if (willOpen) {
-        panel.classList.add("is-open");
-        if (dot) dot.style.display = "none";
-      }
-    });
-    document.addEventListener("click", (e) => {
-      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
-        panel.classList.remove("is-open");
-      }
-    });
+    if (window.SidebarController && typeof window.SidebarController.initNotifDropdown === "function") {
+      window.SidebarController.initNotifDropdown();
+    }
   }
 
   /* ---------- Notification Preferences (GET & PATCH /notifications/preferences) ---------- */

@@ -108,27 +108,9 @@ window.TasklyNotifications = (function () {
   }
 
   function wireNotifDropdown() {
-    const btn = $("#notifBtn");
-    const panel = $("#notifPanel");
-    const dot = $("#notifDot");
-    if (!btn || !panel) return;
-
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = !panel.classList.contains("is-open");
-      if (willOpen) {
-        panel.classList.add("is-open");
-        if (dot) dot.style.display = "none";
-      } else {
-        panel.classList.remove("is-open");
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
-        panel.classList.remove("is-open");
-      }
-    });
+    if (window.SidebarController && typeof window.SidebarController.initNotifDropdown === "function") {
+      window.SidebarController.initNotifDropdown();
+    }
   }
 
   function tickCountdown() {
@@ -348,7 +330,16 @@ window.TasklyNotifications = (function () {
 
       window.addEventListener("taskly:notifications-updated", () => renderNotificationsPage());
       window.addEventListener("storage", (e) => {
-        if (e.key === "taskly_notifications") renderNotificationsPage();
+        if (e.key === "taskly_notifications") {
+          renderNotificationsPage();
+        } else if (e.key === "taskly_sync_event") {
+          try {
+            const data = JSON.parse(e.newValue || "{}");
+            if (data.event === "taskly:notifications-updated") {
+              renderNotificationsPage();
+            }
+          } catch (err) {}
+        }
       });
     };
 
