@@ -133,7 +133,12 @@ window.TasklyRoadmap = (function () {
     el.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
+  /* ---------- Notifications Handling ---------- */
+
   function getStoredNotifications() {
+    if (window.TasklyAPI && typeof window.TasklyAPI.getStoredNotifications === "function") {
+      return window.TasklyAPI.getStoredNotifications();
+    }
     try {
       const raw = localStorage.getItem("taskly_notifications");
       return raw ? JSON.parse(raw) : [];
@@ -143,19 +148,19 @@ window.TasklyRoadmap = (function () {
   }
 
   function saveStoredNotifications(notifs) {
-    try {
-      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
-    } catch (e) {}
+    if (window.TasklyAPI && typeof window.TasklyAPI.saveStoredNotifications === "function") {
+      window.TasklyAPI.saveStoredNotifications(notifs);
+    } else {
+      try {
+        localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+      } catch (e) {}
+    }
   }
 
   async function loadNotifications() {
     try {
-      const freshNotifs = await window.TasklyAPI.getNotifications();
-      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
-        const existing = getStoredNotifications();
-        const existingIds = new Set(existing.map(n => n.id));
-        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
-        saveStoredNotifications(merged);
+      if (window.TasklyAPI && typeof window.TasklyAPI.getNotifications === "function") {
+        await window.TasklyAPI.getNotifications();
       }
     } catch (err) {
       console.warn("Could not fetch notifications:", err);
@@ -169,34 +174,50 @@ window.TasklyRoadmap = (function () {
     if (!panel) return;
 
     const notifs = getStoredNotifications();
-    if (dot) dot.style.display = notifs.length > 0 ? "block" : "none";
+    const unread = notifs.filter(n => !n.read);
+    if (dot) dot.style.display = unread.length > 0 ? "block" : "none";
+
+    const formatRelativeTime = (iso) => {
+      if (!iso) return "Just now";
+      try {
+        const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (diff < 60) return "Just now";
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
+      } catch (e) {
+        return "Recently";
+      }
+    };
 
     panel.innerHTML = `
-      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>Notifications</span>
-        ${notifs.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-ink-soft); font-size:11.5px; font-weight:600; cursor:pointer; padding:2px 6px;">Clear all</button>' : ''}
+      <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--color-border, #f1f5f9);">
+        <span style="font-weight:700; font-size:13.5px;">Notifications</span>
+        ${unread.length > 0 ? '<button id="clearNotifsBtn" type="button" style="background:none; border:none; color:var(--color-teal, #0d9488); font-size:11.5px; font-weight:700; cursor:pointer; padding:2px 6px;">Mark all read</button>' : ''}
       </div>
       <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
         ${notifs.length === 0 ? `
           <div style="padding: 24px 16px; text-align: center; color: var(--color-ink-soft); font-size: 13px;">
             No new notifications
           </div>
-        ` : notifs.map(n => `
-          <div class="notif-item" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: ${n.roadmap_id ? 'pointer' : 'default'};">
-            <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}">
-              <svg viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <use href="${n.type === 'milestone' ? '#ic-flame' : '#ic-check'}"></use>
-              </svg>
-            </div>
-            <div>
-              <p class="notif-text">${escapeHtml(n.message || 'Milestone update')}</p>
-              <p class="notif-time">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
+        ` : notifs.slice(0, 15).map(n => `
+          <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" data-roadmap-id="${escapeHtml(n.roadmap_id || '')}" style="cursor: pointer; padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.06)'};">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div class="notif-icon ${n.type === 'milestone' || n.type === 'roadmap' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                  <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/>
+                </svg>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <p class="notif-text" style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${escapeHtml(n.message || 'Notification update')}</p>
+                <p class="notif-time" style="font-size:11px; color:#94A3B8; margin-top:3px;">${formatRelativeTime(n.created_at)}</p>
+              </div>
             </div>
           </div>
         `).join('')}
       </div>
-      <div class="dropdown-footer">
-        <button class="view-all-btn" id="viewAllNotifsBtn" type="button">View all notifications</button>
+      <div class="dropdown-footer" style="padding:8px; text-align:center; border-top:1px solid var(--color-border, #f1f5f9);">
+        <button class="view-all-btn" id="viewAllNotifsBtn" type="button" style="color:var(--color-teal, #0d9488); font-weight:700; font-size:12.5px; background:none; border:none; cursor:pointer;">View all notifications</button>
       </div>
     `;
 
@@ -204,9 +225,14 @@ window.TasklyRoadmap = (function () {
     if (clearBtn) {
       clearBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        localStorage.removeItem("taskly_notifications");
+        if (window.TasklyAPI && typeof window.TasklyAPI.markAllNotificationsRead === "function") {
+          window.TasklyAPI.markAllNotificationsRead();
+        } else {
+          notifs.forEach(n => n.read = true);
+          saveStoredNotifications(notifs);
+        }
         renderNotificationDropdown();
-        showToast("Notifications cleared.");
+        showToast("All notifications marked as read.", "success");
       });
     }
 
@@ -218,14 +244,21 @@ window.TasklyRoadmap = (function () {
       });
     }
 
-    $all(".notif-item[data-roadmap-id]", panel).forEach(item => {
-      const rmId = item.dataset.roadmapId;
-      if (rmId) {
-        item.addEventListener("click", () => {
+    $all(".notif-item", panel).forEach(item => {
+      item.addEventListener("click", () => {
+        const id = item.dataset.notifId;
+        const rmId = item.dataset.roadmapId;
+        const found = notifs.find(n => n.id === id);
+        if (found) {
+          found.read = true;
+          saveStoredNotifications(notifs);
+          renderNotificationDropdown();
+        }
+        if (rmId && rmId !== roadmapId) {
           panel.classList.remove("is-open");
           window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
-        });
-      }
+        }
+      });
     });
   }
 
@@ -247,6 +280,11 @@ window.TasklyRoadmap = (function () {
       if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
         panel.classList.remove("is-open");
       }
+    });
+
+    window.addEventListener("taskly:notifications-updated", () => renderNotificationDropdown());
+    window.addEventListener("storage", (e) => {
+      if (e.key === "taskly_notifications") renderNotificationDropdown();
     });
   }
 
@@ -359,6 +397,13 @@ window.TasklyRoadmap = (function () {
             stopPolling();
             if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
               window.TasklyAPI.clearActiveGeneration(roadmapId);
+            }
+            if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+              window.TasklyAPI.addNotification({
+                message: `"${fresh.title || roadmap.title || 'Roadmap'}" generation complete!`,
+                type: "milestone",
+                roadmap_id: roadmapId
+              });
             }
             showToast("Roadmap generation complete!", "success");
             render();
@@ -722,8 +767,22 @@ window.TasklyRoadmap = (function () {
         try {
           if (isDone) {
             await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
+            if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+              window.TasklyAPI.addNotification({
+                message: `Reopened task "${node.name || 'item'}"`,
+                type: "action",
+                roadmap_id: roadmapId
+              });
+            }
           } else {
             await window.TasklyAPI.completeNode(roadmapId, node.id);
+            if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+              window.TasklyAPI.addNotification({
+                message: `Completed "${node.name || 'item'}" in ${(roadmap && (roadmap.title || roadmap.goal_text)) || 'checklist'}`,
+                type: "milestone",
+                roadmap_id: roadmapId
+              });
+            }
           }
           if (window.StreakManager && typeof window.StreakManager.loadStreak === "function") {
             window.StreakManager.loadStreak();
@@ -743,6 +802,13 @@ window.TasklyRoadmap = (function () {
           e.stopPropagation();
           try {
             await window.TasklyAPI.deleteNode(roadmapId, node.id);
+            if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+              window.TasklyAPI.addNotification({
+                message: `Deleted task "${node.name || 'item'}"`,
+                type: "action",
+                roadmap_id: roadmapId
+              });
+            }
             showToast("Item deleted.");
             const fresh = await window.TasklyAPI.getRoadmap(roadmapId);
             if (fresh) roadmap = (fresh.roadmap || fresh.data) || fresh;
@@ -772,6 +838,14 @@ window.TasklyRoadmap = (function () {
           order: nextOrder,
           time_estimate: "15 min"
         });
+
+        if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+          window.TasklyAPI.addNotification({
+            message: `Added task "${name}" to ${(roadmap && (roadmap.title || roadmap.goal_text)) || 'checklist'}`,
+            type: "action",
+            roadmap_id: roadmapId
+          });
+        }
 
         addInput.value = "";
         showToast("Item added!", "success");
@@ -830,8 +904,22 @@ window.TasklyRoadmap = (function () {
           try {
             if (isCompleted) {
               await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
+              if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+                window.TasklyAPI.addNotification({
+                  message: `Reopened milestone "${node.name || 'task'}"`,
+                  type: "action",
+                  roadmap_id: roadmapId
+                });
+              }
             } else {
               await window.TasklyAPI.completeNode(roadmapId, node.id);
+              if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+                window.TasklyAPI.addNotification({
+                  message: `Completed milestone "${node.name || 'task'}" in ${(roadmap && (roadmap.title || roadmap.goal_text)) || 'roadmap'}`,
+                  type: "milestone",
+                  roadmap_id: roadmapId
+                });
+              }
               showToast("Nice work! Task complete.", "success");
             }
             if (window.StreakManager && typeof window.StreakManager.loadStreak === "function") {
@@ -908,9 +996,23 @@ window.TasklyRoadmap = (function () {
       try {
         if (isCompleted) {
           await window.TasklyAPI.uncompleteNode(roadmapId, node.id);
+          if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+            window.TasklyAPI.addNotification({
+              message: `Reopened task "${node.name || 'item'}"`,
+              type: "action",
+              roadmap_id: roadmapId
+            });
+          }
           showToast("Marked incomplete.");
         } else {
           await window.TasklyAPI.completeNode(roadmapId, node.id);
+          if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+            window.TasklyAPI.addNotification({
+              message: `Completed milestone "${node.name || 'item'}" in ${(roadmap && (roadmap.title || roadmap.goal_text)) || 'roadmap'}`,
+              type: "milestone",
+              roadmap_id: roadmapId
+            });
+          }
           showToast("Nice work! Task complete.", "success");
         }
         await loadStreak();
@@ -939,7 +1041,16 @@ window.TasklyRoadmap = (function () {
       delBtn.disabled = true;
 
       try {
+        const node = findNodeById(currentNodeId);
+        const nodeName = (node && node.name) || "task";
         await window.TasklyAPI.deleteNode(roadmapId, currentNodeId);
+        if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+          window.TasklyAPI.addNotification({
+            message: `Deleted task "${nodeName}"`,
+            type: "action",
+            roadmap_id: roadmapId
+          });
+        }
         showToast("Task deleted.");
         closeModal("deleteTaskOverlay");
 
@@ -1050,6 +1161,13 @@ window.TasklyRoadmap = (function () {
             time_estimate: estimate || null,
             depends_on: dependsOn
           });
+          if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+            window.TasklyAPI.addNotification({
+              message: `Updated task "${name}"`,
+              type: "action",
+              roadmap_id: roadmapId
+            });
+          }
           showToast("Task updated.", "success");
         } else {
           // POST /roadmaps/{roadmap_id}/nodes
@@ -1060,6 +1178,13 @@ window.TasklyRoadmap = (function () {
             time_estimate: estimate || undefined,
             depends_on: dependsOn
           });
+          if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+            window.TasklyAPI.addNotification({
+              message: `Added task "${name}" to ${(roadmap && (roadmap.title || roadmap.goal_text)) || 'roadmap'}`,
+              type: "action",
+              roadmap_id: roadmapId
+            });
+          }
           showToast("Task added.", "success");
         }
 
@@ -1155,6 +1280,13 @@ window.TasklyRoadmap = (function () {
       try {
         await window.TasklyAPI.updateRoadmap(roadmapId, { title: trimmed });
         if (roadmap) roadmap.title = trimmed;
+        if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+          window.TasklyAPI.addNotification({
+            message: `Renamed roadmap to "${trimmed}"`,
+            type: "roadmap",
+            roadmap_id: roadmapId
+          });
+        }
         renderHeader();
         showToast("Roadmap renamed.", "success");
       } catch (err) {
@@ -1175,9 +1307,17 @@ window.TasklyRoadmap = (function () {
     const regenBtn = $("#regenerateRoadmapBtn");
     if (regenBtn) {
       regenBtn.addEventListener("click", async () => {
+        const title = (roadmap && (roadmap.title || roadmap.goal_text)) || "Roadmap";
         closeModal("roadmapMenuOverlay");
         try {
           await window.TasklyAPI.regenerateRoadmap(roadmapId);
+          if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+            window.TasklyAPI.addNotification({
+              message: `Regeneration started for "${title}"`,
+              type: "roadmap",
+              roadmap_id: roadmapId
+            });
+          }
           showToast("Roadmap regeneration started.", "success");
           await loadRoadmap(roadmapId);
         } catch (err) {
@@ -1207,8 +1347,15 @@ window.TasklyRoadmap = (function () {
 
     confirmDeleteBtn && confirmDeleteBtn.addEventListener("click", async () => {
       confirmDeleteBtn.disabled = true;
+      const deletedTitle = (roadmap && (roadmap.title || roadmap.goal_text)) || "Roadmap";
       try {
         await window.TasklyAPI.deleteRoadmap(roadmapId);
+        if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+          window.TasklyAPI.addNotification({
+            message: `Deleted roadmap "${deletedTitle}"`,
+            type: "system"
+          });
+        }
         closeModal("roadmapMenuOverlay");
         showToast("Roadmap deleted. Returning to Dashboard…");
         setTimeout(() => { window.location.href = "dashboard.html"; }, 600);

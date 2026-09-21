@@ -963,6 +963,62 @@ const TasklyAPI = {
   },
 
   /* ---------------- Notifications ---------------- */
+  getStoredNotifications() {
+    try {
+      const raw = localStorage.getItem("taskly_notifications");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  saveStoredNotifications(notifs) {
+    try {
+      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+      window.dispatchEvent(new CustomEvent("taskly:notifications-updated", { detail: notifs }));
+    } catch (e) {}
+  },
+
+  addNotification(notif) {
+    if (!notif) return null;
+    const message = typeof notif === "string" ? notif : notif.message;
+    if (!message) return null;
+
+    const list = this.getStoredNotifications();
+    const newEntry = {
+      id: notif.id || ("notif_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7)),
+      message: message,
+      type: notif.type || "action",
+      roadmap_id: notif.roadmap_id || notif.roadmapId || null,
+      read: false,
+      created_at: notif.created_at || new Date().toISOString()
+    };
+
+    // Avoid duplicate message spam within 3 seconds
+    if (list.length > 0 && list[0].message === newEntry.message && (Date.now() - new Date(list[0].created_at).getTime() < 3000)) {
+      return list[0];
+    }
+
+    list.unshift(newEntry);
+    if (list.length > 50) list.length = 50;
+
+    this.saveStoredNotifications(list);
+    return newEntry;
+  },
+
+  markAllNotificationsRead() {
+    const list = this.getStoredNotifications();
+    list.forEach(n => n.read = true);
+    this.saveStoredNotifications(list);
+  },
+
+  clearAllNotifications() {
+    try {
+      localStorage.removeItem("taskly_notifications");
+      window.dispatchEvent(new CustomEvent("taskly:notifications-updated", { detail: [] }));
+    } catch (e) {}
+  },
+
   // GET /notifications/preferences → NotificationPreferenceOut: { user_id, email_enabled, milestone_notifications }
   async getNotificationPreferences() {
     return await apiRequest("/notifications/preferences", { method: "GET" });
@@ -978,7 +1034,19 @@ const TasklyAPI = {
 
   // GET /notifications → pull-and-consume: array of NotificationOut (marks delivered on read)
   async getNotifications() {
-    return await apiRequest("/notifications", { method: "GET" });
+    try {
+      const freshNotifs = await apiRequest("/notifications", { method: "GET" });
+      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
+        const existing = this.getStoredNotifications();
+        const existingIds = new Set(existing.map(n => n.id));
+        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
+        this.saveStoredNotifications(merged);
+        return merged;
+      }
+    } catch (e) {
+      console.warn("Could not fetch remote notifications:", e);
+    }
+    return this.getStoredNotifications();
   },
 
   /* ---------------- Chat (Nodi AI) ---------------- */

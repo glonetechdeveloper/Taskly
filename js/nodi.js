@@ -347,8 +347,17 @@
             if (window.TasklyAPI && window.TasklyAPI.clearActiveGeneration) {
               window.TasklyAPI.clearActiveGeneration(roadmapId);
             }
-            if (currentStatus === "done" && window.TasklyDashboard && typeof window.TasklyDashboard.fetchUserRoadmaps === "function") {
-              window.TasklyDashboard.fetchUserRoadmaps();
+            if (currentStatus === "done") {
+              if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function") {
+                window.TasklyAPI.addNotification({
+                  message: "Nodi finished creating your roadmap!",
+                  type: "roadmap",
+                  roadmap_id: roadmapId
+                });
+              }
+              if (window.TasklyDashboard && typeof window.TasklyDashboard.fetchUserRoadmaps === "function") {
+                window.TasklyDashboard.fetchUserRoadmaps();
+              }
             }
           }
         } catch (err) {
@@ -605,11 +614,19 @@
         if (Array.isArray(actions) && actions.length > 0) {
           actions.forEach(a => {
             const tool = String(a.tool || "");
+            const res = typeof a.result === "string" ? a.result : "";
             if (tool.includes("roadmap")) {
               window.dispatchEvent(new CustomEvent("taskly:roadmap-created", { detail: a.result }));
             }
             if (tool.includes("node") || tool.includes("task")) {
               window.dispatchEvent(new CustomEvent("taskly:node-completed", { detail: a.result }));
+              if (window.TasklyAPI && typeof window.TasklyAPI.addNotification === "function" && res) {
+                const clean = res.replace(/\(id:[^)]+\)/gi, "").trim();
+                window.TasklyAPI.addNotification({
+                  message: `Nodi: ${clean}`,
+                  type: "milestone"
+                });
+              }
             }
             if (tool.includes("streak")) {
               window.dispatchEvent(new CustomEvent("taskly:streak-updated", { detail: a.result }));

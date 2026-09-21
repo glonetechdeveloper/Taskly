@@ -148,6 +148,9 @@ window.TasklyNotifications = (function () {
   /* ---------- Notifications Data & Synchronization ---------- */
 
   function getStoredNotifications() {
+    if (window.TasklyAPI && typeof window.TasklyAPI.getStoredNotifications === "function") {
+      return window.TasklyAPI.getStoredNotifications();
+    }
     try {
       const raw = localStorage.getItem("taskly_notifications");
       return raw ? JSON.parse(raw) : [];
@@ -157,19 +160,19 @@ window.TasklyNotifications = (function () {
   }
 
   function saveStoredNotifications(notifs) {
-    try {
-      localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
-    } catch (e) {}
+    if (window.TasklyAPI && typeof window.TasklyAPI.saveStoredNotifications === "function") {
+      window.TasklyAPI.saveStoredNotifications(notifs);
+    } else {
+      try {
+        localStorage.setItem("taskly_notifications", JSON.stringify(notifs));
+      } catch (e) {}
+    }
   }
 
   async function fetchNotificationsFromServer() {
     try {
-      const freshNotifs = await window.TasklyAPI.getNotifications();
-      if (Array.isArray(freshNotifs) && freshNotifs.length > 0) {
-        const existing = getStoredNotifications();
-        const existingIds = new Set(existing.map(n => n.id));
-        const merged = [...freshNotifs.filter(n => !existingIds.has(n.id)), ...existing];
-        saveStoredNotifications(merged);
+      if (window.TasklyAPI && typeof window.TasklyAPI.getNotifications === "function") {
+        await window.TasklyAPI.getNotifications();
       }
     } catch (err) {
       console.warn("Could not fetch notifications from server:", err);
@@ -279,9 +282,13 @@ window.TasklyNotifications = (function () {
     if (markAllBtn) {
       markAllBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        notifs.forEach(n => n.read = true);
-        saveStoredNotifications(notifs);
-        renderNotificationsPage();
+        if (window.TasklyAPI && typeof window.TasklyAPI.markAllNotificationsRead === "function") {
+          window.TasklyAPI.markAllNotificationsRead();
+        } else {
+          notifs.forEach(n => n.read = true);
+          saveStoredNotifications(notifs);
+          renderNotificationsPage();
+        }
         showToast("All notifications marked as read.", "success");
       });
     }
@@ -292,10 +299,14 @@ window.TasklyNotifications = (function () {
     if (!btn) return;
 
     btn.addEventListener("click", () => {
-      const notifs = getStoredNotifications();
-      notifs.forEach(n => n.read = true);
-      saveStoredNotifications(notifs);
-      renderNotificationsPage();
+      if (window.TasklyAPI && typeof window.TasklyAPI.markAllNotificationsRead === "function") {
+        window.TasklyAPI.markAllNotificationsRead();
+      } else {
+        const notifs = getStoredNotifications();
+        notifs.forEach(n => n.read = true);
+        saveStoredNotifications(notifs);
+        renderNotificationsPage();
+      }
       showToast("All notifications marked as read.", "success");
     });
   }
@@ -334,6 +345,11 @@ window.TasklyNotifications = (function () {
         fetchNotificationsFromServer(),
         loadStreak()
       ]);
+
+      window.addEventListener("taskly:notifications-updated", () => renderNotificationsPage());
+      window.addEventListener("storage", (e) => {
+        if (e.key === "taskly_notifications") renderNotificationsPage();
+      });
     };
 
     if (document.readyState === "loading") {
@@ -343,7 +359,7 @@ window.TasklyNotifications = (function () {
     }
   }
 
-  return { init };
+  return { init, renderNotificationsPage };
 })();
 
 if (typeof window !== "undefined" && window.TasklyNotifications) {

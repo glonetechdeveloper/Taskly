@@ -18,8 +18,42 @@
       this.initTooltips();
       this.initActiveItem();
       this.initBadges();
+      this.initNotifDropdown();
       this.bindEvents();
       this.initTouchGestures();
+    },
+
+    initNotifDropdown() {
+      const btn = document.getElementById("notifBtn");
+      const panel = document.getElementById("notifPanel");
+      const dot = document.getElementById("notifDot");
+      if (!btn || !panel) return;
+
+      this.renderNavbarNotifications();
+
+      if (btn.dataset.wiredNotif) return;
+      btn.dataset.wiredNotif = "true";
+
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = !panel.classList.contains("is-open");
+        document.querySelectorAll(".dropdown-panel.is-open").forEach(d => {
+          if (d !== panel) d.classList.remove("is-open");
+        });
+        if (willOpen) {
+          panel.classList.add("is-open");
+          if (dot) dot.style.display = "none";
+          this.renderNavbarNotifications();
+        } else {
+          panel.classList.remove("is-open");
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (panel.classList.contains("is-open") && !panel.contains(e.target) && !btn.contains(e.target)) {
+          panel.classList.remove("is-open");
+        }
+      });
     },
 
     initTheme() {
@@ -128,14 +162,19 @@
       if (!badge) return;
 
       try {
-        if (window.TasklyAPI && typeof window.TasklyAPI.getNotifications === "function") {
-          const notifs = await window.TasklyAPI.getNotifications();
-          if (Array.isArray(notifs) && notifs.length > 0) {
-            badge.textContent = notifs.length;
-            badge.style.display = "inline-flex";
-          } else {
-            badge.style.display = "none";
-          }
+        let notifs = [];
+        if (window.TasklyAPI && typeof window.TasklyAPI.getStoredNotifications === "function") {
+          notifs = window.TasklyAPI.getStoredNotifications();
+        } else {
+          const raw = localStorage.getItem("taskly_notifications");
+          notifs = raw ? JSON.parse(raw) : [];
+        }
+        const unread = notifs.filter(n => !n.read);
+        if (unread.length > 0) {
+          badge.textContent = unread.length;
+          badge.style.display = "inline-flex";
+        } else {
+          badge.style.display = "none";
         }
       } catch (e) {
         badge.style.display = "none";
@@ -358,45 +397,49 @@
 
       let notifs = [];
       try {
-        const raw = localStorage.getItem("taskly_notifications");
-        notifs = raw ? JSON.parse(raw) : [];
+        if (window.TasklyAPI && typeof window.TasklyAPI.getStoredNotifications === "function") {
+          notifs = window.TasklyAPI.getStoredNotifications();
+        } else {
+          const raw = localStorage.getItem("taskly_notifications");
+          notifs = raw ? JSON.parse(raw) : [];
+        }
       } catch (e) {
         notifs = [];
       }
 
-      if (notifs.length === 0) {
-        notifs = [
-          { id: "n1", message: "Welcome to Taskly! Create your first roadmap to get started.", read: false, created_at: new Date().toISOString() },
-          { id: "n2", message: "You're on a 5 day streak. Keep it going today!", read: true, created_at: new Date(Date.now() - 3600000).toISOString() }
-        ];
-        try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
-      }
-
       const unreadList = notifs.filter(n => !n.read);
-      const readList = notifs.filter(n => n.read);
-
       if (dot) dot.style.display = unreadList.length > 0 ? "block" : "none";
 
-      // Combine: unread on top, then read, max 5 items total
-      const combined = [...unreadList, ...readList].slice(0, 5);
+      const formatRelativeTime = (iso) => {
+        if (!iso) return "Just now";
+        try {
+          const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+          if (diff < 60) return "Just now";
+          if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+          if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+          return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
+        } catch (e) {
+          return "Recently";
+        }
+      };
 
       panel.innerHTML = `
-        <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Notifications</span>
-          ${unreadList.length > 0 ? '<button id="markAllReadNavBtn" type="button" style="background:none; border:none; color:var(--color-teal); font-size:11.5px; font-weight:700; cursor:pointer;">Mark all read</button>' : ''}
+        <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--color-border, #f1f5f9);">
+          <span style="font-weight:700; font-size:13.5px;">Notifications</span>
+          ${unreadList.length > 0 ? '<button id="markAllReadNavBtn" type="button" style="background:none; border:none; color:var(--color-teal, #0d9488); font-size:11.5px; font-weight:700; cursor:pointer;">Mark all read</button>' : ''}
         </div>
         <div class="notif-dropdown-list" style="max-height: 320px; overflow-y: auto;">
-          ${combined.length === 0 ? `
-            <div style="padding: 20px 16px; text-align: center; color: #94A3B8; font-size: 13px;">No notifications</div>
-          ` : combined.map(n => `
-            <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" style="padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.05)'}; cursor: pointer; transition: background 0.15s ease;">
+          ${notifs.length === 0 ? `
+            <div style="padding: 24px 16px; text-align: center; color: #94A3B8; font-size: 13px;">No new notifications</div>
+          ` : notifs.slice(0, 15).map(n => `
+            <div class="notif-item ${n.read ? 'is-read' : 'is-unread'}" data-notif-id="${n.id}" data-roadmap-id="${n.roadmap_id || ''}" style="padding: 10px 14px; border-bottom: 1px solid var(--color-border, #f1f5f9); background: ${n.read ? 'transparent' : 'rgba(13, 148, 136, 0.06)'}; cursor: pointer; transition: background 0.15s ease;">
               <div style="display:flex; gap:10px; align-items:flex-start;">
-                <div class="notif-icon ${n.type === 'milestone' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/></svg>
+                <div class="notif-icon ${n.type === 'milestone' || n.type === 'roadmap' ? 'is-teal' : ''}" style="width:28px; height:28px; border-radius:50%; background: ${n.read ? '#F1F5F9' : '#CCFBF1'}; color: ${n.read ? '#94A3B8' : '#0D9488'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="${n.type === 'milestone' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/></svg>
                 </div>
                 <div style="flex:1; min-width:0;">
                   <p style="font-size:12.5px; line-height:1.4; margin:0; font-weight:${n.read ? '500' : '700'}; color:var(--color-ink, #0f172a);">${n.message}</p>
-                  <span style="font-size:11px; color:#94A3B8; margin-top:2px; display:block;">${n.read ? 'Read' : '• Unread'}</span>
+                  <span style="font-size:11px; color:#94A3B8; margin-top:3px; display:block;">${formatRelativeTime(n.created_at)}</span>
                 </div>
               </div>
             </div>
@@ -407,15 +450,24 @@
         </div>
       `;
 
-      // Mark single item as read on click
+      // Mark single item as read on click and navigate if roadmap
       panel.querySelectorAll(".notif-item").forEach(item => {
         item.addEventListener("click", () => {
           const id = item.dataset.notifId;
+          const rmId = item.dataset.roadmapId;
           const found = notifs.find(n => n.id === id);
           if (found) {
             found.read = true;
-            try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+            if (window.TasklyAPI && typeof window.TasklyAPI.saveStoredNotifications === "function") {
+              window.TasklyAPI.saveStoredNotifications(notifs);
+            } else {
+              try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+            }
             this.renderNavbarNotifications();
+          }
+          if (rmId) {
+            panel.classList.remove("is-open");
+            window.location.href = `roadmap.html?id=${encodeURIComponent(rmId)}`;
           }
         });
       });
@@ -425,13 +477,39 @@
       if (markBtn) {
         markBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          notifs.forEach(n => n.read = true);
-          try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+          if (window.TasklyAPI && typeof window.TasklyAPI.markAllNotificationsRead === "function") {
+            window.TasklyAPI.markAllNotificationsRead();
+          } else {
+            notifs.forEach(n => n.read = true);
+            try { localStorage.setItem("taskly_notifications", JSON.stringify(notifs)); } catch (e) {}
+          }
           this.renderNavbarNotifications();
         });
       }
     }
   };
+
+  window.addEventListener("taskly:notifications-updated", () => {
+    if (window.SidebarController) {
+      if (typeof window.SidebarController.renderNavbarNotifications === "function") {
+        window.SidebarController.renderNavbarNotifications();
+      }
+      if (typeof window.SidebarController.initBadges === "function") {
+        window.SidebarController.initBadges();
+      }
+    }
+  });
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "taskly_notifications" && window.SidebarController) {
+      if (typeof window.SidebarController.renderNavbarNotifications === "function") {
+        window.SidebarController.renderNavbarNotifications();
+      }
+      if (typeof window.SidebarController.initBadges === "function") {
+        window.SidebarController.initBadges();
+      }
+    }
+  });
 
   window.SidebarController = SidebarController;
 
