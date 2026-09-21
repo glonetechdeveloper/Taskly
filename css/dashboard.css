@@ -89,6 +89,8 @@
 [data-theme="dark"] .chat-textarea,
 [data-theme="dark"] .modal-textarea,
 [data-theme="dark"] .modal-input {
+  background: #1A2538;
+  border-color: #1E293B;
   color: #F1F5F9;
 }
 
@@ -993,7 +995,21 @@ svg { display: block; }
 .btn-ghost:hover { background: var(--color-cream-soft); color: var(--color-ink); border-color: var(--color-ink-soft); }
 .btn-ghost:active { transform: scale(.96); }
 
-/* --- Add Roadmap modal --- */
+/* --- Modals --- */
+.modal-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.modal-input:focus { outline: none; border-color: var(--color-teal); box-shadow: var(--shadow-focus); }
+.modal-input::placeholder { color: var(--color-ink-faint); }
+
 .modal-textarea {
   width: 100%;
   min-height: 90px;
