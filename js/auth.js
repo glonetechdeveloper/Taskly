@@ -53,7 +53,9 @@ window.Taskly = (function () {
   }
 
   function isValidEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    if (!value || typeof value !== "string") return false;
+    const trimmed = value.trim().toLowerCase();
+    return /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/.test(trimmed);
   }
 
   function setButtonLoading(btn, isLoading) {
@@ -136,7 +138,7 @@ window.Taskly = (function () {
 
     let valid = true;
     if (!isValidEmail(email)) {
-      setFieldError(emailField, "Enter a valid email address");
+      setFieldError(emailField, "Email must be a @gmail.com or @yahoo.com address");
       valid = false;
     } else {
       setFieldError(emailField, null);
@@ -172,8 +174,10 @@ window.Taskly = (function () {
         if (userId) localStorage.setItem("taskly_user_id", userId);
         localStorage.setItem("taskly_user_password", password);
 
-        const existingName = localStorage.getItem("taskly_user_name");
-        if (!existingName) {
+        const existingName = (user && (user.name || user.full_name)) || localStorage.getItem("taskly_user_name");
+        if (existingName) {
+          localStorage.setItem("taskly_user_name", existingName);
+        } else {
           localStorage.setItem("taskly_user_name", userEmail.split("@")[0]);
         }
       } catch (e) {}
@@ -185,7 +189,7 @@ window.Taskly = (function () {
 
     } catch (err) {
       console.error("Login failed:", err);
-      const msg = err.message || "Invalid email or password. Please try again.";
+      const msg = (err && err.message) ? err.message : "Invalid email or password. Please try again.";
       setGlobalError(msg);
       showToast(msg, "error");
       setFieldError(passwordField, msg);
@@ -222,14 +226,14 @@ window.Taskly = (function () {
     }
 
     if (!isValidEmail(email)) {
-      setFieldError(emailField, "Enter a valid email address");
+      setFieldError(emailField, "Email must be a @gmail.com or @yahoo.com address");
       valid = false;
     } else {
       setFieldError(emailField, null);
     }
 
-    if (password.length < 8) {
-      setFieldError(passwordField, "Use at least 8 characters");
+    if (password.length < 8 || password.length > 72) {
+      setFieldError(passwordField, "Password must be between 8 and 72 characters");
       valid = false;
     } else {
       setFieldError(passwordField, null);

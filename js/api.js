@@ -120,10 +120,26 @@ function handleOfflineFallback(path, options = {}) {
   }
 
   if (path.startsWith("/auth/me")) {
-    const userEmail = localStorage.getItem("taskly_user_email") || "user@example.com";
+    const method = (options.method || "GET").toUpperCase();
+    if (method === "PATCH" || method === "PUT") {
+      let bodyObj = {};
+      try { bodyObj = JSON.parse(options.body || "{}"); } catch (e) {}
+      if (bodyObj.name) localStorage.setItem("taskly_user_name", bodyObj.name);
+      if (bodyObj.email) localStorage.setItem("taskly_user_email", bodyObj.email);
+      if (bodyObj.password) localStorage.setItem("taskly_user_password", bodyObj.password);
+      return {
+        id: localStorage.getItem("taskly_user_id") || "mock_user_1",
+        email: bodyObj.email || localStorage.getItem("taskly_user_email") || "user@gmail.com",
+        name: bodyObj.name || localStorage.getItem("taskly_user_name") || "Taskly User",
+        created_at: new Date().toISOString()
+      };
+    }
+    const userEmail = localStorage.getItem("taskly_user_email") || "user@gmail.com";
+    const userName = localStorage.getItem("taskly_user_name") || "Taskly User";
     return {
-      id: "mock_user_1",
+      id: localStorage.getItem("taskly_user_id") || "mock_user_1",
       email: userEmail,
+      name: userName,
       created_at: new Date().toISOString()
     };
   }
@@ -640,6 +656,39 @@ const TasklyAPI = {
     return await apiRequest("/auth/me", { method: "GET" });
   },
 
+  // PATCH /auth/me (also supports PUT /auth/me) — Request body (UserUpdate): { name?, email?, password?, current_password? }
+  async updateMe(data = {}) {
+    const payload = {};
+    if (data.name !== undefined && data.name !== null && String(data.name).trim()) {
+      payload.name = String(data.name).trim();
+    }
+    if (data.email !== undefined && data.email !== null && String(data.email).trim()) {
+      payload.email = String(data.email).trim().toLowerCase();
+    }
+    if (data.password !== undefined && data.password !== null && String(data.password).trim()) {
+      payload.password = String(data.password);
+    }
+    if (data.current_password !== undefined && data.current_password !== null && String(data.current_password).trim()) {
+      payload.current_password = String(data.current_password);
+    }
+
+    const res = await apiRequest("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+
+    if (res) {
+      if (res.name) {
+        try { localStorage.setItem("taskly_user_name", res.name); } catch (e) {}
+      }
+      if (res.email) {
+        try { localStorage.setItem("taskly_user_email", res.email); } catch (e) {}
+      }
+      this.emit("taskly:user-updated", res);
+    }
+    return res;
+  },
+
   /* ---------------- Single Active Roadmap Generation Guard ---------------- */
   isGeneratingRoadmap() {
     try {
@@ -1111,17 +1160,22 @@ const TasklyAPI = {
   sanitizeError(err) {
     if (!err) return "An unexpected issue occurred. Please try again.";
     const str = typeof err === "object" ? (err.message || err.detail || JSON.stringify(err)) : String(err);
-    if (str.includes("429") || str.includes("Rate limit") || str.includes("rate_limit_exceeded") || str.includes("TPM") || str.includes("tokens per minute")) {
-      return "Our AI service is experiencing high demand right now. Please wait a few moments and try again.";
+    
+    // AI agent quota / rate limit / TPM reached
+    if (/429|rate\s*limit|rate_limit_exceeded|quota|tokens\s*per\s*minute|tpm|limit\s*\d+|service\s*tier/i.test(str)) {
+      return "AI service quota or rate limit reached. Please wait a moment and try again.";
     }
-    if (str.includes("Groq call") || str.includes("phase_tasks") || str.includes("500") || str.includes("503") || str.includes("Internal Server Error")) {
-      return "The AI generator encountered a temporary hiccup. Please tap Retry to generate your roadmap steps.";
+    // Groq / Model / LLM / Phase tasks hiccups
+    if (/groq|phase_tasks|openai|gpt-|model|generation failed|timeout|timed out|500|502|503|504|internal server error/i.test(str)) {
+      return "The AI assistant encountered a temporary hiccup. Please try again.";
     }
-    if (str.includes("Network error") || str.includes("Failed to fetch") || str.includes("Unable to reach")) {
-      return "Network connection issue. Please check your connection and try again.";
+    // Network errors
+    if (/network\s*error|failed to fetch|unable to reach|econnrefused|offline/i.test(str)) {
+      return "Network connection issue. Please check your internet connection and try again.";
     }
-    if (str.length > 130 || str.includes("{") || str.includes("Traceback")) {
-      return "Generation was interrupted. Please tap Retry Generation to resume.";
+    // Any other raw dictionary, stacktrace, JSON dump or overly long string
+    if (str.length > 90 || str.includes("{") || str.includes("Traceback") || str.includes("Error code:")) {
+      return "An unexpected issue occurred while communicating with the AI. Please try again.";
     }
     return str;
   },

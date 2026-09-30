@@ -780,10 +780,11 @@ window.TasklyDashboard = (function () {
             </div>
           `;
         } else if (status === "failed") {
+          const cleanErr = window.TasklyAPI ? window.TasklyAPI.sanitizeError(ind.error) : "AI generation could not be completed. Please try again.";
           indicatorHtml = `
-            <div class="home-chat-indicator is-failed">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span>Generation failed${ind.error ? ': ' + escapeHtml(ind.error) : ''}</span>
+            <div class="home-chat-indicator is-failed" style="color:#DC2626; background:#FEE2E2; border: 1px solid #FCA5A5; border-radius: 8px; padding: 6px 12px; line-height: 1.4;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Generation failed: ${escapeHtml(cleanErr)}</span>
             </div>
           `;
         } else {
@@ -829,7 +830,7 @@ window.TasklyDashboard = (function () {
             if (m.indicator.status !== currentStatus) {
               m.indicator.status = currentStatus;
               if (currentStatus === "failed") {
-                m.indicator.error = res && res.error_message;
+                m.indicator.error = window.TasklyAPI ? window.TasklyAPI.sanitizeError(res && res.error_message) : (res && res.error_message);
               }
               changed = true;
             }
@@ -987,9 +988,10 @@ window.TasklyDashboard = (function () {
       } catch (err) {
         isLocalTyping = false;
         const curHistory = getChatHistory();
+        const friendlyMsg = window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : "Sorry, I ran into an error reaching Nodi AI. Please try again.";
         curHistory.push({
           sender: "nodi",
-          text: "Sorry, I ran into an error reaching Nodi AI. Please try again.",
+          text: `⚠️ ${friendlyMsg}`,
           timestamp: new Date().toISOString()
         });
         saveChatHistory(curHistory);

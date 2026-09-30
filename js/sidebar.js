@@ -540,15 +540,29 @@
     }
   });
 
+  window.addEventListener("taskly:user-updated", () => {
+    if (window.SidebarController && typeof window.SidebarController.initUserInfo === "function") {
+      window.SidebarController.initUserInfo();
+    }
+  });
+
   window.addEventListener("storage", (e) => {
     let shouldUpdate = false;
     if (e.key === "taskly_notifications") {
       shouldUpdate = true;
+    } else if (e.key === "taskly_user_name" || e.key === "taskly_user_email" || e.key === "taskly_user_avatar") {
+      if (window.SidebarController && typeof window.SidebarController.initUserInfo === "function") {
+        window.SidebarController.initUserInfo();
+      }
     } else if (e.key === "taskly_sync_event") {
       try {
         const data = JSON.parse(e.newValue || "{}");
         if (data.event === "taskly:notifications-updated") {
           shouldUpdate = true;
+        } else if (data.event === "taskly:user-updated") {
+          if (window.SidebarController && typeof window.SidebarController.initUserInfo === "function") {
+            window.SidebarController.initUserInfo();
+          }
         }
       } catch (err) {}
     }

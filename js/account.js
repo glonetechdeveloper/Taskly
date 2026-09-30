@@ -221,10 +221,19 @@ window.TasklyAccount = (function () {
     });
   }
 
+  function isValidEmail(value) {
+    if (!value || typeof value !== "string") return false;
+    const trimmed = value.trim().toLowerCase();
+    return /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/.test(trimmed);
+  }
+
   /* ---------- Profile Details Form ---------- */
 
   function wireProfileDetailsForm() {
-    const inputs = [$("#fullNameInput"), $("#emailInput"), $("#usernameInput"), $("#timezoneInput")].filter(Boolean);
+    const nameInput = $("#fullNameInput");
+    const emailInput = $("#emailInput");
+    const tzInput = $("#timezoneInput");
+    const inputs = [nameInput, emailInput, tzInput].filter(Boolean);
     const editBtn = $("#editDetailsBtn");
     const actions = $("#profileEditActions");
     const cancelBtn = $("#cancelProfileEditBtn");
@@ -232,19 +241,27 @@ window.TasklyAccount = (function () {
     const successMsg = $("#profileSuccessMsg");
     const nameDisplay = $("#profileNameDisplay");
     const emailDisplay = $("#profileEmailDisplay");
+    const emailErrorEl = $("#emailError");
+    const nameErrorEl = $("#fullNameError");
 
-    let snapshot = inputs.map((i) => i.value);
+    function clearErrors() {
+      if (emailErrorEl) { emailErrorEl.textContent = ""; emailErrorEl.style.display = "none"; }
+      if (nameErrorEl) { nameErrorEl.textContent = ""; nameErrorEl.style.display = "none"; }
+    }
+
+    let snapshot = inputs.map((i) => i ? i.value : "");
 
     function enterEditMode() {
       if (successMsg) successMsg.classList.remove("is-visible");
-      inputs.forEach((i) => { i.disabled = false; });
+      clearErrors();
+      inputs.forEach((i) => { if (i !== tzInput) i.disabled = false; });
       if (editBtn) editBtn.style.display = "none";
       if (actions) actions.style.display = "flex";
-      const first = $("#fullNameInput");
-      first && first.focus();
+      nameInput && nameInput.focus();
     }
 
     function exitEditMode() {
+      clearErrors();
       inputs.forEach((i) => { i.disabled = true; });
       if (editBtn) editBtn.style.display = "";
       if (actions) actions.style.display = "none";
@@ -253,27 +270,88 @@ window.TasklyAccount = (function () {
     if (editBtn) editBtn.addEventListener("click", enterEditMode);
 
     if (cancelBtn) cancelBtn.addEventListener("click", () => {
-      inputs.forEach((i, idx) => { i.value = snapshot[idx]; });
+      inputs.forEach((i, idx) => { if (i) i.value = snapshot[idx]; });
       exitEditMode();
     });
 
-    if (saveBtn) saveBtn.addEventListener("click", () => {
-      const name = $("#fullNameInput") ? $("#fullNameInput").value.trim() : "";
-      const email = $("#emailInput") ? $("#emailInput").value.trim() : "";
-      if (!name || !email) {
-        showToast("Name and email cannot be empty.", "error");
+    if (saveBtn) saveBtn.addEventListener("click", async () => {
+      clearErrors();
+      const name = nameInput ? nameInput.value.trim() : "";
+      const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+
+      if (!name) {
+        if (nameErrorEl) {
+          nameErrorEl.textContent = "Please enter your name.";
+          nameErrorEl.style.display = "block";
+        }
+        showToast("Please enter your name.", "error");
+        nameInput && nameInput.focus();
         return;
       }
-      snapshot = inputs.map((i) => i.value);
-      if (nameDisplay) nameDisplay.textContent = name;
-      if (emailDisplay) emailDisplay.textContent = email;
+
+      if (!isValidEmail(email)) {
+        if (emailErrorEl) {
+          emailErrorEl.textContent = "Email must be a @gmail.com or @yahoo.com address.";
+          emailErrorEl.style.display = "block";
+        }
+        showToast("Email must be a @gmail.com or @yahoo.com address.", "error");
+        emailInput && emailInput.focus();
+        return;
+      }
+
+      saveBtn.disabled = true;
+      const originalHtml = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<span class="spinner-ring" style="width:14px; height:14px; border-width:2px; border-top-color:currentColor;"></span> Saving…';
+
       try {
-        localStorage.setItem("taskly_user_name", name);
-        localStorage.setItem("taskly_user_email", email);
-      } catch (e) {}
-      exitEditMode();
-      if (successMsg) successMsg.classList.add("is-visible");
-      showToast("Profile updated successfully.", "success");
+        const updated = await window.TasklyAPI.updateMe({ name, email });
+        
+        snapshot = inputs.map((i) => i ? i.value : "");
+        const finalName = (updated && updated.name) || name;
+        const finalEmail = (updated && updated.email) || email;
+
+        if (nameDisplay) nameDisplay.textContent = finalName;
+        if (emailDisplay) emailDisplay.textContent = finalEmail;
+
+        try {
+          localStorage.setItem("taskly_user_name", finalName);
+          localStorage.setItem("taskly_user_email", finalEmail);
+        } catch (e) {}
+
+        exitEditMode();
+        if (successMsg) successMsg.classList.add("is-visible");
+        showToast("Profile updated successfully.", "success");
+
+        if (window.SidebarController && typeof window.SidebarController.initUserInfo === "function") {
+          window.SidebarController.initUserInfo();
+        }
+      } catch (err) {
+        console.error("Profile update failed:", err);
+        const status = err.status;
+        const msg = (err && err.message) ? err.message : "";
+
+        if (status === 409 || msg.toLowerCase().includes("already registered")) {
+          if (emailErrorEl) {
+            emailErrorEl.textContent = "Email is already registered by another account.";
+            emailErrorEl.style.display = "block";
+          }
+          showToast("Email is already registered.", "error");
+        } else if (status === 401) {
+          showToast("Session expired. Redirecting to login…", "error");
+          setTimeout(() => { window.location.href = "login.html"; }, 800);
+        } else if (status === 422) {
+          if (emailErrorEl) {
+            emailErrorEl.textContent = msg || "Validation error with email format.";
+            emailErrorEl.style.display = "block";
+          }
+          showToast(msg || "Validation error.", "error");
+        } else {
+          showToast(window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : (msg || "Failed to update profile."), "error");
+        }
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHtml;
+      }
     });
   }
 
@@ -289,10 +367,18 @@ window.TasklyAccount = (function () {
     const currentPass = $("#currentPasswordInput");
     const newPass = $("#newPasswordInput");
     const mainPass = $("#passwordInput");
+    const currentPassErr = $("#currentPasswordError");
+    const newPassErr = $("#newPasswordError");
+
+    function clearPassErrors() {
+      if (currentPassErr) { currentPassErr.textContent = ""; currentPassErr.style.display = "none"; }
+      if (newPassErr) { newPassErr.textContent = ""; newPassErr.style.display = "none"; }
+    }
 
     if (!editBtn) return;
 
     editBtn.addEventListener("click", () => {
+      clearPassErrors();
       if (successMsg) successMsg.classList.remove("is-visible");
       if (staticGrid) staticGrid.style.display = "none";
       if (editFields) editFields.style.display = "block";
@@ -301,6 +387,7 @@ window.TasklyAccount = (function () {
     });
 
     function closePasswordEdit() {
+      clearPassErrors();
       if (currentPass) currentPass.value = "";
       if (newPass) newPass.value = "";
       if (staticGrid) staticGrid.style.display = "block";
@@ -310,24 +397,77 @@ window.TasklyAccount = (function () {
 
     cancelBtn && cancelBtn.addEventListener("click", closePasswordEdit);
 
-    saveBtn && saveBtn.addEventListener("click", () => {
-      const cur = currentPass ? currentPass.value.trim() : "";
-      const nxt = newPass ? newPass.value.trim() : "";
-      if (!cur || !nxt) {
-        showToast("Please fill in both current and new password fields.", "error");
+    saveBtn && saveBtn.addEventListener("click", async () => {
+      clearPassErrors();
+      const cur = currentPass ? currentPass.value : "";
+      const nxt = newPass ? newPass.value : "";
+
+      if (!cur) {
+        if (currentPassErr) {
+          currentPassErr.textContent = "Please enter your current password.";
+          currentPassErr.style.display = "block";
+        }
+        showToast("Please enter your current password.", "error");
+        currentPass && currentPass.focus();
         return;
       }
-      if (nxt.length < 8) {
-        showToast("New password must be at least 8 characters.", "error");
+
+      if (!nxt || nxt.length < 8 || nxt.length > 72) {
+        if (newPassErr) {
+          newPassErr.textContent = "New password must be between 8 and 72 characters.";
+          newPassErr.style.display = "block";
+        }
+        showToast("New password must be between 8 and 72 characters.", "error");
+        newPass && newPass.focus();
         return;
       }
+
+      saveBtn.disabled = true;
+      const originalHtml = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<span class="spinner-ring" style="width:14px; height:14px; border-width:2px; border-top-color:currentColor;"></span> Updating…';
+
       try {
-        localStorage.setItem("taskly_user_password", nxt);
-      } catch (e) {}
-      if (mainPass) mainPass.value = nxt;
-      closePasswordEdit();
-      if (successMsg) successMsg.classList.add("is-visible");
-      showToast("Password updated.", "success");
+        await window.TasklyAPI.updateMe({
+          password: nxt,
+          current_password: cur
+        });
+
+        try {
+          localStorage.setItem("taskly_user_password", nxt);
+        } catch (e) {}
+
+        if (mainPass) mainPass.value = nxt;
+        closePasswordEdit();
+        if (successMsg) successMsg.classList.add("is-visible");
+        showToast("Profile updated successfully.", "success");
+
+      } catch (err) {
+        console.error("Password update failed:", err);
+        const status = err.status;
+        const msg = (err && err.message) ? err.message : "";
+
+        if (status === 400 || msg.toLowerCase().includes("current password is incorrect") || msg.toLowerCase().includes("incorrect password")) {
+          if (currentPassErr) {
+            currentPassErr.textContent = "Current password is incorrect.";
+            currentPassErr.style.display = "block";
+          }
+          showToast("Current password is incorrect.", "error");
+        } else if (status === 422) {
+          if (newPassErr) {
+            newPassErr.textContent = msg || "Password must be between 8 and 72 characters.";
+            newPassErr.style.display = "block";
+          }
+          showToast(msg || "Password validation error.", "error");
+        } else if (status === 401) {
+          showToast("Session expired. Redirecting to login…", "error");
+          setTimeout(() => { window.location.href = "login.html"; }, 800);
+        } else {
+          showToast(window.TasklyAPI ? window.TasklyAPI.sanitizeError(err) : (msg || "Failed to update password."), "error");
+        }
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHtml;
+      }
     });
   }
 
@@ -384,28 +524,25 @@ window.TasklyAccount = (function () {
         if (emailDisplay) emailDisplay.textContent = user.email;
         if (emailInput) emailInput.value = user.email;
 
-        const name = user.full_name || localStorage.getItem("taskly_user_name") || user.email.split("@")[0];
+        const name = user.name || user.full_name || localStorage.getItem("taskly_user_name") || user.email.split("@")[0];
         const nameDisplay = $("#profileNameDisplay");
         const nameInput = $("#fullNameInput");
         if (nameDisplay) nameDisplay.textContent = name;
         if (nameInput) nameInput.value = name;
+
+        try {
+          localStorage.setItem("taskly_user_name", name);
+          localStorage.setItem("taskly_user_email", user.email);
+          if (user.id) localStorage.setItem("taskly_user_id", user.id);
+        } catch (e) {}
+
+        if (window.SidebarController && typeof window.SidebarController.initUserInfo === "function") {
+          window.SidebarController.initUserInfo();
+        }
       }
     } catch (e) {
       console.warn("Could not load user profile:", e);
-      const email = localStorage.getItem("taskly_user_email") || "";
-      const name = localStorage.getItem("taskly_user_name") || "";
-      if (email) {
-        const emailDisplay = $("#userEmailDisplay") || $("#profileEmailDisplay");
-        const emailInput = $("#emailInput");
-        if (emailDisplay) emailDisplay.textContent = email;
-        if (emailInput) emailInput.value = email;
-      }
-      if (name) {
-        const nameDisplay = $("#profileNameDisplay");
-        const nameInput = $("#fullNameInput");
-        if (nameDisplay) nameDisplay.textContent = name;
-        if (nameInput) nameInput.value = name;
-      }
+      hydrateFromLocalStorage();
     }
 
     const savedPass = localStorage.getItem("taskly_user_password") || "";

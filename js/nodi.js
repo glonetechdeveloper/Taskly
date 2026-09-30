@@ -329,7 +329,7 @@
               if (m.indicator.status !== currentStatus) {
                 m.indicator.status = currentStatus;
                 if (currentStatus === "failed") {
-                  m.indicator.error = res && res.error_message;
+                  m.indicator.error = window.TasklyAPI ? window.TasklyAPI.sanitizeError(res && res.error_message) : (res && res.error_message);
                 }
                 changed = true;
               }
@@ -493,10 +493,11 @@
             `;
           } else if (status === "failed") {
             badge.className = "nodi-action-badge is-failed";
-            badge.style.cssText = "color:#DC2626; background:#FEE2E2; border-color:#FCA5A5;";
+            badge.style.cssText = "color:#DC2626; background:#FEE2E2; border-color:#FCA5A5; line-height: 1.4; padding: 6px 12px;";
+            const cleanErr = window.TasklyAPI ? window.TasklyAPI.sanitizeError(ind.error) : "AI generation could not be completed. Please try again.";
             badge.innerHTML = `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span>Generation failed${ind.error ? ': ' + escapeHtml(ind.error) : ''}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Generation failed: ${escapeHtml(cleanErr)}</span>
             `;
           } else {
             const stageName = status === "generating_tasks" ? "generating tasks…" : "generating phases…";
