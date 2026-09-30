@@ -780,11 +780,10 @@ window.TasklyDashboard = (function () {
             </div>
           `;
         } else if (status === "failed") {
-          const cleanErr = window.TasklyAPI ? window.TasklyAPI.sanitizeError(ind.error) : "AI generation could not be completed. Please try again.";
           indicatorHtml = `
             <div class="home-chat-indicator is-failed" style="color:#DC2626; background:#FEE2E2; border: 1px solid #FCA5A5; border-radius: 8px; padding: 6px 12px; line-height: 1.4;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span>Generation failed: ${escapeHtml(cleanErr)}</span>
+              <span>Generation failed: Please try again later thank you.</span>
             </div>
           `;
         } else {

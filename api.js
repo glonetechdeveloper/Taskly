@@ -1088,16 +1088,16 @@ const TasklyAPI = {
 
   /* ---------------- Friendly Error Sanitizer ---------------- */
   sanitizeError(err) {
-    if (!err) return "An unexpected issue occurred. Please try again.";
+    if (!err) return "Please try again later thank you.";
     const str = typeof err === "object" ? (err.message || err.detail || JSON.stringify(err)) : String(err);
     
     // AI agent quota / rate limit / TPM reached
     if (/429|rate\s*limit|rate_limit_exceeded|quota|tokens\s*per\s*minute|tpm|limit\s*\d+|service\s*tier/i.test(str)) {
-      return "AI service quota or rate limit reached. Please wait a moment and try again.";
+      return "Please try again later thank you.";
     }
-    // Groq / Model / LLM / Phase tasks hiccups
+    // Groq / Model / LLM / Phase tasks hiccups / generation failures
     if (/groq|phase_tasks|openai|gpt-|model|generation failed|timeout|timed out|500|502|503|504|internal server error/i.test(str)) {
-      return "The AI assistant encountered a temporary hiccup. Please try again.";
+      return "Please try again later thank you.";
     }
     // Network errors
     if (/network\s*error|failed to fetch|unable to reach|econnrefused|offline/i.test(str)) {
@@ -1105,7 +1105,7 @@ const TasklyAPI = {
     }
     // Any other raw dictionary, stacktrace, JSON dump or overly long string
     if (str.length > 90 || str.includes("{") || str.includes("Traceback") || str.includes("Error code:")) {
-      return "An unexpected issue occurred while communicating with the AI. Please try again.";
+      return "Please try again later thank you.";
     }
     return str;
   },

@@ -415,15 +415,13 @@ window.TasklyRoadmap = (function () {
     const addBtn = $("#addTaskBtn");
     if (addBtn) addBtn.style.display = "none";
 
-    const cleanMsg = window.TasklyAPI ? window.TasklyAPI.sanitizeError(errMsg) : "We were unable to complete generation for this roadmap. Please try again.";
-
     body.innerHTML = `
       <div class="empty-roadmaps is-visible" style="border-color:var(--color-error-tint); padding:var(--sp-6) var(--sp-4);">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-error); width:36px; height:36px; margin:0 auto var(--sp-2);">
           <use href="#ic-warn"/>
         </svg>
-        <strong style="color:var(--color-error); font-size:16px;">Roadmap generation failed</strong>
-        <p style="margin-top:6px; margin-bottom:18px; line-height:1.5; color:var(--color-ink-soft); max-width:440px; margin-left:auto; margin-right:auto;">${escapeHtml(cleanMsg)}</p>
+        <strong style="color:var(--color-error); font-size:16px;">Generation failed</strong>
+        <p style="margin-top:6px; margin-bottom:18px; line-height:1.5; color:var(--color-ink-soft); max-width:440px; margin-left:auto; margin-right:auto;">Please try again later thank you.</p>
         <div style="display:flex; gap:12px; justify-content:center;">
           <button class="btn-solid" id="retryRegenBtn" type="button" style="display:inline-flex;">Retry Generation</button>
           <a href="roadmapmanager.html" class="btn-ghost" style="display:inline-flex; text-decoration:none;">Back to Manager</a>
